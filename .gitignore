@@ -1,0 +1,12 @@
+*.dcm
+*.kicad_pcb-bak
+*.sch-bak
+.idea
+build
+.gradle
+local.properties
+*.log
+Output
+*.emSession
+firmware/src/ble_name.h
+

@@ -1,0 +1,4 @@
+(sym_lib_table
+  (lib (name nRF52832_qfaa-eagle-import)(type Legacy)(uri ${KIPRJMOD}/nRF52832_qfaa-eagle-import.lib)(options "")(descr ""))
+  (lib (name custom)(type Legacy)(uri ${KIPRJMOD}/custom.lib)(options "")(descr ""))
+)
