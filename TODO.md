@@ -16,3 +16,4 @@
 
 * add STL models for the case
 
+* add ADPCM sound compression
