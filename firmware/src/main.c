@@ -84,7 +84,7 @@
 #define APP_BLE_OBSERVER_PRIO           3                                       /**< Application's BLE observer priority. You shouldn't need to modify this value. */
 #define APP_BLE_CONN_CFG_TAG            1                                       /**< A tag identifying the SoftDevice BLE configuration. */
 
-#define APP_ADV_INTERVAL                64                                      /**< The advertising interval (in units of 0.625 ms; this value corresponds to 40 ms). */
+#define APP_ADV_INTERVAL                1600                                      /**< The advertising interval (in units of 0.625 ms; this value corresponds to 40 ms). */
 #define APP_ADV_DURATION                BLE_GAP_ADV_TIMEOUT_GENERAL_UNLIMITED   /**< The advertising time-out (in units of seconds). When set to 0, we will never time out. */
 
 
@@ -465,7 +465,7 @@ static void on_bonded_peer_reconnection_lvl_notify(pm_evt_t const * p_evt)
     //err_code = app_timer_start(m_battery_notify_timer_id,
     //                                   BATTERY_NOTIFY_DELAY,
     //                                   &peer_id);
-    APP_ERROR_CHECK(err_code);
+    //APP_ERROR_CHECK(err_code);
 }
 
 
@@ -577,7 +577,7 @@ static void advertising_start(void)
 static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 {
     ret_code_t err_code;
-
+   
     switch (p_ble_evt->header.evt_id)
     {
         case BLE_GAP_EVT_CONNECTED:
@@ -597,12 +597,23 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             break;
 
         case BLE_GAP_EVT_SEC_PARAMS_REQUEST:
-            // Pairing not supported
-            err_code = sd_ble_gap_sec_params_reply(m_conn_handle,
-                                                   BLE_GAP_SEC_STATUS_PAIRING_NOT_SUPP,
-                                                   NULL,
-                                                   NULL);
-            APP_ERROR_CHECK(err_code);
+            NRF_LOG_DEBUG("BLE_GAP_EVT_SEC_PARAMS_REQUEST");
+            break;
+        
+        case BLE_GAP_EVT_AUTH_KEY_REQUEST:
+            NRF_LOG_INFO("BLE_GAP_EVT_AUTH_KEY_REQUEST");
+            break;
+
+        case BLE_GAP_EVT_LESC_DHKEY_REQUEST:
+            NRF_LOG_INFO("BLE_GAP_EVT_LESC_DHKEY_REQUEST");
+            break;
+       case BLE_GAP_EVT_AUTH_STATUS:
+            NRF_LOG_INFO("BLE_GAP_EVT_AUTH_STATUS: status=0x%x bond=0x%x lv4: %d kdist_own:0x%x kdist_peer:0x%x",
+                          p_ble_evt->evt.gap_evt.params.auth_status.auth_status,
+                          p_ble_evt->evt.gap_evt.params.auth_status.bonded,
+                          p_ble_evt->evt.gap_evt.params.auth_status.sm1_levels.lv4,
+                          *((uint8_t *)&p_ble_evt->evt.gap_evt.params.auth_status.kdist_own),
+                          *((uint8_t *)&p_ble_evt->evt.gap_evt.params.auth_status.kdist_peer));
             break;
 
         case BLE_GAP_EVT_PHY_UPDATE_REQUEST:
@@ -801,10 +812,10 @@ static void idle_state_handle(void)
         //while (spi_flash_is_spi_bus_busy()) ;
         //spi_flash_copy_received_data(tmp_buf_after_write, 128);
 
-        if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
-        {
-            app_sm_state = APP_SM_XFER;
-        }
+////if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
+////{
+////    app_sm_state = APP_SM_XFER;
+////}
     }   
     break;
 
@@ -974,6 +985,15 @@ void ble_operation_handle()
     }
 }
 
+static void delete_bonds(void)
+{
+    ret_code_t err_code;
+
+    NRF_LOG_INFO("Erase bonds!");
+
+    err_code = pm_peers_delete();
+    APP_ERROR_CHECK(err_code);
+}
 
 /**@brief Function for application main entry.
  */
@@ -992,6 +1012,7 @@ int main(void)
     gap_params_init();
     gatt_init();
     peer_manager_init();
+    delete_bonds();
     services_init();
     advertising_init();
     conn_params_init();
@@ -1002,6 +1023,10 @@ int main(void)
     
     spi_access_init();
     write_pointer = 0;
+
+    ble_gap_addr_t ble_addr;
+    sd_ble_gap_addr_get(&ble_addr);
+    NRF_LOG_INFO("%x:%x:%x:%x:%x:%x", ble_addr.addr[5],ble_addr.addr[4],ble_addr.addr[3],ble_addr.addr[2],ble_addr.addr[1],ble_addr.addr[0]);
     for (;;)
     {
         ble_operation_handle();
