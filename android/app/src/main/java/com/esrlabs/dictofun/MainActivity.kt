@@ -302,7 +302,7 @@ class MainActivity : AppCompatActivity() {
             .build()
 
         // The argument provided in setSingleDevice() determines whether a single
-        // device name or a list of them appears.
+        // device name or a list ofc them appears.
         return AssociationRequest.Builder()
             .addDeviceFilter(deviceFilter)
             .setSingleDevice(false)
