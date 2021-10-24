@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".DeviceConnectionActivity">
+    tools:context="osh.dictofun.app.DeviceConnectionActivity">
 
     <TextView
         android:id="@+id/connections_list_title"

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    package="com.esrlabs.dictofun">
+    package="osh.dictofun.app">
 
     <uses-permission
         android:name="android.permission.BLUETOOTH"
@@ -31,17 +31,17 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.DictoFun">
         <activity
-            android:name=".DeviceConnectionActivity"
+            android:name="osh.dictofun.app.DeviceConnectionActivity"
             android:exported="true" />
         <activity
-            android:name=".IntroductionActivity"
+            android:name="osh.dictofun.app.IntroductionActivity"
             android:exported="true">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
-                android:value=".MainActivity" />
+                android:value="osh.dictofun.app.MainActivity" />
         </activity>
         <activity
-            android:name=".MainActivity"
+            android:name="osh.dictofun.app.MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -51,7 +51,7 @@
         </activity>
 
         <service
-            android:name=".services.FileTransferService"
+            android:name="osh.dictofun.app.services.FileTransferService"
             android:enabled="true" />
     </application>
 
