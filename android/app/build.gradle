@@ -53,4 +53,6 @@ dependencies {
     implementation 'io.grpc:grpc-okhttp:1.40.1'
 
     implementation 'com.thoughtbot:expandablerecyclerview:1.4'
+
+    implementation project(':ble')
 }
