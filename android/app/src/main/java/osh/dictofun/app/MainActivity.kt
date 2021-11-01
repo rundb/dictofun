@@ -14,6 +14,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
+import android.view.View
 import android.widget.ListView
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.IntentSenderRequest
@@ -32,6 +33,7 @@ import osh.dictofun.app.services.ExternalStorageService
 import osh.dictofun.app.services.FileTransferService
 import osh.dictofun.app.services.GoogleSpeechRecognitionService
 import osh.dictofun.app.services.ISpeechRecognitionService
+import java.lang.reflect.Method
 import java.nio.ByteBuffer
 import java.util.regex.Pattern
 import java.util.stream.Collectors.toList
@@ -40,8 +42,8 @@ import java.util.stream.Collectors.toList
 class MainActivity : AppCompatActivity() {
     private val REQUEST_CODE_BACKGROUND: Int = 1545
 
-    private val RECOGNITION_ENABLED = true
-    private val RESET_ASSOTIATIONS_ON_STARTUP = true
+    private val RECOGNITION_ENABLED = false
+    private val RESET_ASSOTIATIONS_ON_STARTUP = false
 
     private val deviceManager: CompanionDeviceManager by lazy {
         getSystemService(Context.COMPANION_DEVICE_SERVICE) as CompanionDeviceManager
@@ -173,7 +175,40 @@ class MainActivity : AppCompatActivity() {
         recyclerView.adapter = expandableRecordingAdapter
     }
 
+    fun eraseBonds(view: View)
+    {
+        // TODO: ask the user to confirm that he wants to remove the bonds
+        val bluetoothAdapter: BluetoothAdapter? = BluetoothAdapter.getDefaultAdapter()
+        if (bluetoothAdapter == null)
+        {
+            Log.e("bonds", "Failed to access ble device")
+            return
+        }
+        for (device in bluetoothAdapter.bondedDevices)
+        {
+            Log.i("bond", "bonded: ${device.name}")
+            if (device.name.startsWith("dictofun"))
+            {
+                val m : Method = device.javaClass.getMethod("removeBond")
+                m.invoke(device)
+            }
+        }
+    }
+
     fun isPairedDeviceFound(): Boolean {
+        val bluetoothAdapter: BluetoothAdapter? = BluetoothAdapter.getDefaultAdapter()
+
+        if (bluetoothAdapter != null) {
+            for (device in bluetoothAdapter.bondedDevices)
+            {
+                Log.i("bond", "bonded: ${device.name}")
+                if (device.name.startsWith("dictofun"))
+                {
+                    return true;
+                }
+            }
+        }
+
         return false
     }
 

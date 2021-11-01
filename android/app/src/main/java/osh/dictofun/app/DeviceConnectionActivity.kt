@@ -10,11 +10,12 @@ import android.content.*
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
+import android.widget.LinearLayout
 import osh.dictofun.app.R
 import java.util.regex.Pattern
 
 import no.nordicsemi.android.ble.BleManager;
-
+import java.lang.reflect.Method
 
 
 class DeviceConnectionActivity : AppCompatActivity() {
@@ -34,6 +35,9 @@ class DeviceConnectionActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_device_connection)
+        // TODO: consider filling this list view with data about the discovered devices
+        var devicesListView : LinearLayout = findViewById(R.id.connection_device_list)
+        devicesListView.removeAllViews()
 
         val bluetoothAdapter: BluetoothAdapter? = BluetoothAdapter.getDefaultAdapter()
         if (bluetoothAdapter == null) {
@@ -42,6 +46,10 @@ class DeviceConnectionActivity : AppCompatActivity() {
             return
         }
 
+        for (device in bluetoothAdapter.bondedDevices)
+        {
+            Log.d("bond", "found bonded: ${device.name}")
+        }
 
         if (bluetoothAdapter?.isEnabled == false) {
             val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
@@ -49,13 +57,11 @@ class DeviceConnectionActivity : AppCompatActivity() {
         }
 
         scanDevices()
-
     }
 
     fun scanDevices() {
         val deviceFilter: BluetoothDeviceFilter = BluetoothDeviceFilter.Builder()
             .setNamePattern(Pattern.compile("dictofun*"))
-//            .addServiceUuid(ParcelUuid(UUID(0x123abcL, -1L)), null)
             .build()
 
         val pairingRequest: AssociationRequest = AssociationRequest.Builder()
@@ -63,7 +69,6 @@ class DeviceConnectionActivity : AppCompatActivity() {
             .setSingleDevice(true)
             .build()
 
-        //val deviceManager = requireContext().getSystemService(Context.COMPANION_DEVICE_SERVICE)
         val deviceManager: CompanionDeviceManager by lazy {
             getSystemService(Context.COMPANION_DEVICE_SERVICE) as CompanionDeviceManager
         }
@@ -75,7 +80,7 @@ class DeviceConnectionActivity : AppCompatActivity() {
                 }
 
                 override fun onFailure(error: CharSequence?) {
-                    Log.e("devicieManager", "Unexpected error: $error")
+                    Log.e("deviceManager", "Unexpected error: $error")
                 }
             }
             , null)
@@ -88,9 +93,17 @@ class DeviceConnectionActivity : AppCompatActivity() {
                     // The user chose to pair the app with a Bluetooth device.
                     val deviceToPair: BluetoothDevice? =
                         data?.getParcelableExtra(CompanionDeviceManager.EXTRA_DEVICE)
+
+
                     deviceToPair?.let { device ->
-                        Log.i("onActivityResult", "creating a bond")
-                        device.createBond()
+                        Log.i("bond", "creating a bond")
+                        Log.i("bond", "bond status: ${device.bondState}")
+
+                        val bondCreationResult = device.createBond()
+                        if (!bondCreationResult)
+                        {
+                            Log.e("bond", "failed to create bond")
+                        }
                         // Maintain continuous interaction with a paired device.
                         applicationContext.registerReceiver(pairReceiver, IntentFilter(BluetoothDevice.ACTION_BOND_STATE_CHANGED))
                     }
@@ -103,16 +116,19 @@ class DeviceConnectionActivity : AppCompatActivity() {
 
     private val pairReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
+            Log.i("bond", "bonding onReceive")
             val state = intent?.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, BluetoothDevice.ERROR)
             val prevState = intent?.getIntExtra(BluetoothDevice.EXTRA_PREVIOUS_BOND_STATE, BluetoothDevice.ERROR)
 
             if (prevState == BluetoothDevice.BOND_BONDING && state == BluetoothDevice.BOND_BONDED) {
                 isPairing = false
                 Log.i("bond", "bonding completed successfully")
+                finish()
             }
             else if (prevState == BluetoothDevice.BOND_BONDING && state == BluetoothDevice.BOND_NONE)
             {
                 Log.e("bond", "bonding has failed")
+                finish()
             }
 
         }

@@ -812,10 +812,10 @@ static void idle_state_handle(void)
         //while (spi_flash_is_spi_bus_busy()) ;
         //spi_flash_copy_received_data(tmp_buf_after_write, 128);
 
-////if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
-////{
-////    app_sm_state = APP_SM_XFER;
-////}
+      if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
+      {
+          app_sm_state = APP_SM_XFER;
+      }
     }   
     break;
 
@@ -1012,7 +1012,8 @@ int main(void)
     gap_params_init();
     gatt_init();
     peer_manager_init();
-    delete_bonds();
+    //// TODO: add bond erase logic (maybe add a characteristic for that)
+    //delete_bonds();
     services_init();
     advertising_init();
     conn_params_init();
