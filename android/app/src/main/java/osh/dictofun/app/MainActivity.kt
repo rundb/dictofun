@@ -25,7 +25,6 @@ import androidx.core.app.ActivityCompat
 import androidx.core.location.LocationManagerCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.recyclerview.widget.RecyclerView
-import osh.dictofun.app.R
 import osh.dictofun.app.recordings.ExpandableRecordingAdapter
 import osh.dictofun.app.recordings.Recording
 import osh.dictofun.app.recordings.Transcription
@@ -33,7 +32,6 @@ import osh.dictofun.app.services.ExternalStorageService
 import osh.dictofun.app.services.FileTransferService
 import osh.dictofun.app.services.GoogleSpeechRecognitionService
 import osh.dictofun.app.services.ISpeechRecognitionService
-import osh.dictofun.app.services.DeviceDiscoveryService
 import java.lang.reflect.Method
 import java.nio.ByteBuffer
 import java.util.regex.Pattern
@@ -60,8 +58,6 @@ class MainActivity : AppCompatActivity() {
 
     private var fileTransferService: FileTransferService? = null
     private var expandableRecordingAdapter: ExpandableRecordingAdapter? = null
-
-    private var deviceDiscoveryService: DeviceDiscoveryService? = null
 
     private val mServiceConnection = object : ServiceConnection {
 
@@ -246,7 +242,6 @@ class MainActivity : AppCompatActivity() {
     fun runMainActivity() {
         externalStorageService = ExternalStorageService(this)
         recognitionService = GoogleSpeechRecognitionService(this) as ISpeechRecognitionService
-        deviceDiscoveryService = DeviceDiscoveryService()
 
         if (RESET_ASSOTIATIONS_ON_STARTUP) {
             deviceManager.associations.forEach(deviceManager::disassociate)

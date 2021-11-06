@@ -30,10 +30,6 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.DictoFun">
-        <service
-            android:name=".services.DeviceDiscoveryService"
-            android:enabled="true"
-            android:exported="true"></service>
 
         <activity
             android:name=".DeviceConnectionActivity"
