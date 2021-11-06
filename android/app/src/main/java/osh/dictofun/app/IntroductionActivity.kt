@@ -37,6 +37,7 @@ class IntroductionActivity : AppCompatActivity() {
         if (requestCode == DEVICE_CONNECTION_ACTIVITY_DONE_INTENT)
         {
             Log.i("intro", "pairing is complete. Coming back to the main activity")
+            finish()
         }
     }
 
