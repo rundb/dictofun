@@ -9,4 +9,5 @@ local.properties
 Output
 *.emSession
 firmware/src/ble_name.h
+android/app/src/main/assets
 
