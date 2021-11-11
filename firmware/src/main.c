@@ -84,7 +84,7 @@
 #define APP_BLE_OBSERVER_PRIO           3                                       /**< Application's BLE observer priority. You shouldn't need to modify this value. */
 #define APP_BLE_CONN_CFG_TAG            1                                       /**< A tag identifying the SoftDevice BLE configuration. */
 
-#define APP_ADV_INTERVAL                1600                                      /**< The advertising interval (in units of 0.625 ms; this value corresponds to 40 ms). */
+#define APP_ADV_INTERVAL                400                                      /**< The advertising interval (in units of 0.625 ms; this value corresponds to 40 ms). */
 #define APP_ADV_DURATION                BLE_GAP_ADV_TIMEOUT_GENERAL_UNLIMITED   /**< The advertising time-out (in units of seconds). When set to 0, we will never time out. */
 
 
@@ -765,11 +765,13 @@ static void idle_state_handle(void)
     {
     case APP_SM_REC_INIT:
     {
-      bsp_board_led_on(LEDBUTTON_LED);
-      is_recording_active = true;
-      drv_audio_transmission_enable();
-      app_sm_state = APP_SM_RECORDING;
+      bsp_board_led_off(LEDBUTTON_LED);
+      //is_recording_active = true;
+      //drv_audio_transmission_enable();
+      // Skip directly to connecting stage 
+      app_sm_state = APP_SM_CONN;
       rec_start_ts = get_timestamp();
+      advertising_start();
     break;
     }
     case APP_SM_RECORDING:
@@ -805,29 +807,23 @@ static void idle_state_handle(void)
 
     case APP_SM_CONN:
     {
-    // todo: establish connection
-    // todo:
-        //spi_flash_trigger_read(0x400, 128);
-
-        //while (spi_flash_is_spi_bus_busy()) ;
-        //spi_flash_copy_received_data(tmp_buf_after_write, 128);
-
-////if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
-////{
-////    app_sm_state = APP_SM_XFER;
-////}
+        // todo: establish connection
+        if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
+        {
+            app_sm_state = APP_SM_XFER;
+        }
     }   
     break;
 
     case APP_SM_XFER:
-    // todo: perform transfer
-    // todo: on xfer end goto APP_SM_FINALISE
         if (is_file_transmission_done)
         {
-            uint32_t err_code = sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
-            APP_ERROR_CHECK(err_code);
-            m_conn_handle = BLE_CONN_HANDLE_INVALID;
-            app_sm_state = APP_SM_FINALISE;
+            //// We do not leave the XFER state until power off
+
+            // uint32_t err_code = sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+            // APP_ERROR_CHECK(err_code);
+            // m_conn_handle = BLE_CONN_HANDLE_INVALID;
+            // app_sm_state = APP_SM_FINALISE;
         }
         break;
 
