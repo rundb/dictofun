@@ -8,6 +8,7 @@ local.properties
 *.log
 Output
 *.emSession
-firmware/src/ble_name.h
+ble_name.h
 android/app/src/main/assets
+*.jlink
 
