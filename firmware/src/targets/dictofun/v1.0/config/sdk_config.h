@@ -158,18 +158,18 @@
 // <e> PEER_MANAGER_ENABLED - peer_manager - Peer Manager
 //==========================================================
 #ifndef PEER_MANAGER_ENABLED
-#define PEER_MANAGER_ENABLED 0
+#define PEER_MANAGER_ENABLED 1
 #endif
 // <o> PM_MAX_REGISTRANTS - Number of event handlers that can be registered. 
 #ifndef PM_MAX_REGISTRANTS
-#define PM_MAX_REGISTRANTS 3
+#define PM_MAX_REGISTRANTS 1
 #endif
 
 // <o> PM_FLASH_BUFFERS - Number of internal buffers for flash operations. 
 // <i> Decrease this value to lower RAM usage.
 
 #ifndef PM_FLASH_BUFFERS
-#define PM_FLASH_BUFFERS 4
+#define PM_FLASH_BUFFERS 2
 #endif
 
 // <q> PM_CENTRAL_ENABLED  - Enable/disable central-specific Peer Manager functionality.
@@ -2446,7 +2446,7 @@
 // <e> NRFX_PDM_ENABLED - nrfx_pdm - PDM peripheral driver
 //==========================================================
 #ifndef NRFX_PDM_ENABLED
-#define NRFX_PDM_ENABLED 0
+#define NRFX_PDM_ENABLED 1
 #endif
 // <o> NRFX_PDM_CONFIG_MODE  - Mode
  
@@ -2494,7 +2494,7 @@
 // <e> NRFX_PDM_CONFIG_LOG_ENABLED - Enables logging in the module.
 //==========================================================
 #ifndef NRFX_PDM_CONFIG_LOG_ENABLED
-#define NRFX_PDM_CONFIG_LOG_ENABLED 0
+#define NRFX_PDM_CONFIG_LOG_ENABLED 1
 #endif
 // <o> NRFX_PDM_CONFIG_LOG_LEVEL  - Default Severity level
  
@@ -4876,7 +4876,7 @@
 // <e> PDM_ENABLED - nrf_drv_pdm - PDM peripheral driver - legacy layer
 //==========================================================
 #ifndef PDM_ENABLED
-#define PDM_ENABLED 0
+#define PDM_ENABLED 1
 #endif
 // <o> PDM_CONFIG_MODE  - Mode
  
@@ -6220,7 +6220,7 @@
 // <31=> 1024 Hz 
 
 #ifndef APP_TIMER_CONFIG_RTC_FREQUENCY
-#define APP_TIMER_CONFIG_RTC_FREQUENCY 1
+#define APP_TIMER_CONFIG_RTC_FREQUENCY 31
 #endif
 
 // <o> APP_TIMER_CONFIG_IRQ_PRIORITY  - Interrupt priority
@@ -6264,7 +6264,7 @@
 // <i> This option can be used when app_timer is used for timestamping.
 
 #ifndef APP_TIMER_KEEPS_RTC_ACTIVE
-#define APP_TIMER_KEEPS_RTC_ACTIVE 0
+#define APP_TIMER_KEEPS_RTC_ACTIVE 1
 #endif
 
 // <o> APP_TIMER_SAFE_WINDOW_MS - Maximum possible latency (in milliseconds) of handling app_timer event. 
@@ -6658,7 +6658,7 @@
 // <e> FDS_ENABLED - fds - Flash data storage module
 //==========================================================
 #ifndef FDS_ENABLED
-#define FDS_ENABLED 0
+#define FDS_ENABLED 1
 #endif
 // <h> Pages - Virtual page settings
 
@@ -7182,7 +7182,7 @@
 // <e> NRF_FSTORAGE_ENABLED - nrf_fstorage - Flash abstraction library
 //==========================================================
 #ifndef NRF_FSTORAGE_ENABLED
-#define NRF_FSTORAGE_ENABLED 0
+#define NRF_FSTORAGE_ENABLED 1
 #endif
 // <h> nrf_fstorage - Common settings
 
@@ -7690,7 +7690,7 @@
 #endif
 // <o> NRF_LOG_BACKEND_UART_TX_PIN - UART TX pin 
 #ifndef NRF_LOG_BACKEND_UART_TX_PIN
-#define NRF_LOG_BACKEND_UART_TX_PIN 6
+#define NRF_LOG_BACKEND_UART_TX_PIN 16
 #endif
 
 // <o> NRF_LOG_BACKEND_UART_BAUDRATE  - Default Baudrate
@@ -7803,7 +7803,7 @@
 // <4=> Debug 
 
 #ifndef NRF_LOG_DEFAULT_LEVEL
-#define NRF_LOG_DEFAULT_LEVEL 3
+#define NRF_LOG_DEFAULT_LEVEL 4
 #endif
 
 // <q> NRF_LOG_DEFERRED  - Enable deffered logger.
@@ -7921,11 +7921,11 @@
 // <i> Function for getting the timestamp is provided by the user
 //==========================================================
 #ifndef NRF_LOG_USES_TIMESTAMP
-#define NRF_LOG_USES_TIMESTAMP 0
+#define NRF_LOG_USES_TIMESTAMP 1
 #endif
 // <o> NRF_LOG_TIMESTAMP_DEFAULT_FREQUENCY - Default frequency of the timestamp (in Hz) or 0 to use app_timer frequency. 
 #ifndef NRF_LOG_TIMESTAMP_DEFAULT_FREQUENCY
-#define NRF_LOG_TIMESTAMP_DEFAULT_FREQUENCY 0
+#define NRF_LOG_TIMESTAMP_DEFAULT_FREQUENCY 1024  
 #endif
 
 // </e>
@@ -10576,7 +10576,7 @@
 // <4=> Debug 
 
 #ifndef PM_LOG_LEVEL
-#define PM_LOG_LEVEL 3
+#define PM_LOG_LEVEL 4
 #endif
 
 // <o> PM_LOG_INFO_COLOR  - ANSI escape code prefix.
@@ -11421,7 +11421,7 @@
 // <i> The time set aside for this connection on every connection interval in 1.25 ms units.
 
 #ifndef NRF_SDH_BLE_GAP_EVENT_LENGTH
-#define NRF_SDH_BLE_GAP_EVENT_LENGTH 6
+#define NRF_SDH_BLE_GAP_EVENT_LENGTH 20
 #endif
 
 // <o> NRF_SDH_BLE_GATT_MAX_MTU_SIZE - Static maximum MTU size. 
