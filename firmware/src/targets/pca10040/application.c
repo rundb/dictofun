@@ -73,6 +73,8 @@
 #include "spi_access.h"
 #include "drv_audio.h"
 
+#include "BleSystem.h"
+
 #define ADVERTISING_LED                 BSP_BOARD_LED_0                         /**< Is on when device is advertising. */
 #define CONNECTED_LED                   BSP_BOARD_LED_1                         /**< Is on when device has connected. */
 #define LEDBUTTON_LED                   BSP_BOARD_LED_2                         /**< LED to be toggled with the help of the LED Button Service. */
@@ -831,7 +833,7 @@ static void delete_bonds(void)
 
 /**@brief Function for application main entry.
  */
-int main(void)
+void application_init()
 {
     // Initialize.
     log_init();
@@ -839,24 +841,34 @@ int main(void)
     timers_init();
     power_management_init();
 
-    ble_stack_init();
-    gap_params_init();
-    gatt_init();
+    // ble_stack_init();
+    // gap_params_init();
+    // gatt_init();
 
-    services_init();
-    advertising_init();
-    conn_params_init();
+    // services_init();
+    // advertising_init();
+    // conn_params_init();
 
-    write_pointer = 0;
+    // write_pointer = 0;
 
-    ble_gap_addr_t ble_addr;
-    sd_ble_gap_addr_get(&ble_addr);
-    for (;;)
-    {
-        idle_state_handle();
-    }
-    // Shut the LDO down
+    // ble_gap_addr_t ble_addr;
+    // sd_ble_gap_addr_get(&ble_addr);
 }
+
+void application_cyclic()
+{
+    idle_state_handle();
+}
+
+// void run_application()
+// {
+//     application_init();
+//     for (;;)
+//     {
+//         idle_state_handle();
+//     }
+//     // Shut the LDO down
+// }
 
 
 /**
