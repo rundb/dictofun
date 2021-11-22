@@ -1,4 +1,5 @@
 (fp_lib_table
-  (lib (name nRF52832_qfaa)(type KiCad)(uri "$(KIPRJMOD)/nRF52832_qfaa.pretty")(options "")(descr ""))
-  (lib (name voice_recorder)(type KiCad)(uri ${KIPRJMOD}/voice_recorder.pretty)(options "")(descr ""))
+  (lib (name nRF52832_qfaa)(type KiCad)(uri "$(KIPRJMOD)/components/nRF52832_qfaa.pretty")(options "")(descr ""))
+  (lib (name voice_recorder)(type KiCad)(uri ${KIPRJMOD}/components/voice_recorder.pretty)(options "")(descr ""))
+  (lib (name _other)(type KiCad)(uri ${KIPRJMOD}/components/)(options "")(descr ""))
 )
