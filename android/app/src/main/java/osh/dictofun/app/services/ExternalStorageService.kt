@@ -71,7 +71,7 @@ class ExternalStorageService(context: Context) {
         if (remainingFilesize > 0) {
             addToFile(currentFilename!!, bytes)
             remainingFilesize -= bytes.size
-            Log.i("StorageService", "Remaining file size ${remainingFilesize}")
+            Log.d("StorageService", "Remaining file size ${remainingFilesize}")
         }
 
         if (remainingFilesize <= 0) {

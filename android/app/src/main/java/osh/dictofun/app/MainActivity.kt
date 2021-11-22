@@ -14,6 +14,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
+import android.view.View
 import android.widget.ListView
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.IntentSenderRequest
@@ -24,7 +25,6 @@ import androidx.core.app.ActivityCompat
 import androidx.core.location.LocationManagerCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.recyclerview.widget.RecyclerView
-import osh.dictofun.app.R
 import osh.dictofun.app.recordings.ExpandableRecordingAdapter
 import osh.dictofun.app.recordings.Recording
 import osh.dictofun.app.recordings.Transcription
@@ -32,6 +32,7 @@ import osh.dictofun.app.services.ExternalStorageService
 import osh.dictofun.app.services.FileTransferService
 import osh.dictofun.app.services.GoogleSpeechRecognitionService
 import osh.dictofun.app.services.ISpeechRecognitionService
+import java.lang.reflect.Method
 import java.nio.ByteBuffer
 import java.util.regex.Pattern
 import java.util.stream.Collectors.toList
@@ -39,9 +40,10 @@ import java.util.stream.Collectors.toList
 
 class MainActivity : AppCompatActivity() {
     private val REQUEST_CODE_BACKGROUND: Int = 1545
+    private val NEW_DEVICE_REGISTRATION_ACTIVITY_INTENT: Int = 1547
 
     private val RECOGNITION_ENABLED = true
-    private val RESET_ASSOTIATIONS_ON_STARTUP = true
+    private val RESET_ASSOTIATIONS_ON_STARTUP = false
 
     private val deviceManager: CompanionDeviceManager by lazy {
         getSystemService(Context.COMPANION_DEVICE_SERVICE) as CompanionDeviceManager
@@ -84,13 +86,13 @@ class MainActivity : AppCompatActivity() {
             val action = intent.action
             val mIntent = intent
 
-            Log.d("TAG", "Command: $action")
+            Log.d("bleStatusChange", "Command: $action")
             if (action == FileTransferService.ACTION_GATT_CONNECTED) {
-                Log.i("TAG", "UART_CONNECT_MSG")
+                Log.i("bleStatusChange", "File Transfer Service connected")
             }
 
             if (action == FileTransferService.ACTION_GATT_DISCONNECTED) {
-                Log.i("TAG", "UART_DISCONNECT_MSG")
+                Log.i("bleStatusChange", "File Transfer Service disconnected")
             }
 
             if (action == FileTransferService.ACTION_GATT_SERVICES_DISCOVERED) {
@@ -173,70 +175,114 @@ class MainActivity : AppCompatActivity() {
         recyclerView.adapter = expandableRecordingAdapter
     }
 
+    fun eraseBonds(view: View)
+    {
+        // TODO: ask the user to confirm that he wants to remove the bonds
+        val bluetoothAdapter: BluetoothAdapter? = BluetoothAdapter.getDefaultAdapter()
+        if (bluetoothAdapter == null)
+        {
+            Log.e("bonds", "Failed to access ble device")
+            return
+        }
+        for (device in bluetoothAdapter.bondedDevices)
+        {
+            Log.i("bond", "bonded: ${device.name}")
+            if (device.name.startsWith("dictofun"))
+            {
+                val m : Method = device.javaClass.getMethod("removeBond")
+                m.invoke(device)
+            }
+        }
+    }
+
     fun isPairedDeviceFound(): Boolean {
+        val bluetoothAdapter: BluetoothAdapter? = BluetoothAdapter.getDefaultAdapter()
+
+        if (bluetoothAdapter != null) {
+            for (device in bluetoothAdapter.bondedDevices)
+            {
+                Log.i("bond", "bonded: ${device.name}")
+                if (device.name.startsWith("dictofun"))
+                {
+                    return true;
+                }
+            }
+        }
+
         return false
     }
 
     fun startNewDeviceRegistration(){
         val intent = Intent(this, IntroductionActivity::class.java)
-        startActivity(intent)
+        startActivityForResult(intent, NEW_DEVICE_REGISTRATION_ACTIVITY_INTENT)
     }
 
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        if (requestCode == NEW_DEVICE_REGISTRATION_ACTIVITY_INTENT)
+        {
+            Log.i("main", "Continuing with the main interface")
+            runMainActivity()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        if (!isPairedDeviceFound())
-        {
+        if (!isPairedDeviceFound()) {
             startNewDeviceRegistration()
         }
         else {
+            runMainActivity()
+        }
+    }
 
-            externalStorageService = ExternalStorageService(this)
-            recognitionService = GoogleSpeechRecognitionService(this) as ISpeechRecognitionService
+    fun runMainActivity() {
+        externalStorageService = ExternalStorageService(this)
+        recognitionService = GoogleSpeechRecognitionService(this) as ISpeechRecognitionService
 
-            if (RESET_ASSOTIATIONS_ON_STARTUP) {
-                deviceManager.associations.forEach(deviceManager::disassociate)
+        if (RESET_ASSOTIATIONS_ON_STARTUP) {
+            deviceManager.associations.forEach(deviceManager::disassociate)
+        }
+
+        val bluetoothAdapter: BluetoothAdapter? = BluetoothAdapter.getDefaultAdapter()
+        if (bluetoothAdapter == null) {
+            // Device doesn't support Bluetooth
+        }
+
+        requestBackgroundPermission()
+
+        createRecordingAdapter()
+
+
+        if (deviceManager.associations.isNotEmpty()) {
+            if (bluetoothAdapter?.isEnabled == false) {
+                requestBluetoothEnabling(null)
             }
-
-            val bluetoothAdapter: BluetoothAdapter? = BluetoothAdapter.getDefaultAdapter()
-            if (bluetoothAdapter == null) {
-                // Device doesn't support Bluetooth
-            }
-
-            requestBackgroundPermission()
-
-            createRecordingAdapter()
-
-
-            if (deviceManager.associations.isNotEmpty()) {
-                if (bluetoothAdapter?.isEnabled == false) {
-                    requestBluetoothEnabling(null)
-                }
-                bindFileTransferService()
-            } else {
-                val chooseDeviceActivityResult =
-                    registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) {
-                        when (it.resultCode) {
-                            Activity.RESULT_OK -> {
-                                // The user chose to pair the app with a Bluetooth device.
-                                val scanResult: ScanResult? =
-                                    it.data?.getParcelableExtra(CompanionDeviceManager.EXTRA_DEVICE)
-                                val deviceToPair = scanResult?.device
-                                deviceToPair?.let { _ ->
-                                    bindFileTransferService()
-                                }
+            bindFileTransferService()
+        } else {
+            val chooseDeviceActivityResult =
+                registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) {
+                    when (it.resultCode) {
+                        Activity.RESULT_OK -> {
+                            // The user chose to pair the app with a Bluetooth device.
+                            val scanResult: ScanResult? =
+                                it.data?.getParcelableExtra(CompanionDeviceManager.EXTRA_DEVICE)
+                            val deviceToPair = scanResult?.device
+                            deviceToPair?.let { _ ->
+                                bindFileTransferService()
                             }
                         }
                     }
-
-                if (bluetoothAdapter?.isEnabled == false) {
-                    requestBluetoothEnabling(chooseDeviceActivityResult)
-                } else {
-                    // perform bluetooth scanning.
-                    requestBluetoothSelection(chooseDeviceActivityResult)
                 }
+
+            if (bluetoothAdapter?.isEnabled == false) {
+                requestBluetoothEnabling(chooseDeviceActivityResult)
+            } else {
+                // perform bluetooth scanning.
+                requestBluetoothSelection(chooseDeviceActivityResult)
             }
         }
     }
@@ -299,7 +345,7 @@ class MainActivity : AppCompatActivity() {
         // omit calls to setNamePattern() and addServiceUuid()
         // respectively, as shown in the following  Bluetooth example.
         val deviceFilter: BluetoothLeDeviceFilter = BluetoothLeDeviceFilter.Builder()
-            .setNamePattern(Pattern.compile("dictofun_*"))
+            .setNamePattern(Pattern.compile("dictofun*"))
             .build()
 
         // The argument provided in setSingleDevice() determines whether a single

@@ -143,7 +143,7 @@ class FileTransferService : Service() {
         // http://developer.bluetooth.org/gatt/characteristics/Pages/CharacteristicViewer.aspx?u=org.bluetooth.characteristic.heart_rate_measurement.xml
         if (TX_CHAR_UUID == characteristic.uuid) {
 
-            Log.i(TAG, "Received TX: ${characteristic.value.contentToString()}");
+            Log.d(TAG, "Received TX: ${characteristic.value.contentToString()}");
             intent.putExtra(EXTRA_DATA, characteristic.value)
         } else if (FILE_INFO_CHAR_UUID == characteristic.uuid) {
             intent.putExtra(EXTRA_DATA, characteristic.value)
@@ -315,7 +315,7 @@ class FileTransferService : Service() {
      * @return
      */
     fun enableTXNotification() {
-        Log.w(TAG, "enable TX notification.")
+        Log.i(TAG, "enable TX notification.")
         val fileTransferService = mBluetoothGatt!!.getService(FILE_TRANSFER_SERVICE_UUID)
         if (fileTransferService == null) {
             showMessage("Rx service not found!")

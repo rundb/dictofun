@@ -30,18 +30,19 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.DictoFun">
+
         <activity
-            android:name="osh.dictofun.app.DeviceConnectionActivity"
+            android:name=".DeviceConnectionActivity"
             android:exported="true" />
         <activity
-            android:name="osh.dictofun.app.IntroductionActivity"
+            android:name=".IntroductionActivity"
             android:exported="true">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="osh.dictofun.app.MainActivity" />
         </activity>
         <activity
-            android:name="osh.dictofun.app.MainActivity"
+            android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -51,7 +52,7 @@
         </activity>
 
         <service
-            android:name="osh.dictofun.app.services.FileTransferService"
+            android:name=".services.FileTransferService"
             android:enabled="true" />
     </application>
 
