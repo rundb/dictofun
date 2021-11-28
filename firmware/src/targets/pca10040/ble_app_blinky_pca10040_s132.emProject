@@ -90,6 +90,7 @@
       <file file_name="application.c" />
       <file file_name="main.cpp" />
       <file file_name="BleSystem.cpp" />
+      <file file_name="BleServices.cpp" />
       <file file_name="sdk_config.h" />
       <file file_name="../../lib/ble_fts/ble_file_transfer_service.c" />
       <file file_name="../../lib/spi_flash/spiflash.c" />

@@ -2,15 +2,19 @@
 #include <softdevice/common/nrf_sdh.h>
 #include <softdevice/common/nrf_sdh_ble.h>
 #include <ble/nrf_ble_qwr/nrf_ble_qwr.h>
+#include <ble/nrf_ble_gatt/nrf_ble_gatt.h>
 #include <ble/ble_services/ble_lbs/ble_lbs.h>
 #include <ble/common/ble_advdata.h>
+#include <ble/common/ble_conn_params.h>
 #include <libraries/util/app_error.h>
+#include "ble_file_transfer_service.h"
 #include <nrf_log.h>
 #include <stdint.h>
 
 // Legacy define. I haven't come up with a replacement for this part of nordic interfaces
 NRF_BLE_QWR_DEF(m_qwr);
 BLE_LBS_DEF(m_lbs);                                                             /**< LED Button Service instance. */
+BLE_FTS_DEF(m_fts, NRF_SDH_BLE_TOTAL_LINK_COUNT);
 
 #define APP_ADV_INTERVAL                1600                                      /**< The advertising interval (in units of 0.625 ms; this value corresponds to 40 ms). */
 #define APP_ADV_DURATION                BLE_GAP_ADV_TIMEOUT_GENERAL_UNLIMITED   /**< The advertising time-out (in units of seconds). When set to 0, we will never time out. */
@@ -34,6 +38,9 @@ static ble_gap_adv_data_t m_adv_data =
     }
 };
 
+static nrf_ble_gatt_t m_gatt;
+NRF_SDH_BLE_OBSERVER(m_gatt_obs, NRF_BLE_GATT_BLE_OBSERVER_PRIO, nrf_ble_gatt_on_ble_evt, &m_gatt);
+
 
 namespace ble
 {
@@ -46,10 +53,14 @@ static void advertising_init();
 
 void BleSystem::init()
 {
-    bleStackInit();
-    gapParamsInit();
+    initBleStack();
+    initGapParams();
+    initGatt();
     services_init();
     advertising_init();
+    initConnParameters();
+
+    startAdvertising();
 }
 
 void BleSystem::cyclic()
@@ -152,7 +163,7 @@ void BleSystem::bleEventHandler(ble_evt_t const * p_ble_evt, void * p_context)
     }
 }
 
-void BleSystem::bleStackInit()
+void BleSystem::initBleStack()
 {
     ret_code_t err_code;
 
@@ -173,7 +184,7 @@ void BleSystem::bleStackInit()
     NRF_SDH_BLE_OBSERVER(m_ble_observer, APP_BLE_OBSERVER_PRIO, ble_evt_handler, NULL);    
 }
 
-void BleSystem::gapParamsInit()
+void BleSystem::initGapParams()
 {
     ret_code_t              err_code;
     ble_gap_conn_params_t   gap_conn_params;
@@ -194,6 +205,49 @@ void BleSystem::gapParamsInit()
     gap_conn_params.conn_sup_timeout  = CONN_SUP_TIMEOUT;
 
     err_code = sd_ble_gap_ppcp_set(&gap_conn_params);
+    APP_ERROR_CHECK(err_code);
+}
+
+void BleSystem::initGatt()
+{
+    ret_code_t err_code = nrf_ble_gatt_init(&m_gatt, NULL);
+    APP_ERROR_CHECK(err_code);
+}
+
+static void on_conn_params_evt(ble_conn_params_evt_t * p_evt)
+{
+    ret_code_t err_code;
+
+    if (p_evt->evt_type == BLE_CONN_PARAMS_EVT_FAILED)
+    {
+        err_code = sd_ble_gap_disconnect(BleSystem::getInstance().getConnectionHandle(), 
+                                        BLE_HCI_CONN_INTERVAL_UNACCEPTABLE);
+        APP_ERROR_CHECK(err_code);
+    }
+}
+
+static void conn_params_error_handler(uint32_t nrf_error)
+{
+    APP_ERROR_HANDLER(nrf_error);
+}
+
+void BleSystem::initConnParameters()
+{
+    ret_code_t             err_code;
+    ble_conn_params_init_t cp_init;
+
+    memset(&cp_init, 0, sizeof(cp_init));
+
+    cp_init.p_conn_params                  = NULL;
+    cp_init.first_conn_params_update_delay = FIRST_CONN_PARAMS_UPDATE_DELAY;
+    cp_init.next_conn_params_update_delay  = NEXT_CONN_PARAMS_UPDATE_DELAY;
+    cp_init.max_conn_params_update_count   = MAX_CONN_PARAMS_UPDATE_COUNT;
+    cp_init.start_on_notify_cccd_handle    = BLE_GATT_HANDLE_INVALID;
+    cp_init.disconnect_on_fail             = false;
+    cp_init.evt_handler                    = on_conn_params_evt;
+    cp_init.error_handler                  = conn_params_error_handler;
+
+    err_code = ble_conn_params_init(&cp_init);
     APP_ERROR_CHECK(err_code);
 }
 
