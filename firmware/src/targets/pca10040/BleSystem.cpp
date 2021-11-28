@@ -10,10 +10,11 @@
 #include "ble_file_transfer_service.h"
 #include <nrf_log.h>
 #include <stdint.h>
+#include "BleServices.h"
 
 // Legacy define. I haven't come up with a replacement for this part of nordic interfaces
-NRF_BLE_QWR_DEF(m_qwr);
-BLE_LBS_DEF(m_lbs);                                                             /**< LED Button Service instance. */
+// NRF_BLE_QWR_DEF(m_qwr);
+//BLE_LBS_DEF(m_lbs);                                                             /**< LED Button Service instance. */
 BLE_FTS_DEF(m_fts, NRF_SDH_BLE_TOTAL_LINK_COUNT);
 
 #define APP_ADV_INTERVAL                1600                                      /**< The advertising interval (in units of 0.625 ms; this value corresponds to 40 ms). */
@@ -56,7 +57,8 @@ void BleSystem::init()
     initBleStack();
     initGapParams();
     initGatt();
-    services_init();
+    _bleServices.init();
+    _qwr_default_handle = _bleServices.getQwrHandle();
     advertising_init();
     initConnParameters();
 
@@ -92,7 +94,7 @@ void BleSystem::bleEventHandler(ble_evt_t const * p_ble_evt, void * p_context)
             // bsp_board_led_on(CONNECTED_LED);
             // bsp_board_led_off(ADVERTISING_LED);
             m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
-            err_code = nrf_ble_qwr_conn_handle_assign(&m_qwr, m_conn_handle);
+            err_code = nrf_ble_qwr_conn_handle_assign(_qwr_default_handle, m_conn_handle);
             APP_ERROR_CHECK(err_code);
             break;
 
@@ -256,39 +258,16 @@ static void nrf_qwr_error_handler(uint32_t nrf_error)
     APP_ERROR_HANDLER(nrf_error);
 }
 
-void services_init(void)
-{
-    ret_code_t         err_code;
-    ble_lbs_init_t     lbs_init = {0};
-    //ble_fts_init_t     fts_init = {0};
-    nrf_ble_qwr_init_t qwr_init = {0};
-
-    // Initialize Queued Write Module.
-    qwr_init.error_handler = nrf_qwr_error_handler;
-
-    err_code = nrf_ble_qwr_init(&m_qwr, &qwr_init);
-    APP_ERROR_CHECK(err_code);
-
-    // Initialize LBS.
-    // lbs_init.led_write_handler = led_write_handler;
-
-    err_code = ble_lbs_init(&m_lbs, &lbs_init);
-    APP_ERROR_CHECK(err_code);
-
-    // Initialize FTS.
-    // fts_init.data_handler = fts_data_handler;
-
-    // err_code = ble_fts_init(&m_fts, &fts_init);
-    // APP_ERROR_CHECK(err_code);
-}
-
 void advertising_init(void)
 {
     ret_code_t    err_code;
     ble_advdata_t advdata;
     ble_advdata_t srdata;
 
-    ble_uuid_t adv_uuids[] = {{LBS_UUID_SERVICE, m_lbs.uuid_type}};
+    static const size_t MAX_UUIDS_COUNT = 3U;
+    ble_uuid_t adv_uuids[MAX_UUIDS_COUNT];
+    const auto uuids_count = BleSystem::getInstance().getServices().setAdvUuids(adv_uuids, MAX_UUIDS_COUNT);
+    
 
     // Build and set advertising data.
     memset(&advdata, 0, sizeof(advdata));
@@ -297,9 +276,8 @@ void advertising_init(void)
     advdata.include_appearance = true;
     advdata.flags              = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
 
-
     memset(&srdata, 0, sizeof(srdata));
-    srdata.uuids_complete.uuid_cnt = sizeof(adv_uuids) / sizeof(adv_uuids[0]);
+    srdata.uuids_complete.uuid_cnt = uuids_count;
     srdata.uuids_complete.p_uuids  = adv_uuids;
 
     err_code = ble_advdata_encode(&advdata, m_adv_data.adv_data.p_data, &m_adv_data.adv_data.len);

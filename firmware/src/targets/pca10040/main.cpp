@@ -13,13 +13,11 @@ ble::BleSystem bleSystem{};
 int main()
 {
     log_init();
-    application_init();
     bsp_board_init(BSP_INIT_LEDS);
     timers_init();
     bleSystem.init();
     for (;;)
     {
-        application_cyclic();
         bleSystem.cyclic();
         idle_state_handle();
     }
