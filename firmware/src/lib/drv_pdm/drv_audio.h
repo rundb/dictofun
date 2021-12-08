@@ -43,6 +43,9 @@ typedef struct
 
 typedef void (*audio_frame_cb_t)(drv_audio_frame_t*);
 
+#ifdef __cplusplus
+extern "C" {
+#endif  //#ifdef __cplusplus
 /**@brief Enable audio transmission.
  *
  * @return
@@ -69,6 +72,10 @@ uint32_t drv_audio_transmission_disable(void);
 uint32_t drv_audio_init(audio_frame_cb_t frame_cb);
 
 void drv_audio_wav_header_apply(uint8_t* data, size_t wav_sz);
+
+#ifdef __cplusplus
+}
+#endif //#ifdef __cplusplus
 
 #endif /* __DRV_AUDIO_H__ */
 /** @} */

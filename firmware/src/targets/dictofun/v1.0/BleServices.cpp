@@ -2,7 +2,7 @@
 
 #include <ble_services/ble_lbs/ble_lbs.h>
 #include <ble/nrf_ble_qwr/nrf_ble_qwr.h>
-#include <ble_fts/ble_file_transfer_service.h>
+#include <ble_file_transfer_service.h>
 #include <boards/boards.h>
 #include <nrf_log.h>
 

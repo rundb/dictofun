@@ -46,7 +46,7 @@ NRF_SDH_BLE_OBSERVER(m_gatt_obs, NRF_BLE_GATT_BLE_OBSERVER_PRIO, nrf_ble_gatt_on
 namespace ble
 {
 
-BleSystem * BleSystem::_instance;
+BleSystem * BleSystem::_instance{nullptr};
 const char BleSystem::DEVICE_NAME[] = "dictofun_v1.0";
 
 static void services_init();

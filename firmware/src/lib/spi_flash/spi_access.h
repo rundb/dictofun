@@ -4,6 +4,10 @@
 #include <stdint.h>
 #include "spiflash.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif  //#ifdef __cplusplus
+
 void spi_access_init();
 
 void spi_access_txrx(uint8_t * tx_data, uint8_t * rx_data, uint32_t size);
@@ -25,6 +29,10 @@ void spi_flash_write_enable(int new_state);
 int spi_flash_is_busy();
 void spi_flash_copy_received_data(uint8_t * dst, uint32_t len);
 int spi_flash_is_spi_bus_busy();
+
+#ifdef __cplusplus
+}
+#endif //#ifdef __cplusplus
 
 
 #endif //_SPI_ACCESS_H_

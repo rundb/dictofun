@@ -3,6 +3,11 @@
 #include <libraries/log/nrf_log_ctrl.h>
 #include <libraries/log/nrf_log.h>
 #include <libraries/log/nrf_log_default_backends.h>
+#include <spi_access.h>
+#include <nrf_gpio.h>
+
+#include <tasks/task_audio.h>
+#include <tasks/task_state.h>
 
 static void log_init();
 static void idle_state_handle();
@@ -12,13 +17,21 @@ ble::BleSystem bleSystem{};
 
 int main()
 {
+    nrf_gpio_cfg_output(LDO_EN_PIN);
+    nrf_gpio_cfg_input(BUTTON_PIN, NRF_GPIO_PIN_PULLUP);
+    nrf_gpio_pin_set(LDO_EN_PIN);
+
     log_init();
     bsp_board_init(BSP_INIT_LEDS);
     timers_init();
     bleSystem.init();
+    audio_init();
     for (;;)
     {
         bleSystem.cyclic();
+        audio_frame_handle();
+        spi_flash_cyclic();
+        application::application_cyclic();
         idle_state_handle();
     }
 }

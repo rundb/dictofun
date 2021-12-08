@@ -114,10 +114,8 @@ enum APP_SM_STATES
   APP_SM_RECORDING,
   APP_SM_CONN,
   APP_SM_XFER,
-
   APP_SM_FINALISE = 50,
   APP_SM_SHUTDOWN,
-
 };
 
 #define SPI_XFER_DATA_STEP 0x100
@@ -694,6 +692,7 @@ static void audio_frame_handle()
     pending_frame = NULL;
   }
 }
+
 static void audio_frame_cb(drv_audio_frame_t * frame)
 {
   NRFX_ASSERT(NULL == pending_frame);
