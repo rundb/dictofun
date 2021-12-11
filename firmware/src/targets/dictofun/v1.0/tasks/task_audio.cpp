@@ -12,6 +12,18 @@ void audio_init()
     drv_audio_init(audio_frame_cb);   
 }
 
+void audio_start_record()
+{
+    drv_audio_transmission_enable();
+}
+
+// TODO: replace with setting a flag that stops the recording in 
+//       the interrupt. Thus we can assure that last chunk is saved.
+void audio_stop_record()
+{
+    drv_audio_transmission_disable();
+}
+
 void audio_frame_handle()
 {
   if(pending_frame) 

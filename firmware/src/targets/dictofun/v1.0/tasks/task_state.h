@@ -10,6 +10,7 @@ namespace application
 enum AppSmState
 {
   APP_SM_STARTUP = 0,
+  APP_SM_PREPARE = 1,
   APP_SM_REC_INIT = 10,
   APP_SM_RECORDING,
   APP_SM_CONN,

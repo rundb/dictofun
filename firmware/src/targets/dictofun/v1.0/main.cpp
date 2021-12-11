@@ -18,14 +18,16 @@ ble::BleSystem bleSystem{};
 int main()
 {
     nrf_gpio_cfg_output(LDO_EN_PIN);
-    nrf_gpio_cfg_input(BUTTON_PIN, NRF_GPIO_PIN_PULLUP);
+    nrf_gpio_cfg_input(BUTTON_PIN, NRF_GPIO_PIN_PULLDOWN);
     nrf_gpio_pin_set(LDO_EN_PIN);
 
     log_init();
     bsp_board_init(BSP_INIT_LEDS);
     timers_init();
+    spi_access_init();
     bleSystem.init();
     audio_init();
+    
     for (;;)
     {
         bleSystem.cyclic();
