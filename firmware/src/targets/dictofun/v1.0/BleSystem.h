@@ -29,10 +29,11 @@ public:
     }
 
     void init();
+    void start();
     void cyclic();
 
-
     static inline BleSystem& getInstance() {return *_instance; }
+    bool isActive() { return _isActive;}
     inline BleServices& getServices() { return _bleServices; }
 
     void bleEventHandler(ble_evt_t const * p_ble_evt, void * p_context);
@@ -49,6 +50,8 @@ private:
     void initGapParams();
     void initGatt();
     void initConnParameters();
+
+    bool _isActive{false};
 
     uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;
     //uint8_t m_adv_handle = BLE_GAP_ADV_SET_HANDLE_NOT_SET;

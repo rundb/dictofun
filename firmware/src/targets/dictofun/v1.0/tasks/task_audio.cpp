@@ -47,3 +47,9 @@ void audio_frame_cb(drv_audio_frame_t * frame)
   NRFX_ASSERT(NULL == pending_frame);
   pending_frame = frame;
 }
+
+// In fact, 2x of size is returned - as we write only half of the available memory
+size_t audio_get_record_size()
+{
+    return write_pointer;
+}

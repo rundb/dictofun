@@ -3,10 +3,13 @@
 #include <nrf_log.h>
 #include "tasks/task_memory.h"
 #include "tasks/task_audio.h"
+#include "BleSystem.h"
 
 namespace application
 {
 AppSmState _applicationState{APP_SM_STARTUP};
+static bool is_finalize_triggered{false};
+
 
 AppSmState getApplicationState()
 {
@@ -37,7 +40,7 @@ void application_cyclic()
                 if (rc != 0)
                 {
                     NRF_LOG_ERROR("Erase failed. Finalizing.");
-                    _applicationState = APP_SM_FINALISE;
+                    _applicationState = APP_SM_FINALIZE;
                 }
                 else
                 {
@@ -68,17 +71,48 @@ void application_cyclic()
             if (!isRecordButtonPressed())
             {
                 audio_stop_record();
-                _applicationState = APP_SM_FINALISE;
+                _applicationState = APP_SM_CONN;
+                const auto record_size = audio_get_record_size();
+                NRF_LOG_INFO("Recorded %d bytes", record_size);
             }
             break;
         }
         case APP_SM_CONN:
-        case APP_SM_XFER:
-        case APP_SM_FINALISE:
         {
-            // trigger flash memory erase
+            if (!ble::BleSystem::getInstance().isActive())
+            {
+                ble::BleSystem::getInstance().start();
+            }
+            if (ble::BleSystem::getInstance().getConnectionHandle() != BLE_CONN_HANDLE_INVALID)
+            {
+                _applicationState = APP_SM_XFER;
+            }
+            break;
+        }
+        case APP_SM_XFER:
+        {
+            if (ble::BleSystem::getInstance().getServices().isFileTransmissionComplete())
+            {
+                _applicationState = APP_SM_FINALIZE;
+            }
+            break;
+        }
+        case APP_SM_FINALIZE:
+        {
+            if (!is_finalize_triggered)
+            {
+                is_finalize_triggered = true;
+                NRF_LOG_INFO("Finalizing operation: erasing memory");
+                // trigger flash memory erase
+                int rc = spi_flash_erase_area(0x00, 0xB0000);
+                if (rc != 0)
+                {
+                    NRF_LOG_ERROR("Erase failed.");
+                    _applicationState = APP_SM_FINALIZE;
+                }
+            }
             --shutdown_counter;
-            if (shutdown_counter == 0)
+            if (shutdown_counter == 0 && (!spi_flash_is_busy()))
             {
                 _applicationState = APP_SM_SHUTDOWN;
             }

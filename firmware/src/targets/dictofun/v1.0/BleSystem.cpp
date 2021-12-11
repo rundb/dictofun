@@ -61,13 +61,17 @@ void BleSystem::init()
     _qwr_default_handle = _bleServices.getQwrHandle();
     advertising_init();
     initConnParameters();
+}
 
+void BleSystem::start()
+{
+    _isActive = true;
     startAdvertising();
 }
 
 void BleSystem::cyclic()
 {
-
+    _bleServices.cyclic();
 }
 
 void BleSystem::startAdvertising()
