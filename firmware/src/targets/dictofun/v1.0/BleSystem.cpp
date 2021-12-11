@@ -6,6 +6,7 @@
 #include <ble/ble_services/ble_lbs/ble_lbs.h>
 #include <ble/common/ble_advdata.h>
 #include <ble/common/ble_conn_params.h>
+#include <ble/peer_manager/peer_manager_handler.h>
 #include <libraries/util/app_error.h>
 #include "ble_file_transfer_service.h"
 #include <nrf_log.h>
@@ -217,6 +218,79 @@ void BleSystem::initGapParams()
 void BleSystem::initGatt()
 {
     ret_code_t err_code = nrf_ble_gatt_init(&m_gatt, NULL);
+    APP_ERROR_CHECK(err_code);
+}
+
+void BleSystem::bonded_client_add(pm_evt_t const * p_evt)
+{
+    uint16_t   conn_handle = p_evt->conn_handle;
+    uint16_t   peer_id     = p_evt->peer_id;
+}
+
+void BleSystem::on_bonded_peer_reconnection_lvl_notify(pm_evt_t const * p_evt)
+{
+    ret_code_t        err_code;
+    static uint16_t   peer_id   = PM_PEER_ID_INVALID;
+
+    peer_id = p_evt->peer_id;
+}
+
+void BleSystem::pm_evt_handler(pm_evt_t const * p_evt)
+{
+    pm_handler_on_pm_evt(p_evt);
+    pm_handler_disconnect_on_sec_failure(p_evt);
+    pm_handler_flash_clean(p_evt);
+
+    switch (p_evt->evt_id)
+    {
+        case PM_EVT_BONDED_PEER_CONNECTED:
+            bonded_client_add(p_evt);
+            on_bonded_peer_reconnection_lvl_notify(p_evt);
+            break;
+
+        case PM_EVT_CONN_SEC_SUCCEEDED:
+            bonded_client_add(p_evt);
+            break;
+
+        case PM_EVT_PEERS_DELETE_SUCCEEDED:
+            bonded_client_remove_all();
+
+            // Bonds are deleted. Start scanning.
+            break;
+
+        default:
+            break;
+    }
+}
+
+void BleSystem::initBonding()
+{
+    ble_gap_sec_params_t sec_param;
+    ret_code_t           err_code;
+
+    err_code = pm_init();
+    APP_ERROR_CHECK(err_code);
+
+    memset(&sec_param, 0, sizeof(ble_gap_sec_params_t));
+
+    // Security parameters to be used for all security procedures.
+    sec_param.bond           = SEC_PARAM_BOND;
+    sec_param.mitm           = SEC_PARAM_MITM;
+    sec_param.lesc           = SEC_PARAM_LESC;
+    sec_param.keypress       = SEC_PARAM_KEYPRESS;
+    sec_param.io_caps        = SEC_PARAM_IO_CAPABILITIES;
+    sec_param.oob            = SEC_PARAM_OOB;
+    sec_param.min_key_size   = SEC_PARAM_MIN_KEY_SIZE;
+    sec_param.max_key_size   = SEC_PARAM_MAX_KEY_SIZE;
+    sec_param.kdist_own.enc  = 1;
+    sec_param.kdist_own.id   = 1;
+    sec_param.kdist_peer.enc = 1;
+    sec_param.kdist_peer.id  = 1;
+
+    err_code = pm_sec_params_set(&sec_param);
+    APP_ERROR_CHECK(err_code);
+
+    err_code = pm_register(pm_evt_handler);
     APP_ERROR_CHECK(err_code);
 }
 

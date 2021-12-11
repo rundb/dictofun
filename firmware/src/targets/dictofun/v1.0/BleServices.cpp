@@ -180,7 +180,7 @@ void BleServices::cyclic()
             NRF_LOG_INFO("Sending file info, size %d (%X)", _file_size, _file_size);
 
             ble_fts_file_info_t file_info;
-            file_info.file_size_bytes = _file_size;
+            file_info.file_size_bytes = _file_size / 2;
 
             ble_fts_file_info_send(&m_fts, &file_info);
             _ble_cmd = CMD_EMPTY;

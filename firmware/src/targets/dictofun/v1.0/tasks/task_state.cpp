@@ -82,6 +82,8 @@ void application_cyclic()
             if (!ble::BleSystem::getInstance().isActive())
             {
                 ble::BleSystem::getInstance().start();
+                const auto record_size = audio_get_record_size();
+                ble::BleSystem::getInstance().getServices().setFileSizeForTransfer(record_size);
             }
             if (ble::BleSystem::getInstance().getConnectionHandle() != BLE_CONN_HANDLE_INVALID)
             {
