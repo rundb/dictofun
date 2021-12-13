@@ -22,4 +22,16 @@
 #define LDO_EN_PIN 11
 #define BUTTON_PIN 25
 
+#define BOARD_NAME "dictofun_v1.0"
+
+#define SPI_FLASH_RST_PIN  10
+#define SPI_FLASH_WP_PIN   5
+#define SPI_FLASH_CS_PIN   7
+#define SPI_FLASH_SCK_PIN  9
+#define SPI_FLASH_MOSI_PIN 8
+#define SPI_FLASH_MISO_PIN 6
+
+#define CONFIG_IO_PDM_CLK           18
+#define CONFIG_IO_PDM_DATA          3
+
 #endif //_DICTOFUN_1_0_H_

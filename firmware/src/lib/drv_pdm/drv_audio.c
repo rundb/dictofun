@@ -12,14 +12,12 @@
 #include "nrf_log.h"
 
 #include "nrf_drv_pdm.h"
+#include "boards/boards.h"
 
 
 //#define DBG_RADIO_STATUS			31
 #define DBG_PDM_HANDLER_PIN			17
 //#define DBG_PDM_AUDIO_BUFFER			27
-
-#define CONFIG_IO_PDM_CLK			18
-#define CONFIG_IO_PDM_DATA			0x03
 
 #define CONFIG_AUDIO_PDM_GAIN 			0x38
 
