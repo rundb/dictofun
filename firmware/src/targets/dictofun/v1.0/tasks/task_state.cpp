@@ -3,6 +3,7 @@
 #include <nrf_log.h>
 #include "tasks/task_memory.h"
 #include "tasks/task_audio.h"
+#include "tasks/task_led.h"
 #include "BleSystem.h"
 
 namespace application
@@ -30,6 +31,7 @@ void application_cyclic()
         case APP_SM_STARTUP:
         {
             _applicationState = APP_SM_REC_INIT;
+            led::task_led_set_indication_state(led::PREPARING);
             nrf_gpio_pin_set(LDO_EN_PIN);
 
             const auto erased = memory::isMemoryErased();
@@ -52,6 +54,7 @@ void application_cyclic()
         }
         case APP_SM_PREPARE:
         {
+            led::task_led_set_indication_state(led::PREPARING);
             // Wait until SPI Flash memory erase is done
             if (!spi_flash_is_busy())
             {
@@ -61,6 +64,7 @@ void application_cyclic()
         }
         case APP_SM_REC_INIT:
         {
+            led::task_led_set_indication_state(led::RECORDING);
             _applicationState = APP_SM_RECORDING;
             audio_start_record();
             break;
@@ -79,6 +83,7 @@ void application_cyclic()
         }
         case APP_SM_CONN:
         {
+            led::task_led_set_indication_state(led::CONNECTING);
             if (!ble::BleSystem::getInstance().isActive())
             {
                 ble::BleSystem::getInstance().start();
@@ -93,6 +98,7 @@ void application_cyclic()
         }
         case APP_SM_XFER:
         {
+            led::task_led_set_indication_state(led::SENDING);
             if (ble::BleSystem::getInstance().getServices().isFileTransmissionComplete())
             {
                 _applicationState = APP_SM_FINALIZE;
@@ -101,6 +107,7 @@ void application_cyclic()
         }
         case APP_SM_FINALIZE:
         {
+            led::task_led_set_indication_state(led::SHUTTING_DOWN);
             if (!is_finalize_triggered)
             {
                 is_finalize_triggered = true;

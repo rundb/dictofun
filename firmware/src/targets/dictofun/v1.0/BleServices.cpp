@@ -167,7 +167,7 @@ void BleServices::cyclic()
             
             if(_read_pointer == 0)
             {
-              drv_audio_wav_header_apply(buffer, _file_size);
+              drv_audio_wav_header_apply(buffer, _file_size / 2);
             }
 
             send_data(buffer, sizeof(buffer));

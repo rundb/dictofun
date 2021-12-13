@@ -137,6 +137,7 @@
       <file file_name="./tasks/task_audio.cpp" />
       <file file_name="./tasks/task_state.cpp" />
       <file file_name="./tasks/task_memory.cpp" />
+      <file file_name="./tasks/task_led.cpp" />
     </folder>
     <folder Name="Lib">
       <file file_name="../../../lib/spi_flash/spiflash.c" />

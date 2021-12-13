@@ -8,6 +8,7 @@
 
 #include <tasks/task_audio.h>
 #include <tasks/task_state.h>
+#include <tasks/task_led.h>
 
 static void log_init();
 static void idle_state_handle();
@@ -27,6 +28,8 @@ int main()
     spi_access_init();
     bleSystem.init();
     audio_init();
+
+    led::task_led_init();
     
     for (;;)
     {
@@ -34,6 +37,7 @@ int main()
         audio_frame_handle();
         spi_flash_cyclic();
         application::application_cyclic();
+        led::task_led_cyclic();
         idle_state_handle();
     }
 }
