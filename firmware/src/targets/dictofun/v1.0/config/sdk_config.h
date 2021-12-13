@@ -3,11 +3,6 @@
 #ifdef USE_APP_CONFIG
 #include "app_config.h"
 #endif
-// <h> nRF_BLE 
-
-//==========================================================
-// <q> BLE_ADVERTISING_ENABLED  - ble_advertising - Advertising module
- 
 
 #ifndef BLE_ADVERTISING_ENABLED
 #define BLE_ADVERTISING_ENABLED 0
