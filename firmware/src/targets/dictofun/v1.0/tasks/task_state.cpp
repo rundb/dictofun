@@ -25,7 +25,7 @@ bool isRecordButtonPressed()
 }
 
 static volatile int shutdown_counter = 100000;
-static const uint32_t MAX_OPERATION_DURATION = 10000;
+static const uint32_t MAX_OPERATION_DURATION = 5000;
 void application_cyclic()
 {
     const auto timestamp = app_timer_cnt_get();
@@ -77,7 +77,7 @@ void application_cyclic()
         {
             // if button is released - go further. Timestamp - for the case of 
             // inactive button detection
-            if (!isRecordButtonPressed() /*|| (timestamp >= MAX_OPERATION_DURATION)*/)
+            if (!isRecordButtonPressed() || (timestamp >= MAX_OPERATION_DURATION))
             {
                 audio_stop_record();
                 _applicationState = APP_SM_CONN;
