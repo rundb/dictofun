@@ -2,12 +2,13 @@
 #include <stdint.h>
 #include <nrf_gpio.h>
 #include <libraries/timer/app_timer.h>
+#include "boards/boards.h"
 
 namespace led
 {
-static const uint16_t RED_LED_PIN = 15;
-static const uint16_t BLUE_LED_PIN = 13;
-static const uint16_t GREEN_LED_PIN = 14;
+static const uint16_t RED_LED_PIN = LED_3;
+static const uint16_t BLUE_LED_PIN = LED_1;
+static const uint16_t GREEN_LED_PIN = LED_2;
 
 LedState colors[COLORS_COUNT] {OFF, OFF, OFF};
 

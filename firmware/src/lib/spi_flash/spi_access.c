@@ -6,6 +6,8 @@
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 
+#include "boards/boards.h"
+
 static volatile spi_xfer_complete = true;
 static const nrf_drv_spi_t spi_instance = NRF_DRV_SPI_INSTANCE(0);
 uint8_t tmp_rx_buf[256];
@@ -22,25 +24,14 @@ void spi_flash_cyclic()
     
 }
 
-// Using SPIM0.
-// DO - 0.06 (MISO)
-// DI - 0.08 (MOSI)
-// CS - 0.07 (GPIO mode)
-// CLK- 0.09
-// /WP- 0.05 (fix the state)
-///RST- 0.10 (fix the state)
-const uint16_t SPI_FLASH_RST_PIN = NRF_GPIO_PIN_MAP(0, 10);
-const uint16_t SPI_FLASH_WP_PIN = NRF_GPIO_PIN_MAP(0, 5);
-const uint16_t SPI_FLASH_CS_PIN = NRF_GPIO_PIN_MAP(0, 7);
-
 void spi_access_init()
 {
     nrf_drv_spi_config_t const spi_config =
     {
-        .sck_pin        = 9,
-        .mosi_pin       = 8,
-        .miso_pin       = 6,
-        .ss_pin         = 7,
+        .sck_pin        = SPI_FLASH_SCK_PIN,
+        .mosi_pin       = SPI_FLASH_MOSI_PIN,
+        .miso_pin       = SPI_FLASH_MISO_PIN,
+        .ss_pin         = SPI_FLASH_CS_PIN,
         .irq_priority   = 3,
         .orc            = 0x00,
         .frequency      = NRF_DRV_SPI_FREQ_1M,

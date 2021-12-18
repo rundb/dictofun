@@ -12,6 +12,7 @@
 #include <nrf_log.h>
 #include <stdint.h>
 #include "BleServices.h"
+#include <boards/boards.h>
 
 // Legacy define. I haven't come up with a replacement for this part of nordic interfaces
 // NRF_BLE_QWR_DEF(m_qwr);
@@ -48,7 +49,7 @@ namespace ble
 {
 
 BleSystem * BleSystem::_instance{nullptr};
-const char BleSystem::DEVICE_NAME[] = "dictofun_v1.0";
+const char BleSystem::DEVICE_NAME[] = BOARD_NAME;
 
 static void services_init();
 static void advertising_init();

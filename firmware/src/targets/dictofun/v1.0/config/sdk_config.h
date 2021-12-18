@@ -3,11 +3,14 @@
 #ifdef USE_APP_CONFIG
 #include "app_config.h"
 #endif
-// <h> nRF_BLE 
 
-//==========================================================
-// <q> BLE_ADVERTISING_ENABLED  - ble_advertising - Advertising module
- 
+#ifdef BOARD_DICTOFUN_1_0
+#define LOG_UART_PIN 16
+#endif //BOARD_DICTOFUN_1_0
+
+#ifdef BOARD_DICTOFUN_1_1
+#define LOG_UART_PIN  11
+#endif //BOARD_DICTOFUN_1_1
 
 #ifndef BLE_ADVERTISING_ENABLED
 #define BLE_ADVERTISING_ENABLED 0
@@ -7647,7 +7650,7 @@
 #endif
 // <o> NRF_LOG_BACKEND_UART_TX_PIN - UART TX pin 
 #ifndef NRF_LOG_BACKEND_UART_TX_PIN
-#define NRF_LOG_BACKEND_UART_TX_PIN 16
+#define NRF_LOG_BACKEND_UART_TX_PIN LOG_UART_PIN
 #endif
 
 // <o> NRF_LOG_BACKEND_UART_BAUDRATE  - Default Baudrate

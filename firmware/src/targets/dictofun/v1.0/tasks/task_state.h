@@ -1,8 +1,7 @@
 #ifndef _TASK_STATE_H_
 #define _TASK_STATE_H_
 
-#define LDO_EN_PIN  11
-#define BUTTON_PIN  25  
+#include "boards/boards.h"
 
 namespace application
 {
