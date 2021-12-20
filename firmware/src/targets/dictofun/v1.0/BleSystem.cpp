@@ -61,6 +61,7 @@ void BleSystem::init()
     initGatt();
     _bleServices.init();
     _qwr_default_handle = _bleServices.getQwrHandle();
+    initBonding();
     advertising_init();
     initConnParameters();
 }
@@ -226,6 +227,11 @@ void BleSystem::bonded_client_add(pm_evt_t const * p_evt)
 {
     uint16_t   conn_handle = p_evt->conn_handle;
     uint16_t   peer_id     = p_evt->peer_id;
+}
+
+void BleSystem::bonded_client_remove_all()
+{
+    // TODO: implement
 }
 
 void BleSystem::on_bonded_peer_reconnection_lvl_notify(pm_evt_t const * p_evt)
