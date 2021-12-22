@@ -42,7 +42,7 @@ class MainActivity : AppCompatActivity() {
     private val REQUEST_CODE_BACKGROUND: Int = 1545
     private val NEW_DEVICE_REGISTRATION_ACTIVITY_INTENT: Int = 1547
 
-    private val RECOGNITION_ENABLED = true
+    private val RECOGNITION_ENABLED = false
     private val RESET_ASSOTIATIONS_ON_STARTUP = false
 
     private val deviceManager: CompanionDeviceManager by lazy {
@@ -73,7 +73,20 @@ class MainActivity : AppCompatActivity() {
             }
 
             // Automatically connects to the device upon successful start-up initialization.
-            fileTransferService!!.connect(deviceManager.associations[0])
+            val bluetoothAdapter: BluetoothAdapter? = BluetoothAdapter.getDefaultAdapter()
+            if (bluetoothAdapter == null)
+            {
+                Log.e("bonds", "Failed to access ble device")
+                return
+            }
+            for (device in bluetoothAdapter.bondedDevices)
+            {
+                if (device.name.startsWith("dictofun"))
+                {
+                    Log.i("Main", "Connecting to bonded device with address ${device.address}")
+                    fileTransferService!!.connect(device.address)
+                }
+            }
         }
 
         override fun onServiceDisconnected(componentName: ComponentName) {
@@ -201,7 +214,7 @@ class MainActivity : AppCompatActivity() {
         if (bluetoothAdapter != null) {
             for (device in bluetoothAdapter.bondedDevices)
             {
-                Log.i("bond", "bonded: ${device.name}")
+                Log.i("bond", "bonded: ${device.name}, address: ${device.address}")
                 if (device.name.startsWith("dictofun"))
                 {
                     return true;
@@ -231,6 +244,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        Log.i("MainActivity", "onCreate()")
         if (!isPairedDeviceFound()) {
             startNewDeviceRegistration()
         }
@@ -256,13 +270,14 @@ class MainActivity : AppCompatActivity() {
 
         createRecordingAdapter()
 
-
         if (deviceManager.associations.isNotEmpty()) {
             if (bluetoothAdapter?.isEnabled == false) {
                 requestBluetoothEnabling(null)
             }
+            Log.i("MainActivity", "bindFTS without prompting to pair")
             bindFileTransferService()
         } else {
+            Log.i("MainActivity", "bindFTS with pairing")
             val chooseDeviceActivityResult =
                 registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) {
                     when (it.resultCode) {

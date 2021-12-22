@@ -220,6 +220,7 @@ class FileTransferService : Service() {
                 false
             }
         }
+        Log.d(TAG, "Address: ${address}")
         val device = mBluetoothAdapter!!.getRemoteDevice(address)
         if (device == null) {
             Log.w(TAG, "Device not found.  Unable to connect.")
@@ -379,7 +380,7 @@ class FileTransferService : Service() {
         get() = if (mBluetoothGatt == null) null else mBluetoothGatt!!.services
 
     companion object {
-        private const val TAG = "lbs_tag_service" //ImageTransferService.class.getSimpleName();
+        private const val TAG = "fts_service"
         private const val STATE_DISCONNECTED = 0
         private const val STATE_CONNECTING = 1
         private const val STATE_CONNECTED = 2
