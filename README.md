@@ -18,3 +18,7 @@ Schematics for device is located here: `out/v1.0(20.08.2021)/schematic/nRF52832_
 
 Project software consists of 2 large parts: embedded firmware for NRF52832 chip and Android phone software.
 
+## Build firmware
+
+Before building the firmware, SDK should be downloaded. To do that, go to `firmware/sdk` folder and execute script
+`download_nordic_sdk.sh`. This command downloads and extracts the SDK files into the folder locally.
