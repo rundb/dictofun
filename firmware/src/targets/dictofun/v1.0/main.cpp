@@ -96,7 +96,6 @@ NRF_LOG_INSTANCE_REGISTER(APP_TIMER_LOG_NAME, timestamp_timer,
                                         APP_TIMER_CONFIG_LOG_LEVEL : NRF_LOG_SEVERITY_NONE);
 
 static app_timer_t timestamp_timer_data = {
-        .active = false,
         NRF_LOG_INSTANCE_PTR_INIT(p_log, APP_TIMER_LOG_NAME, timer_id)
 };
 static app_timer_id_t timestamp_timer;// = &timestamp_timer_data;

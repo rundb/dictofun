@@ -28,8 +28,6 @@ void spi_access_txrx(uint8_t * tx_data, uint8_t * rx_data, uint32_t size);
 
 void spi_flash_cyclic();
 
-extern spiflash_hal_t spi_flash_hal;
-
 void spi_flash_reset();
 int spi_flash_is_present();
 int spi_flash_get_sr_1();
