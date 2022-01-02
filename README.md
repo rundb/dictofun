@@ -2,7 +2,7 @@
 
 Small wearable NRF52-based voice recorder. NRF52832-based.
 
-![alt text] (https://github.com/rundb/dictofun/blob/master/pcb/out/v1.1/dictofun_1.1_top.PNG)
+![DictoFun](https://github.com/rundb/dictofun/blob/master/pcb/out/v1.1/dictofun_1.1_top.PNG?raw=true)
 
 ## Concept
 
