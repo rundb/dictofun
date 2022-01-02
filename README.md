@@ -1,24 +1,35 @@
 # DictoFun
 
-Small wearable voice recorder. NRF52832-based.
+Small wearable NRF52-based voice recorder. NRF52832-based.
+
+![alt text] (https://github.com/rundb/dictofun/blob/master/pcb/out/v1.1/dictofun_1.1_top.PNG)
 
 ## Concept
 
 Device was initiated after my frustration while using voice recorder for storing ideas. It was taking up to 7 seconds from taking the voice recorder of the pocket to start recording the data. 
 
-Idea: develop a small wearable device with just one button. When button is pressed, the device immediately starts recording the audio data. After the button is released, the record is then in the background synchronized with the phone.
+Idea behind the device: press and hold the big button on the device and start speaking. The device should start recording _immediately_ (== under human reaction time, <=0.4 sec>), without the need for any other presses or for looking at the screen. When you're done - release the button. This should end the record. 
 
-The wearable device'es duty is done at this point. Phone's task is to save the record, apply voice recognition service and synchronize this data with `your favorite note keeper`
+After finishing the record device should transfer the record to the phone. The record is then transferred to the voice recognition service. The recognized text should then be sent to the note keeper of your choice.
+
+## Project structure
+
+Project consists of 3 parts: 
+* `pcb` - everything related to the schematics/PCB/boards' production. Currently v1.0 and 1.1 exist, only v1.1 is supported in the software.
+* `firmware` - software components for NRF52 chip. 
+* `android` - software that is running on the Android side. 
+
+iOS might be also added later to this list.
 
 ## Schematics
 
-Schematics for device is located here: `out/v1.0(20.08.2021)/schematic/nRF52832_qfaa.pdf`
-
-## Software
-
-Project software consists of 2 large parts: embedded firmware for NRF52832 chip and Android phone software.
+Relevant schematics for device is located here: `out/v1.1/schematic/nRF52832_qfaa.pdf`
 
 ## Build firmware
 
 Before building the firmware, SDK should be downloaded. To do that, go to `firmware/sdk` folder and execute script
 `download_nordic_sdk.sh`. This command downloads and extracts the SDK files into the folder locally.
+
+After the download one can open a corresponding Segger SES Project with SES. Later it should be possible to build with CMake. 
+
+Android app can be built with a standard Android studio build process.
