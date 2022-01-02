@@ -1,0 +1,11 @@
+Rework for v1.1.
+* cut lines that are coming to pins p0.25 and p0.26 and put a ~1k resistor into the cut. If this is not done, NRF52 burns down.
+
+TODO for v1.1:
+* investigate why LDO is not shutdown after it is pulled down.
+
+For newer versionss
+* add current limiting resistors on lines MAIN_BUTTON and DBG_POWER_LATCH that enter the microcontroller. 
+* use teardrops for the pins
+* enforce the testpoints and b- / b+ points (with vias and/or with thicker lines/more vias)
+* consider a debug plug that wouldn't require soldering a 10-pin JTAG connector for flashing.
