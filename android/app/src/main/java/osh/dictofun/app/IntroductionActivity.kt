@@ -16,28 +16,31 @@
 
 package osh.dictofun.app
 
-import android.Manifest
+import android.Manifest.permission.*
 import android.bluetooth.BluetoothAdapter
 import android.content.Intent
 import android.content.pm.PackageManager.PERMISSION_GRANTED
 import android.graphics.Color
-import android.graphics.Color.GRAY
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.TextView
-import osh.dictofun.app.R
-import java.security.Permission
+import androidx.core.app.ActivityCompat
 
 class IntroductionActivity : AppCompatActivity() {
-    private val DEVICE_CONNECTION_ACTIVITY_DONE_INTENT: Int = 2001
+
+    companion object {
+        private const val TAG : String = "IntroductionActivity"
+        private const val DEVICE_CONNECTION_ACTIVITY_DONE_INTENT: Int = 2001
+        private const val PERMISSIONS_REQUEST_CODE: Int = 2002
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_introduction)
-        Log.i("intro", "onCreate")
+        Log.i(TAG, "onCreate")
 
         fillPermissionsData()
     }
@@ -52,23 +55,23 @@ class IntroductionActivity : AppCompatActivity() {
 
         if (requestCode == DEVICE_CONNECTION_ACTIVITY_DONE_INTENT)
         {
-            Log.i("intro", "pairing is complete. Coming back to the main activity")
+            Log.i(TAG, "pairing is complete. Coming back to the main activity")
             finish()
         }
     }
 
     fun fillPermissionsData() {
-        var bleEnabledView: TextView = findViewById(R.id.bluetoothEnabledView) as TextView
-        var locationPermissionView: TextView = findViewById(R.id.locationPermissionGrantedView)
-        var backgroundPermissionView: TextView = findViewById(R.id.backgroundPermissionGrantedView)
+        val bleEnabledView: TextView = findViewById(R.id.bluetoothEnabledView) as TextView
+        val locationPermissionView: TextView = findViewById(R.id.locationPermissionGrantedView)
+        val backgroundPermissionView: TextView = findViewById(R.id.backgroundPermissionGrantedView)
 
-        var nextButton: Button = findViewById(R.id.introduction_next_button) as Button
+        val nextButton: Button = findViewById(R.id.introduction_next_button) as Button
 
-        var isLocationPermissionGranted =
-            checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
-        var isBackgroundPermissionGranted =
-            checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-        var isBleEnabled = BluetoothAdapter.getDefaultAdapter().isEnabled
+        val isLocationPermissionGranted =
+            checkSelfPermission(ACCESS_COARSE_LOCATION)
+        val isBackgroundPermissionGranted =
+            checkSelfPermission(ACCESS_BACKGROUND_LOCATION)
+        val isBleEnabled = BluetoothAdapter.getDefaultAdapter().isEnabled
 
         if (isBleEnabled) {
             bleEnabledView.text = "Bluetooth is enabled"
@@ -78,21 +81,52 @@ class IntroductionActivity : AppCompatActivity() {
         }
 
         if (isLocationPermissionGranted == PERMISSION_GRANTED) {
-            locationPermissionView.setText("Location permission is granted")
+            locationPermissionView.text = "Location permission is granted"
+            locationPermissionView.setOnClickListener(null)
         } else {
-            locationPermissionView.setText("Location permission is not granted")
+            locationPermissionView.text = "Location permission is not granted"
             locationPermissionView.setTextColor(Color.parseColor("#ff0000"))
+            locationPermissionView.setOnClickListener{
+                // FIXME: 1/16/22 Check if we need fine location?
+                // How behaves on Android 11 ?
+                requestPermissionEnabling(arrayOf(ACCESS_COARSE_LOCATION, ACCESS_FINE_LOCATION))
+            }
         }
 
         if (isBackgroundPermissionGranted == PERMISSION_GRANTED) {
-            backgroundPermissionView.setText("Background permission is granted")
+            backgroundPermissionView.text = "Background permission is granted"
+            locationPermissionView.setOnClickListener(null)
         } else {
-            backgroundPermissionView.setText("Background permission is not granted")
+            backgroundPermissionView.text = "Background permission is not granted"
             backgroundPermissionView.setTextColor(Color.parseColor("#ff0000"))
+            backgroundPermissionView.setOnClickListener{
+                requestPermissionEnabling(arrayOf(ACCESS_BACKGROUND_LOCATION))
+            }
         }
 
-        nextButton.isClickable = isBleEnabled &&
+        nextButton.isEnabled = isBleEnabled &&
                 (isLocationPermissionGranted == PERMISSION_GRANTED) &&
                 (isBackgroundPermissionGranted == PERMISSION_GRANTED)
+    }
+
+    private fun requestPermissionEnabling(permissions: Array<String>) {
+        ActivityCompat.requestPermissions(this, permissions, PERMISSIONS_REQUEST_CODE)
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        // Refresh activity on receiving permission update.
+        if (requestCode == PERMISSIONS_REQUEST_CODE) {
+            refreshActivity()
+        }
+    }
+
+    private fun refreshActivity() {
+        finish();
+        startActivity(getIntent());
     }
 }
