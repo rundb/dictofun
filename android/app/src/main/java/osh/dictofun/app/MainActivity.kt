@@ -16,7 +16,7 @@
 
 package osh.dictofun.app
 
-import android.Manifest
+import android.Manifest.permission.*
 import android.app.Activity
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.le.ScanResult
@@ -55,11 +55,15 @@ import java.util.stream.Collectors.toList
 
 
 class MainActivity : AppCompatActivity() {
-    private val REQUEST_CODE_BACKGROUND: Int = 1545
+    private val REQUEST_CODE_PERMISSIONS: Int = 1545
     private val NEW_DEVICE_REGISTRATION_ACTIVITY_INTENT: Int = 1547
 
     private val RECOGNITION_ENABLED = false
     private val RESET_ASSOTIATIONS_ON_STARTUP = false
+
+    companion object {
+        private val TAG: String = "MainActivity"
+    }
 
     private val deviceManager: CompanionDeviceManager by lazy {
         getSystemService(Context.COMPANION_DEVICE_SERVICE) as CompanionDeviceManager
@@ -80,7 +84,7 @@ class MainActivity : AppCompatActivity() {
         override fun onServiceConnected(componentName: ComponentName, service: IBinder) {
             fileTransferService = (service as FileTransferService.LocalBinder).service
             if (!fileTransferService!!.initialize()) {
-                Log.e("MainActivity", "Unable to initialize Bluetooth")
+                Log.e(TAG, "Unable to initialize Bluetooth")
                 finish()
             }
 
@@ -90,16 +94,13 @@ class MainActivity : AppCompatActivity() {
 
             // Automatically connects to the device upon successful start-up initialization.
             val bluetoothAdapter: BluetoothAdapter? = BluetoothAdapter.getDefaultAdapter()
-            if (bluetoothAdapter == null)
-            {
+            if (bluetoothAdapter == null) {
                 Log.e("bonds", "Failed to access ble device")
                 return
             }
-            for (device in bluetoothAdapter.bondedDevices)
-            {
-                if (device.name.startsWith("dictofun"))
-                {
-                    Log.i("Main", "Connecting to bonded device with address ${device.address}")
+            for (device in bluetoothAdapter.bondedDevices) {
+                if (device.name.startsWith("dictofun")) {
+                    Log.i(TAG, "Connecting to bonded device with address ${device.address}")
                     fileTransferService!!.connect(device.address)
                 }
             }
@@ -138,7 +139,7 @@ class MainActivity : AppCompatActivity() {
                     val fileSize =
                         ByteBuffer.wrap(txValue.copyOfRange(1, txValue.size).reversedArray()).int
                     if (fileSize != 0) {
-                        Log.i("MainActivity", "New file is ready, size: $fileSize bytes")
+                        Log.i(TAG, "New file is ready, size: $fileSize bytes")
 
                         // Request file.
                         externalStorageService?.initNewFileSaving(fileSize)
@@ -146,23 +147,23 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
-                Log.i("MainActivity", "File info data: ${txValue.contentToString()}")
+                Log.i(TAG, "File info data: ${txValue.contentToString()}")
             }
 
             if (action == FileTransferService.ACTION_FILE_DATA) {
                 val txValue = intent.getByteArrayExtra(FileTransferService.EXTRA_DATA)
                 if (txValue != null) {
-                    Log.d("MainActivity", "Data available: ${txValue.contentToString()}")
+                    Log.d(TAG, "Data available: ${txValue.contentToString()}")
                     externalStorageService?.appendToCurrentFile(txValue)?.ifPresent {
                         // Get transcription.
                         Log.i(
-                            "MainActivity",
+                            TAG,
                             "Getting transcription from recognition service: filename=$it"
                         )
                         if (RECOGNITION_ENABLED) {
                             val result =
                                 recognitionService?.recognize(externalStorageService!!.getFile(it))
-                            Log.i("MainActivity", "Result: $result")
+                            Log.i(TAG, "Result: $result")
                             result?.let { it1 ->
                                 externalStorageService?.storeTranscription(
                                     it,
@@ -179,7 +180,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             if (action == FileTransferService.DEVICE_DOES_NOT_SUPPORT_IMAGE_TRANSFER) {
-                Log.i("MainActivity", "APP: Invalid BLE service, disconnecting!")
+                Log.i(TAG, "APP: Invalid BLE service, disconnecting!")
                 fileTransferService?.disconnect()
 //                externalStorageService?.resetCurrentFile()
             }
@@ -249,9 +250,8 @@ class MainActivity : AppCompatActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
 
-        if (requestCode == NEW_DEVICE_REGISTRATION_ACTIVITY_INTENT)
-        {
-            Log.i("main", "Continuing with the main interface")
+        if (requestCode == NEW_DEVICE_REGISTRATION_ACTIVITY_INTENT) {
+            Log.i(TAG, "Continuing with the main interface")
             runMainActivity()
         }
     }
@@ -260,7 +260,9 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        Log.i("MainActivity", "onCreate()")
+        checkBtPermissions()
+
+        Log.i(TAG, "onCreate()")
         if (!isPairedDeviceFound()) {
             startNewDeviceRegistration()
         }
@@ -269,9 +271,35 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private val requestMultiplePermissions =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+            permissions.entries.forEach {
+                Log.d(TAG, "${it.key} = ${it.value}")
+            }
+        }
+
+    /***
+     * On Android 12+ check bluetooth permissions and request in case of absence.
+     */
+    private fun checkBtPermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val hasBtPermissions = permissionPresent(BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED &&
+                    permissionPresent(BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+
+            if (!hasBtPermissions) {
+                requestMultiplePermissions.launch(arrayOf(BLUETOOTH_SCAN, BLUETOOTH_CONNECT))
+            }
+        }
+    }
+
+    private fun permissionPresent(permission: String) = ActivityCompat.checkSelfPermission(
+        this, permission)
+
     fun runMainActivity() {
         externalStorageService = ExternalStorageService(this)
-        recognitionService = GoogleSpeechRecognitionService(this) as ISpeechRecognitionService
+        if (RECOGNITION_ENABLED) {
+            recognitionService = GoogleSpeechRecognitionService(this)
+        }
 
         if (RESET_ASSOTIATIONS_ON_STARTUP) {
             deviceManager.associations.forEach(deviceManager::disassociate)
@@ -282,18 +310,16 @@ class MainActivity : AppCompatActivity() {
             // Device doesn't support Bluetooth
         }
 
-        requestBackgroundPermission()
-
         createRecordingAdapter()
 
         if (deviceManager.associations.isNotEmpty()) {
             if (bluetoothAdapter?.isEnabled == false) {
                 requestBluetoothEnabling(null)
             }
-            Log.i("MainActivity", "bindFTS without prompting to pair")
+            Log.i(TAG, "bindFTS without prompting to pair")
             bindFileTransferService()
         } else {
-            Log.i("MainActivity", "bindFTS with pairing")
+            Log.i(TAG, "bindFTS with pairing")
             val chooseDeviceActivityResult =
                 registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) {
                     when (it.resultCode) {
@@ -385,27 +411,5 @@ class MainActivity : AppCompatActivity() {
             .addDeviceFilter(deviceFilter)
             .setSingleDevice(false)
             .build()
-    }
-
-    @RequiresApi(Build.VERSION_CODES.Q)
-    private fun requestBackgroundPermission() {
-        if (!LocationManagerCompat.isLocationEnabled(locationManager)) {
-            // Start Location Settings Activity, you should explain to the user why he need to enable location before.
-            startActivity(Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS))
-        }
-
-        val hasBackgroundLocationPermission = ActivityCompat.checkSelfPermission(
-            this,
-            Manifest.permission.ACCESS_BACKGROUND_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-
-        if (hasBackgroundLocationPermission) {
-            // handle location update
-        } else {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION), REQUEST_CODE_BACKGROUND
-            )
-        }
     }
 }
