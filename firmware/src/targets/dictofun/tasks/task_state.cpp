@@ -191,11 +191,17 @@ void application_cyclic()
 
 CompletionStatus do_init()
 {
+    // pull LDO EN high
+    // check crystals' operation
     return CompletionStatus::INVALID;
 }
 
 CompletionStatus do_prepare()
 {
+    // check if SPI flash is operational
+    // initialize FS
+    // check if microphone is present
+
     return CompletionStatus::INVALID;
 }
 
