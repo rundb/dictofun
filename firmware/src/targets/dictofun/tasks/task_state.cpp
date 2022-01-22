@@ -15,14 +15,13 @@
  */
 
 #include "tasks/task_state.h"
-#include <nrf_gpio.h>
-#include <nrf_log.h>
-#include "tasks/task_memory.h"
+#include "BleSystem.h"
 #include "tasks/task_audio.h"
 #include "tasks/task_led.h"
-#include "BleSystem.h"
+#include "tasks/task_memory.h"
 #include <libraries/timer/app_timer.h>
-
+#include <nrf_gpio.h>
+#include <nrf_log.h>
 
 namespace application
 {
@@ -80,124 +79,110 @@ void application_cyclic()
 {
     const auto timestamp = app_timer_cnt_get();
     const auto prevState = _applicationState;
-    switch (_applicationState)
+    switch(_applicationState)
     {
-        case AppSmState::INIT: 
+    case AppSmState::INIT: {
+        const auto res = do_init();
+        if(CompletionStatus::DONE == res)
         {
-            // led::task_led_set_indication_state(led::PREPARING);
-            // nrf_gpio_pin_set(LDO_EN_PIN);
-            // _applicationState = AppSmState::PREPARE;
-            const auto res = do_init();
-            if (CompletionStatus::DONE == res)
-            {
-                _applicationState = AppSmState::PREPARE;
-            }
-        } 
-        break;
-        case AppSmState::PREPARE: 
-        {
-            const auto res = do_prepare();
-            if (CompletionStatus::DONE == res)
-            {
-                _applicationState = AppSmState::RECORD;
-            }
-        } 
-        break;
-        case AppSmState::RECORD: 
-        {
-            const auto res = do_record();
-            if (CompletionStatus::DONE == res)
-            {
-                _applicationState = AppSmState::RECORD_FINALIZATION;
-            }
-        } 
-        break;
-        case AppSmState::RECORD_FINALIZATION: 
-        {
-            const auto res = do_record_finalize();
-            if (CompletionStatus::DONE == res)
-            {
-                _applicationState = AppSmState::CONNECT;
-            }
-        } 
-        break;
-        case AppSmState::CONNECT: 
-        {
-            const auto res = do_connect();
-            if (CompletionStatus::DONE == res)
-            {
-                _applicationState = AppSmState::TRANSFER;
-            }
-            else if (CompletionStatus::TIMEOUT == res)
-            {
-                _applicationState = AppSmState::FINALIZE;
-            }
-            else if (CompletionStatus::RESTART_DETECTED == res)
-            {
-                _applicationState = AppSmState::RESTART;
-            }
-        } 
-        break;
-        case AppSmState::TRANSFER: 
-        {
-            const auto res = do_transfer();
-            if (CompletionStatus::DONE == res)
-            {
-                _applicationState = AppSmState::DISCONNECT;
-            }
-            else if (CompletionStatus::TIMEOUT == res)
-            {
-                _applicationState = AppSmState::FINALIZE;
-            }
-            else if (CompletionStatus::RESTART_DETECTED == res)
-            {
-                _applicationState = AppSmState::RESTART;
-            }
-        } 
-        break;
-        case AppSmState::DISCONNECT: 
-        {
-            const auto res = do_disconnect();
-            if (CompletionStatus::DONE == res)
-            {
-                _applicationState = AppSmState::FINALIZE;
-            }
-            else if (CompletionStatus::RESTART_DETECTED == res)
-            {
-                _applicationState = AppSmState::RESTART;
-            }
-        } 
-        break;
-        case AppSmState::FINALIZE: 
-        {
-            const auto res = do_finalize();
-            if (CompletionStatus::RESTART_DETECTED == res)
-            {
-                _applicationState = AppSmState::RESTART;
-            }
-            else if (CompletionStatus::DONE == res)
-            {
-                _applicationState = AppSmState::SHUTDOWN;
-            }
-        } 
-        break;
-        case AppSmState::SHUTDOWN: 
-        {
-            do_shutdown();
-        } 
-        break;
-        case AppSmState::RESTART: 
-        {
-            const auto res = do_restart();
-            if (CompletionStatus::DONE == res)
-            {
-                _applicationState = AppSmState::RECORD;
-            }
-        } 
-        break;
-
+            _applicationState = AppSmState::PREPARE;
+        }
     }
-    if (prevState != _applicationState)
+    break;
+    case AppSmState::PREPARE: {
+        const auto res = do_prepare();
+        if(CompletionStatus::DONE == res)
+        {
+            _applicationState = AppSmState::RECORD;
+        }
+    }
+    break;
+    case AppSmState::RECORD: {
+        const auto res = do_record();
+        if(CompletionStatus::DONE == res)
+        {
+            _applicationState = AppSmState::RECORD_FINALIZATION;
+        }
+    }
+    break;
+    case AppSmState::RECORD_FINALIZATION: {
+        const auto res = do_record_finalize();
+        if(CompletionStatus::DONE == res)
+        {
+            _applicationState = AppSmState::CONNECT;
+        }
+    }
+    break;
+    case AppSmState::CONNECT: {
+        const auto res = do_connect();
+        if(CompletionStatus::DONE == res)
+        {
+            _applicationState = AppSmState::TRANSFER;
+        }
+        else if(CompletionStatus::TIMEOUT == res)
+        {
+            _applicationState = AppSmState::FINALIZE;
+        }
+        else if(CompletionStatus::RESTART_DETECTED == res)
+        {
+            _applicationState = AppSmState::RESTART;
+        }
+    }
+    break;
+    case AppSmState::TRANSFER: {
+        const auto res = do_transfer();
+        if(CompletionStatus::DONE == res)
+        {
+            _applicationState = AppSmState::DISCONNECT;
+        }
+        else if(CompletionStatus::TIMEOUT == res)
+        {
+            _applicationState = AppSmState::FINALIZE;
+        }
+        else if(CompletionStatus::RESTART_DETECTED == res)
+        {
+            _applicationState = AppSmState::RESTART;
+        }
+    }
+    break;
+    case AppSmState::DISCONNECT: {
+        const auto res = do_disconnect();
+        if(CompletionStatus::DONE == res)
+        {
+            _applicationState = AppSmState::FINALIZE;
+        }
+        else if(CompletionStatus::RESTART_DETECTED == res)
+        {
+            _applicationState = AppSmState::RESTART;
+        }
+    }
+    break;
+    case AppSmState::FINALIZE: {
+        const auto res = do_finalize();
+        if(CompletionStatus::RESTART_DETECTED == res)
+        {
+            _applicationState = AppSmState::RESTART;
+        }
+        else if(CompletionStatus::DONE == res)
+        {
+            _applicationState = AppSmState::SHUTDOWN;
+        }
+    }
+    break;
+    case AppSmState::SHUTDOWN: {
+        do_shutdown();
+    }
+    break;
+    case AppSmState::RESTART: {
+        const auto res = do_restart();
+        if(CompletionStatus::DONE == res)
+        {
+            _applicationState = AppSmState::RECORD;
+        }
+    }
+    break;
+    }
+    if(prevState != _applicationState)
     {
         // TODO: log state change
         NRF_LOG_INFO("state %d->%d", prevState, _applicationState);
