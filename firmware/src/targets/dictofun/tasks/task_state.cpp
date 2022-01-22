@@ -26,9 +26,7 @@
 
 namespace application
 {
-AppSmState _applicationState{APP_SM_STARTUP};
-static bool is_finalize_triggered{false};
-
+AppSmState _applicationState{AppSmState::INIT};
 
 AppSmState getApplicationState()
 {
@@ -40,123 +38,164 @@ bool isRecordButtonPressed()
     return nrf_gpio_pin_read(BUTTON_PIN) > 0;
 }
 
-static volatile int shutdown_counter = 100000;
-static const uint32_t MAX_OPERATION_DURATION = 5000;
+/**
+ * Enum is defined within CPP file, as it's used only inside the implementation
+ */
+enum class CompletionStatus
+{
+    INVALID,
+    PENDING,
+    DONE,
+    TIMEOUT,
+    RESTART_DETECTED,
+    ERROR
+};
+
+/**
+ * FSM action steps. 
+ * If operation is not finished before the exit of the function, PENDING is returned.
+ * If operation has been finished - DONE is returned.
+ * If operation has timed out (states CONNECT and TRANSFER) - TIMEOUT is returned.
+ * If a button press has been detected during BLE phases - RESTART_DETECTED is returned.
+ * If an error that doesn't allow to continue to work is detected - ERROR is detected (f.e.
+ *      crystal(s) haven't started, SPI Flash is absent, microphone is not working)
+ */
+CompletionStatus do_init();
+CompletionStatus do_prepare();
+CompletionStatus do_record();
+CompletionStatus do_record_finalize();
+CompletionStatus do_connect();
+CompletionStatus do_transfer();
+CompletionStatus do_disconnect();
+CompletionStatus do_finalize();
+CompletionStatus do_restart();
+CompletionStatus do_shutdown();
+
+/**
+ * Cyclic function contains only the logic related to the FSM steps. 
+ * Contents of the steps are extracted into do_<something> functions, to separate
+ * FSM logic and step-related logic. 
+ */
 void application_cyclic()
 {
     const auto timestamp = app_timer_cnt_get();
     const auto prevState = _applicationState;
     switch (_applicationState)
     {
-        case APP_SM_STARTUP:
+        case AppSmState::INIT: 
         {
-            _applicationState = APP_SM_REC_INIT;
-            led::task_led_set_indication_state(led::PREPARING);
-            nrf_gpio_pin_set(LDO_EN_PIN);
+            // led::task_led_set_indication_state(led::PREPARING);
+            // nrf_gpio_pin_set(LDO_EN_PIN);
+            // _applicationState = AppSmState::PREPARE;
+            const auto res = do_init();
+            if (CompletionStatus::DONE == res)
+            {
+                _applicationState = AppSmState::PREPARE;
+            }
+        } 
+        break;
+        case AppSmState::PREPARE: 
+        {
+            const auto res = do_prepare();
+            if (CompletionStatus::DONE == res)
+            {
+                _applicationState = AppSmState::RECORD;
+            }
+        } 
+        break;
+        case AppSmState::RECORD: 
+        {
+            const auto res = do_record();
+            if (CompletionStatus::DONE == res)
+            {
+                _applicationState = AppSmState::RECORD_FINALIZATION;
+            }
+        } 
+        break;
+        case AppSmState::RECORD_FINALIZATION: 
+        {
+            const auto res = do_record_finalize();
+            if (CompletionStatus::DONE == res)
+            {
+                _applicationState = AppSmState::CONNECT;
+            }
+        } 
+        break;
+        case AppSmState::CONNECT: 
+        {
+            const auto res = do_connect();
+            if (CompletionStatus::DONE == res)
+            {
+                _applicationState = AppSmState::TRANSFER;
+            }
+            else if (CompletionStatus::TIMEOUT == res)
+            {
+                _applicationState = AppSmState::FINALIZE;
+            }
+            else if (CompletionStatus::RESTART_DETECTED == res)
+            {
+                _applicationState = AppSmState::RESTART;
+            }
+        } 
+        break;
+        case AppSmState::TRANSFER: 
+        {
+            const auto res = do_transfer();
+            if (CompletionStatus::DONE == res)
+            {
+                _applicationState = AppSmState::DISCONNECT;
+            }
+            else if (CompletionStatus::TIMEOUT == res)
+            {
+                _applicationState = AppSmState::FINALIZE;
+            }
+            else if (CompletionStatus::RESTART_DETECTED == res)
+            {
+                _applicationState = AppSmState::RESTART;
+            }
+        } 
+        break;
+        case AppSmState::DISCONNECT: 
+        {
+            const auto res = do_disconnect();
+            if (CompletionStatus::DONE == res)
+            {
+                _applicationState = AppSmState::FINALIZE;
+            }
+            else if (CompletionStatus::RESTART_DETECTED == res)
+            {
+                _applicationState = AppSmState::RESTART;
+            }
+        } 
+        break;
+        case AppSmState::FINALIZE: 
+        {
+            const auto res = do_finalize();
+            if (CompletionStatus::RESTART_DETECTED == res)
+            {
+                _applicationState = AppSmState::RESTART;
+            }
+            else if (CompletionStatus::DONE == res)
+            {
+                _applicationState = AppSmState::SHUTDOWN;
+            }
+        } 
+        break;
+        case AppSmState::SHUTDOWN: 
+        {
+            do_shutdown();
+        } 
+        break;
+        case AppSmState::RESTART: 
+        {
+            const auto res = do_restart();
+            if (CompletionStatus::DONE == res)
+            {
+                _applicationState = AppSmState::RECORD;
+            }
+        } 
+        break;
 
-            const auto erased = memory::isMemoryErased();
-            if (!erased)
-            {
-                NRF_LOG_WARNING("Memory is not erased. Erasing now");
-                int rc = spi_flash_erase_area(0x00, 0xB0000);
-                if (rc != 0)
-                {
-                    NRF_LOG_ERROR("Erase failed. Finalizing.");
-                    _applicationState = APP_SM_FINALIZE;
-                }
-                else
-                {
-                    _applicationState = APP_SM_PREPARE;
-                }
-            }
-
-            break;
-        }
-        case APP_SM_PREPARE:
-        {
-            led::task_led_set_indication_state(led::PREPARING);
-            // Wait until SPI Flash memory erase is done
-            if (!spi_flash_is_busy())
-            {
-                _applicationState = APP_SM_REC_INIT;
-            }
-            break;
-        }
-        case APP_SM_REC_INIT:
-        {
-            led::task_led_set_indication_state(led::RECORDING);
-            _applicationState = APP_SM_RECORDING;
-            audio_start_record();
-            break;
-        }
-        case APP_SM_RECORDING:
-        {
-            // if button is released - go further. Timestamp - for the case of 
-            // inactive button detection
-            if (!isRecordButtonPressed() || (timestamp >= MAX_OPERATION_DURATION))
-            {
-                audio_stop_record();
-                _applicationState = APP_SM_CONN;
-                const auto record_size = audio_get_record_size();
-                NRF_LOG_INFO("Recorded %d bytes", record_size);
-            }
-            break;
-        }
-        case APP_SM_CONN:
-        {
-            led::task_led_set_indication_state(led::CONNECTING);
-            if (!ble::BleSystem::getInstance().isActive())
-            {
-                ble::BleSystem::getInstance().start();
-                const auto record_size = audio_get_record_size();
-                ble::BleSystem::getInstance().getServices().setFileSizeForTransfer(record_size);
-            }
-            if (ble::BleSystem::getInstance().getConnectionHandle() != BLE_CONN_HANDLE_INVALID)
-            {
-                _applicationState = APP_SM_XFER;
-            }
-            break;
-        }
-        case APP_SM_XFER:
-        {
-            led::task_led_set_indication_state(led::SENDING);
-            if (ble::BleSystem::getInstance().getServices().isFileTransmissionComplete())
-            {
-                _applicationState = APP_SM_FINALIZE;
-            }
-            break;
-        }
-        case APP_SM_FINALIZE:
-        {
-            led::task_led_set_indication_state(led::SHUTTING_DOWN);
-            if (!is_finalize_triggered)
-            {
-                is_finalize_triggered = true;
-                NRF_LOG_INFO("Finalizing operation: erasing memory");
-                // trigger flash memory erase
-                int rc = spi_flash_erase_area(0x00, 0xB0000);
-                if (rc != 0)
-                {
-                    NRF_LOG_ERROR("Erase failed.");
-                    _applicationState = APP_SM_FINALIZE;
-                }
-            }
-            --shutdown_counter;
-            if (shutdown_counter == 0 && (!spi_flash_is_busy()))
-            {
-                _applicationState = APP_SM_SHUTDOWN;
-            }
-
-            // after memory is erased - shutdown
-            break;
-        }
-        case APP_SM_SHUTDOWN:
-        {
-            // disable LDO and enter low-power sleep mode
-            nrf_gpio_pin_clear(LDO_EN_PIN);
-            while(1);
-            break;
-        }
     }
     if (prevState != _applicationState)
     {
@@ -164,4 +203,55 @@ void application_cyclic()
         NRF_LOG_INFO("state %d->%d", prevState, _applicationState);
     }
 }
+
+CompletionStatus do_init()
+{
+    return CompletionStatus::INVALID;
 }
+
+CompletionStatus do_prepare()
+{
+    return CompletionStatus::INVALID;
+}
+
+CompletionStatus do_record()
+{
+    return CompletionStatus::INVALID;
+}
+
+CompletionStatus do_record_finalize()
+{
+    return CompletionStatus::INVALID;
+}
+
+CompletionStatus do_connect()
+{
+    return CompletionStatus::INVALID;
+}
+
+CompletionStatus do_transfer()
+{
+    return CompletionStatus::INVALID;
+}
+
+CompletionStatus do_disconnect()
+{
+    return CompletionStatus::INVALID;
+}
+
+CompletionStatus do_finalize()
+{
+    return CompletionStatus::INVALID;
+}
+
+CompletionStatus do_restart()
+{
+    return CompletionStatus::INVALID;
+}
+
+CompletionStatus do_shutdown()
+{
+    return CompletionStatus::INVALID;
+}
+
+} // namespace application

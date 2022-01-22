@@ -11,12 +11,17 @@ Main application works based on the following state machine:
 [*] --> Init
 Init : Startup the HW
 Init -> Prepare : done
+Init -> Finalize: error during init
 
 Prepare : initialize FS, prepare to record
-Prepare -> Record : done
+Prepare -> Record
+Prepare -> Finalize: error during preparation
+Record --> Rec.finalization
+Record: perform the recording
 
-Record: perform the record
-Record --> Connect : button released
+Rec.finalization --> Connect
+
+Rec.finalization: should be atomic
 
 Connect: stop the record, close the written file, establish BLE connection
 Connect --> Transfer : connection established
