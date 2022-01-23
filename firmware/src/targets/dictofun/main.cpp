@@ -15,15 +15,15 @@
  */
 #include "BleSystem.h"
 #include <boards/boards.h>
-#include <libraries/log/nrf_log_ctrl.h>
 #include <libraries/log/nrf_log.h>
+#include <libraries/log/nrf_log_ctrl.h>
 #include <libraries/log/nrf_log_default_backends.h>
-#include <spi_access.h>
 #include <nrf_gpio.h>
+#include <spi_access.h>
 
 #include <tasks/task_audio.h>
-#include <tasks/task_state.h>
 #include <tasks/task_led.h>
+#include <tasks/task_state.h>
 
 static void log_init();
 static void idle_state_handle();
@@ -37,6 +37,13 @@ int main()
     nrf_gpio_cfg_input(BUTTON_PIN, NRF_GPIO_PIN_PULLDOWN);
     nrf_gpio_pin_set(LDO_EN_PIN);
 
+    nrf_gpio_cfg(LDO_EN_PIN,
+                 NRF_GPIO_PIN_DIR_OUTPUT,
+                 NRF_GPIO_PIN_INPUT_DISCONNECT,
+                 NRF_GPIO_PIN_PULLDOWN,
+                 NRF_GPIO_PIN_H0S1,
+                 NRF_GPIO_PIN_NOSENSE);
+
     log_init();
     bsp_board_init(BSP_INIT_LEDS);
     timers_init();
@@ -45,8 +52,8 @@ int main()
     audio_init();
 
     led::task_led_init();
-    
-    for (;;)
+
+    for(;;)
     {
         bleSystem.cyclic();
         audio_frame_handle();
@@ -79,28 +86,28 @@ static void idle_state_handle()
 
 uint32_t get_timestamp_delta(uint32_t base)
 {
-  uint32_t now = app_timer_cnt_get();
+    uint32_t now = app_timer_cnt_get();
 
-  if(base > now)
-    return 0;
-  else
-    return  now - base;
+    if(base > now)
+        return 0;
+    else
+        return now - base;
 }
 
 // Expanding APP_TIMER_DEF macro, as it's not compatible with C++
-NRF_LOG_INSTANCE_REGISTER(APP_TIMER_LOG_NAME, timestamp_timer,
-                            APP_TIMER_CONFIG_INFO_COLOR,
-                            APP_TIMER_CONFIG_DEBUG_COLOR,
-                            APP_TIMER_CONFIG_INITIAL_LOG_LEVEL,
-                            APP_TIMER_CONFIG_LOG_ENABLED ?                                  
-                                        APP_TIMER_CONFIG_LOG_LEVEL : NRF_LOG_SEVERITY_NONE);
+NRF_LOG_INSTANCE_REGISTER(APP_TIMER_LOG_NAME,
+                          timestamp_timer,
+                          APP_TIMER_CONFIG_INFO_COLOR,
+                          APP_TIMER_CONFIG_DEBUG_COLOR,
+                          APP_TIMER_CONFIG_INITIAL_LOG_LEVEL,
+                          APP_TIMER_CONFIG_LOG_ENABLED ? APP_TIMER_CONFIG_LOG_LEVEL
+                                                       : NRF_LOG_SEVERITY_NONE);
 
 static app_timer_t timestamp_timer_data = {
-        NRF_LOG_INSTANCE_PTR_INIT(p_log, APP_TIMER_LOG_NAME, timer_id)
-};
-static app_timer_id_t timestamp_timer;// = &timestamp_timer_data;
+    NRF_LOG_INSTANCE_PTR_INIT(p_log, APP_TIMER_LOG_NAME, timer_id)};
+static app_timer_id_t timestamp_timer; // = &timestamp_timer_data;
 
-void timestamp_timer_timeout_handler(void * p_context) {}
+void timestamp_timer_timeout_handler(void* p_context) { }
 static void timers_init()
 {
     timestamp_timer = &timestamp_timer_data;

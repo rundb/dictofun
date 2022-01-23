@@ -15,20 +15,17 @@
  */
 
 #include "tasks/task_state.h"
-#include <nrf_gpio.h>
-#include <nrf_log.h>
-#include "tasks/task_memory.h"
+#include "BleSystem.h"
 #include "tasks/task_audio.h"
 #include "tasks/task_led.h"
-#include "BleSystem.h"
+#include "tasks/task_memory.h"
 #include <libraries/timer/app_timer.h>
-
+#include <nrf_gpio.h>
+#include <nrf_log.h>
 
 namespace application
 {
-AppSmState _applicationState{APP_SM_STARTUP};
-static bool is_finalize_triggered{false};
-
+AppSmState _applicationState{AppSmState::INIT};
 
 AppSmState getApplicationState()
 {
@@ -40,128 +37,374 @@ bool isRecordButtonPressed()
     return nrf_gpio_pin_read(BUTTON_PIN) > 0;
 }
 
-static volatile int shutdown_counter = 100000;
-static const uint32_t MAX_OPERATION_DURATION = 5000;
+/**
+ * Enum is defined within CPP file, as it's used only inside the implementation
+ */
+enum class CompletionStatus
+{
+    INVALID,
+    PENDING,
+    DONE,
+    TIMEOUT,
+    RESTART_DETECTED,
+    ERROR
+};
+
+/**
+ * FSM action steps. 
+ * If operation is not finished before the exit of the function, PENDING is returned.
+ * If operation has been finished - DONE is returned.
+ * If operation has timed out (states CONNECT and TRANSFER) - TIMEOUT is returned.
+ * If a button press has been detected during BLE phases - RESTART_DETECTED is returned.
+ * If an error that doesn't allow to continue to work is detected - ERROR is detected (f.e.
+ *      crystal(s) haven't started, SPI Flash is absent, microphone is not working)
+ */
+CompletionStatus do_init();
+CompletionStatus do_prepare();
+CompletionStatus do_record_start();
+CompletionStatus do_record();
+CompletionStatus do_record_finalize();
+CompletionStatus do_connect();
+CompletionStatus do_transfer();
+CompletionStatus do_disconnect();
+CompletionStatus do_finalize();
+CompletionStatus do_restart();
+CompletionStatus do_shutdown();
+
+/**
+ * Cyclic function contains only the logic related to the FSM steps. 
+ * Contents of the steps are extracted into do_<something> functions, to separate
+ * FSM logic and step-related logic. 
+ */
 void application_cyclic()
 {
     const auto timestamp = app_timer_cnt_get();
     const auto prevState = _applicationState;
-    switch (_applicationState)
+    switch(_applicationState)
     {
-        case APP_SM_STARTUP:
+    case AppSmState::INIT: {
+        const auto res = do_init();
+        if(CompletionStatus::DONE == res)
         {
-            _applicationState = APP_SM_REC_INIT;
-            led::task_led_set_indication_state(led::PREPARING);
-            nrf_gpio_pin_set(LDO_EN_PIN);
-
-            const auto erased = memory::isMemoryErased();
-            if (!erased)
-            {
-                NRF_LOG_WARNING("Memory is not erased. Erasing now");
-                int rc = spi_flash_erase_area(0x00, 0xB0000);
-                if (rc != 0)
-                {
-                    NRF_LOG_ERROR("Erase failed. Finalizing.");
-                    _applicationState = APP_SM_FINALIZE;
-                }
-                else
-                {
-                    _applicationState = APP_SM_PREPARE;
-                }
-            }
-
-            break;
-        }
-        case APP_SM_PREPARE:
-        {
-            led::task_led_set_indication_state(led::PREPARING);
-            // Wait until SPI Flash memory erase is done
-            if (!spi_flash_is_busy())
-            {
-                _applicationState = APP_SM_REC_INIT;
-            }
-            break;
-        }
-        case APP_SM_REC_INIT:
-        {
-            led::task_led_set_indication_state(led::RECORDING);
-            _applicationState = APP_SM_RECORDING;
-            audio_start_record();
-            break;
-        }
-        case APP_SM_RECORDING:
-        {
-            // if button is released - go further. Timestamp - for the case of 
-            // inactive button detection
-            if (!isRecordButtonPressed() || (timestamp >= MAX_OPERATION_DURATION))
-            {
-                audio_stop_record();
-                _applicationState = APP_SM_CONN;
-                const auto record_size = audio_get_record_size();
-                NRF_LOG_INFO("Recorded %d bytes", record_size);
-            }
-            break;
-        }
-        case APP_SM_CONN:
-        {
-            led::task_led_set_indication_state(led::CONNECTING);
-            if (!ble::BleSystem::getInstance().isActive())
-            {
-                ble::BleSystem::getInstance().start();
-                const auto record_size = audio_get_record_size();
-                ble::BleSystem::getInstance().getServices().setFileSizeForTransfer(record_size);
-            }
-            if (ble::BleSystem::getInstance().getConnectionHandle() != BLE_CONN_HANDLE_INVALID)
-            {
-                _applicationState = APP_SM_XFER;
-            }
-            break;
-        }
-        case APP_SM_XFER:
-        {
-            led::task_led_set_indication_state(led::SENDING);
-            if (ble::BleSystem::getInstance().getServices().isFileTransmissionComplete())
-            {
-                _applicationState = APP_SM_FINALIZE;
-            }
-            break;
-        }
-        case APP_SM_FINALIZE:
-        {
-            led::task_led_set_indication_state(led::SHUTTING_DOWN);
-            if (!is_finalize_triggered)
-            {
-                is_finalize_triggered = true;
-                NRF_LOG_INFO("Finalizing operation: erasing memory");
-                // trigger flash memory erase
-                int rc = spi_flash_erase_area(0x00, 0xB0000);
-                if (rc != 0)
-                {
-                    NRF_LOG_ERROR("Erase failed.");
-                    _applicationState = APP_SM_FINALIZE;
-                }
-            }
-            --shutdown_counter;
-            if (shutdown_counter == 0 && (!spi_flash_is_busy()))
-            {
-                _applicationState = APP_SM_SHUTDOWN;
-            }
-
-            // after memory is erased - shutdown
-            break;
-        }
-        case APP_SM_SHUTDOWN:
-        {
-            // disable LDO and enter low-power sleep mode
-            nrf_gpio_pin_clear(LDO_EN_PIN);
-            while(1);
-            break;
+            _applicationState = AppSmState::PREPARE;
         }
     }
-    if (prevState != _applicationState)
+    break;
+    case AppSmState::PREPARE: {
+        const auto res = do_prepare();
+        if(CompletionStatus::DONE == res)
+        {
+            _applicationState = AppSmState::RECORD_START;
+        }
+    }
+    break;
+    case AppSmState::RECORD_START: {
+        const auto res = do_record_start();
+        if(CompletionStatus::DONE == res)
+        {
+            _applicationState = AppSmState::RECORD;
+        }
+    }
+    break;
+    case AppSmState::RECORD: {
+        const auto res = do_record();
+        if(CompletionStatus::DONE == res)
+        {
+            _applicationState = AppSmState::RECORD_FINALIZATION;
+        }
+    }
+    break;
+    case AppSmState::RECORD_FINALIZATION: {
+        const auto res = do_record_finalize();
+        if(CompletionStatus::DONE == res)
+        {
+            _applicationState = AppSmState::CONNECT;
+        }
+        else if (CompletionStatus::ERROR == res)
+        {
+            _applicationState = AppSmState::FINALIZE;
+        }
+    }
+    break;
+    case AppSmState::CONNECT: {
+        const auto res = do_connect();
+        if(CompletionStatus::DONE == res)
+        {
+            _applicationState = AppSmState::TRANSFER;
+        }
+        else if(CompletionStatus::TIMEOUT == res)
+        {
+            _applicationState = AppSmState::FINALIZE;
+        }
+        else if(CompletionStatus::RESTART_DETECTED == res)
+        {
+            _applicationState = AppSmState::RESTART;
+        }
+    }
+    break;
+    case AppSmState::TRANSFER: {
+        const auto res = do_transfer();
+        if(CompletionStatus::DONE == res)
+        {
+            _applicationState = AppSmState::DISCONNECT;
+        }
+        else if(CompletionStatus::TIMEOUT == res)
+        {
+            _applicationState = AppSmState::FINALIZE;
+        }
+        else if(CompletionStatus::RESTART_DETECTED == res)
+        {
+            _applicationState = AppSmState::RESTART;
+        }
+    }
+    break;
+    case AppSmState::DISCONNECT: {
+        const auto res = do_disconnect();
+        if(CompletionStatus::DONE == res)
+        {
+            _applicationState = AppSmState::FINALIZE;
+        }
+        else if(CompletionStatus::RESTART_DETECTED == res)
+        {
+            _applicationState = AppSmState::RESTART;
+        }
+    }
+    break;
+    case AppSmState::FINALIZE: {
+        const auto res = do_finalize();
+        if(CompletionStatus::RESTART_DETECTED == res)
+        {
+            _applicationState = AppSmState::RESTART;
+        }
+        else if(CompletionStatus::DONE == res)
+        {
+            _applicationState = AppSmState::SHUTDOWN;
+        }
+    }
+    break;
+    case AppSmState::SHUTDOWN: {
+        do_shutdown();
+    }
+    break;
+    case AppSmState::RESTART: {
+        const auto res = do_restart();
+        if(CompletionStatus::DONE == res)
+        {
+            _applicationState = AppSmState::RECORD_START;
+        }
+    }
+    break;
+    }
+    if(prevState != _applicationState)
     {
         // TODO: log state change
         NRF_LOG_INFO("state %d->%d", prevState, _applicationState);
     }
 }
+
+enum class InternalFsmState
+{
+    INIT,
+    RUNNING,
+    DONE
+};
+
+struct FsmContext
+{
+    InternalFsmState state;
+};
+
+/**
+ * This context is used inside each of the do_<> functions in order to distinguish
+ * first, last and other executions.
+ */
+FsmContext _context{InternalFsmState::DONE};
+
+CompletionStatus do_init()
+{
+    // pull LDO EN high
+    nrf_gpio_pin_set(LDO_EN_PIN);
+
+    led::task_led_set_indication_state(led::PREPARING);
+
+    // TODO: check that crystals are operating
+
+    return CompletionStatus::DONE;
 }
+
+CompletionStatus do_prepare()
+{
+    // TODO: check if SPI flash is operational
+    // TODO: replace primitive access to spi_flash_ methods with FS access
+    // TODO: check if microphone is present
+
+    if (_context.state == InternalFsmState::DONE)
+    {
+        _context.state == InternalFsmState::RUNNING;
+        // TODO: place SPI Flash operational check here
+        // TODO: place microphone operation check here
+
+        const auto erased = memory::isMemoryErased();
+        if (!erased)
+        {
+            NRF_LOG_WARNING("Memory is not erased. Erasing now");
+            int rc = spi_flash_erase_area(0x00, 0xB0000);
+            if (rc != 0)
+            {
+                NRF_LOG_ERROR("Erase failed.");
+                _context.state = InternalFsmState::DONE;
+                return CompletionStatus::ERROR;
+            }
+            return CompletionStatus::PENDING;
+        }
+        else
+        {
+            _context.state == InternalFsmState::DONE;
+            return CompletionStatus::DONE;
+        }
+    }
+    else if (_context.state == InternalFsmState::RUNNING)
+    {
+        if (!spi_flash_is_busy())
+        {
+            _context.state = InternalFsmState::DONE;
+            return CompletionStatus::DONE;
+        }
+    }
+
+    _context.state = InternalFsmState::DONE;
+    return CompletionStatus::DONE;
+}
+
+CompletionStatus do_record_start()
+{
+    // trigger start of FS operations
+    // trigger start of PDM
+    audio_start_record();
+
+    led::task_led_set_indication_state(led::RECORDING);
+
+    return CompletionStatus::DONE;
+}
+
+CompletionStatus do_record()
+{
+    // basically all operations are done in interrupts.
+    // here we only have to track button status and handle operation errors
+    const auto isButtonPressed = isRecordButtonPressed();
+    if (!isButtonPressed)
+    {
+        // TODO: maybe a good idea to implement a slightly delayed end of writing
+        audio_stop_record();
+        return CompletionStatus::DONE;
+    }
+
+    return CompletionStatus::PENDING;
+}
+
+CompletionStatus do_record_finalize()
+{
+    // close the audio file
+    // update the FS
+    const auto record_size = audio_get_record_size();
+    NRF_LOG_INFO("Recorded %d bytes", record_size);
+    if (0U == record_size)
+    {
+        return CompletionStatus::ERROR;
+    }
+
+    return CompletionStatus::DONE;
+}
+
+CompletionStatus do_connect()
+{
+    // start advertising, establish connection to the phone
+    if (!ble::BleSystem::getInstance().isActive())
+    {
+        ble::BleSystem::getInstance().start();
+        const auto record_size = audio_get_record_size();
+        ble::BleSystem::getInstance().getServices().setFileSizeForTransfer(record_size);
+
+        led::task_led_set_indication_state(led::CONNECTING);
+    }
+
+    if (ble::BleSystem::getInstance().getConnectionHandle() != BLE_CONN_HANDLE_INVALID)
+    {
+        return CompletionStatus::DONE;
+    }
+
+    // TODO: add restart detection
+    // TODO: add timeout handler
+
+    return CompletionStatus::PENDING;
+}
+
+CompletionStatus do_transfer()
+{
+    led::task_led_set_indication_state(led::SENDING);
+
+    // transfer the data to the phone
+    if (ble::BleSystem::getInstance().getServices().isFileTransmissionComplete())
+    {
+        return CompletionStatus::DONE;
+    }
+
+    // TODO: add restart detection
+    // TODO: add transmission error detection (or incapsulate it in FTS)
+
+    return CompletionStatus::PENDING;
+}
+
+CompletionStatus do_disconnect()
+{
+    // TODO: close the BLE connection
+    return CompletionStatus::DONE;
+}
+
+CompletionStatus do_finalize()
+{
+    // finalize Flash memory operations
+    // if files have been succesfully transmitted - erase the memory and FS descriptos
+    // if not - update FS descriptors
+    if (_context.state == InternalFsmState::DONE)
+    {
+        _context.state = InternalFsmState::RUNNING;
+        led::task_led_set_indication_state(led::SHUTTING_DOWN);
+        NRF_LOG_INFO("Finalize: erasing memory");
+        // trigger flash memory erase
+        int rc = spi_flash_erase_area(0x00, 0xB0000);
+        if (rc != 0)
+        {
+            NRF_LOG_ERROR("Erase failed.");
+            _context.state = InternalFsmState::DONE;
+            return CompletionStatus::DONE;
+        }
+        return CompletionStatus::PENDING;
+    }
+    else if (_context.state == InternalFsmState::RUNNING)
+    {
+        if (!spi_flash_is_busy())
+        {
+            _context.state = InternalFsmState::DONE;
+            return CompletionStatus::DONE;
+        }
+    }
+    
+    return CompletionStatus::INVALID;
+}
+
+CompletionStatus do_restart()
+{
+    // handle the previous state of the operation, assure consistency of FS and 
+    // trigger rec_start ASAP
+    return CompletionStatus::INVALID;
+}
+
+CompletionStatus do_shutdown()
+{
+    // pull LDO_EN down
+    nrf_gpio_pin_clear(LDO_EN_PIN);
+    return CompletionStatus::DONE;
+}
+
+} // namespace application

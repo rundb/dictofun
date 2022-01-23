@@ -46,7 +46,7 @@ void audio_frame_handle()
   {
     const int data_size = pending_frame->buffer_occupied;
     NRFX_ASSERT(data_size < SPI_XFER_DATA_STEP);
-    NRFX_ASSERT(application::getApplicationState() == application::APP_SM_RECORDING);
+    NRFX_ASSERT(application::getApplicationState() == application::AppSmState::RECORD);
       //  nrf_gpio_pin_set(17);
     spi_flash_write(write_pointer, data_size, pending_frame->buffer);
        //     nrf_gpio_pin_clear(17);

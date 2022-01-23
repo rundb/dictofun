@@ -21,19 +21,22 @@
 namespace application
 {
 
-enum AppSmState
+enum class AppSmState
 {
-  APP_SM_STARTUP = 0,
-  APP_SM_PREPARE = 1,
-  APP_SM_REC_INIT = 10,
-  APP_SM_RECORDING,
-  APP_SM_CONN,
-  APP_SM_XFER,
-  APP_SM_FINALIZE = 50,
-  APP_SM_SHUTDOWN,
+	INIT,
+	PREPARE,
+  RECORD_START,
+	RECORD,
+	RECORD_FINALIZATION,
+	CONNECT,
+	TRANSFER,
+	DISCONNECT,
+	FINALIZE,
+	SHUTDOWN,
+	RESTART
 };
 
 AppSmState getApplicationState();
 
 void application_cyclic();
-}
+} // namespace application
