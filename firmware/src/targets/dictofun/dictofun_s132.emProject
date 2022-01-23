@@ -178,7 +178,8 @@
       Name="Debug"
       clang_gnu_version="4.2.1"
       debug_register_definition_file="../../../sdk/nRF5_SDK_17.1.0_ddde560/modules/nrfx/mdk/nrf52.svd"
-      gcc_cplusplus_language_standard="gnu++17" />
+      gcc_cplusplus_language_standard="gnu++17"
+      gcc_optimization_level="Level 2 for size" />
   </project>
   <configuration
     Name="Release"
