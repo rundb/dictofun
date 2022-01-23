@@ -165,7 +165,13 @@
       <file file_name="../../../../../sdk/nRF5_SDK_17.1.0_ddde560/components/libraries/crypto/backend/oberon/oberon_backend_hash.c" />
       <file file_name="../../../../../sdk/nRF5_SDK_17.1.0_ddde560/components/libraries/crypto/backend/oberon/oberon_backend_hmac.c" />
     </folder>
-    <configuration Name="Release" gcc_optimization_level="Level 2 for size" />
+    <configuration
+      Name="Release"
+      arm_library_optimization="Small"
+      gcc_c_language_standard="c99"
+      gcc_cplusplus_language_standard="c++17"
+      gcc_optimization_level="Level 2 for size"
+      link_time_optimization="Yes" />
   </project>
   <configuration
     Name="Release"

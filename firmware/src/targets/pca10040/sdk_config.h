@@ -53,7 +53,7 @@
  
 
 #ifndef BLE_ADVERTISING_ENABLED
-#define BLE_ADVERTISING_ENABLED 0
+#define BLE_ADVERTISING_ENABLED 1
 #endif
 
 // <e> BLE_DTM_ENABLED - ble_dtm - Module for testing RF/PHY using DTM commands
@@ -1330,6 +1330,10 @@
 
 #ifndef NRF_DFU_BLE_BUTTONLESS_SUPPORTS_BONDS
 #define NRF_DFU_BLE_BUTTONLESS_SUPPORTS_BONDS 0
+#endif
+
+#ifndef NRF_DFU_TRANSPORT_BLE
+#define NRF_DFU_TRANSPORT_BLE 1
 #endif
 
 // </h> 

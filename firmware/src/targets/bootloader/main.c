@@ -146,7 +146,7 @@ int main(void)
     APP_ERROR_CHECK(ret_val);
 
     NRF_LOG_FLUSH();
-
+ 
     NRF_LOG_ERROR("After main, should never be reached.");
     NRF_LOG_FLUSH();
 
