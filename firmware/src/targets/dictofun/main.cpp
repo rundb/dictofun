@@ -105,7 +105,7 @@ NRF_LOG_INSTANCE_REGISTER(APP_TIMER_LOG_NAME,
 
 static app_timer_t timestamp_timer_data = {
     NRF_LOG_INSTANCE_PTR_INIT(p_log, APP_TIMER_LOG_NAME, timer_id)};
-static app_timer_id_t timestamp_timer; // = &timestamp_timer_data;
+static app_timer_id_t timestamp_timer; 
 
 void timestamp_timer_timeout_handler(void* p_context) { }
 static void timers_init()

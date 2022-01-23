@@ -13,6 +13,8 @@
   #include "custom_board.h"
 #elif defined(BOARD_DICTOFUN_1_1)
   #include "dictofun_1_1.h"
+#elif defined(BOARD_PCA10040_DICTOFUN)
+  #include "pca10040_dictofun.h"
 #else
 #error "Board is not defined"
 #endif
