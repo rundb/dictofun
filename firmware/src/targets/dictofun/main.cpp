@@ -20,6 +20,7 @@
 #include <libraries/log/nrf_log_default_backends.h>
 #include <nrf_gpio.h>
 #include <spi_access.h>
+#include "ble_dfu.h"
 
 #include <tasks/task_audio.h>
 #include <tasks/task_led.h>
@@ -45,6 +46,10 @@ int main()
                  NRF_GPIO_PIN_NOSENSE);
 
     log_init();
+
+    const auto err_code = ble_dfu_buttonless_async_svci_init();
+    APP_ERROR_CHECK(err_code);
+
     bsp_board_init(BSP_INIT_LEDS);
     timers_init();
     spi_access_init();
