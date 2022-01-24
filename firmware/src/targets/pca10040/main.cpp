@@ -32,6 +32,8 @@ int main()
     bsp_board_init(BSP_INIT_LEDS);
     timers_init();
     bleSystem.init();
+    NRF_LOG_INFO("Starting dictofun_pca10040 main app");
+
     for (;;)
     {
         bleSystem.cyclic();
