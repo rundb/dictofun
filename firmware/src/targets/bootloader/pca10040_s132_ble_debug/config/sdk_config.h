@@ -166,6 +166,10 @@
 #define NRF_BL_DFU_ENTER_METHOD_BUTTONLESS 0
 #endif
 
+#ifndef NRF_DFU_BLE_BUTTONLESS_SUPPORTS_BONDS
+#define NRF_DFU_BLE_BUTTONLESS_SUPPORTS_BONDS 1
+#endif
+
 // </h> 
 //==========================================================
 
@@ -1178,7 +1182,7 @@
  
 
 #ifndef NRF_DFU_BLE_REQUIRES_BONDS
-#define NRF_DFU_BLE_REQUIRES_BONDS 0
+#define NRF_DFU_BLE_REQUIRES_BONDS 1
 
 #endif
 
@@ -1722,11 +1726,11 @@
 // <e> NRF_LOG_BACKEND_UART_ENABLED - nrf_log_backend_uart - Log UART backend
 //==========================================================
 #ifndef NRF_LOG_BACKEND_UART_ENABLED
-#define NRF_LOG_BACKEND_UART_ENABLED 0
+#define NRF_LOG_BACKEND_UART_ENABLED 1
 #endif
 // <o> NRF_LOG_BACKEND_UART_TX_PIN - UART TX pin 
 #ifndef NRF_LOG_BACKEND_UART_TX_PIN
-#define NRF_LOG_BACKEND_UART_TX_PIN 7
+#define NRF_LOG_BACKEND_UART_TX_PIN 11
 #endif
 
 #ifndef NRF_LOG_BACKEND_UART_TEMP_BUFFER_SIZE
@@ -4850,7 +4854,7 @@
  
 
 #ifndef NRF_SDH_BLE_SERVICE_CHANGED
-#define NRF_SDH_BLE_SERVICE_CHANGED 0
+#define NRF_SDH_BLE_SERVICE_CHANGED 1
 
 #endif
 

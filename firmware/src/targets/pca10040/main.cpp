@@ -20,6 +20,11 @@
 #include <libraries/log/nrf_log.h>
 #include <libraries/log/nrf_log_default_backends.h>
 
+//#include "nrf_dfu_ble_svci_bond_sharing.h"
+//#include "nrf_svci_async_function.h"
+//#include "nrf_svci_async_handler.h"
+#include "ble_dfu.h"
+
 static void log_init();
 static void idle_state_handle();
 static void timers_init();
@@ -29,9 +34,12 @@ ble::BleSystem bleSystem{};
 int main()
 {
     log_init();
+    const auto err_code = ble_dfu_buttonless_async_svci_init();
+    APP_ERROR_CHECK(err_code);
     bsp_board_init(BSP_INIT_LEDS);
     timers_init();
     bleSystem.init();
+    bleSystem.start();
     NRF_LOG_INFO("Starting dictofun_pca10040 main app");
 
     for (;;)

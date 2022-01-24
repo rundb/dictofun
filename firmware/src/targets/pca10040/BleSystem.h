@@ -1,5 +1,4 @@
 #pragma once
-
 /*
  * Copyright (c) 2021 Roman Turkin 
  *
@@ -15,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #ifdef __cplusplus
 extern "C"
 {
@@ -30,6 +28,7 @@ void application_cyclic();
 #include <libraries/util/app_util.h>
 #include <libraries/timer/app_timer.h>
 #include <ble/nrf_ble_gatt/nrf_ble_gatt.h>
+#include <ble/peer_manager/peer_manager.h>
 #include "BleServices.h"
 
 namespace ble
@@ -45,10 +44,11 @@ public:
     }
 
     void init();
+    void start();
     void cyclic();
 
-
     static inline BleSystem& getInstance() {return *_instance; }
+    bool isActive() { return _isActive;}
     inline BleServices& getServices() { return _bleServices; }
 
     void bleEventHandler(ble_evt_t const * p_ble_evt, void * p_context);
@@ -66,6 +66,15 @@ private:
     void initGatt();
     void initConnParameters();
 
+    // Bonding-related methods
+    void initBonding();
+    static void pm_evt_handler(pm_evt_t const * p_evt);
+    static void bonded_client_add(pm_evt_t const * p_evt);
+    static void bonded_client_remove_all(void);
+    static void on_bonded_peer_reconnection_lvl_notify(pm_evt_t const * p_evt);
+
+    bool _isActive{false};
+
     uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;
     //uint8_t m_adv_handle = BLE_GAP_ADV_SET_HANDLE_NOT_SET;
     //NRF_BLE_GATT_DEF(m_gatt);
@@ -81,6 +90,15 @@ private:
     static const uint32_t FIRST_CONN_PARAMS_UPDATE_DELAY  = APP_TIMER_TICKS(20000);
     static const uint32_t NEXT_CONN_PARAMS_UPDATE_DELAY = APP_TIMER_TICKS(5000);
     static const uint32_t MAX_CONN_PARAMS_UPDATE_COUNT = 3;
+
+    static const uint8_t SEC_PARAM_BOND = 1;
+    static const uint8_t SEC_PARAM_MITM = 0;
+    static const uint8_t SEC_PARAM_LESC = 0;
+    static const uint8_t SEC_PARAM_KEYPRESS = 0;
+    static const uint8_t SEC_PARAM_IO_CAPABILITIES = BLE_GAP_IO_CAPS_NONE;
+    static const uint8_t SEC_PARAM_OOB = 0;
+    static const uint8_t SEC_PARAM_MIN_KEY_SIZE = 7;
+    static const uint8_t SEC_PARAM_MAX_KEY_SIZE = 16;
 };
 
 }

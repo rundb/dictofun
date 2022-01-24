@@ -172,7 +172,8 @@
       gcc_c_language_standard="c99"
       gcc_cplusplus_language_standard="c++17"
       gcc_optimization_level="Level 2 for size"
-      link_time_optimization="No" />
+      link_time_optimization="No"
+      post_build_command="cp Output/$(Configuration)/Exe/$(ProjectName).hex ../../../../../release/bootloader.hex" />
   </project>
   <configuration
     Name="Release"
