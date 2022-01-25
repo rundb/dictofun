@@ -20,6 +20,7 @@
 #include <libraries/log/nrf_log_default_backends.h>
 #include <nrf_gpio.h>
 #include <spi_access.h>
+#include "ble_dfu.h"
 
 #include <tasks/task_audio.h>
 #include <tasks/task_led.h>
@@ -45,6 +46,10 @@ int main()
                  NRF_GPIO_PIN_NOSENSE);
 
     log_init();
+
+    const auto err_code = ble_dfu_buttonless_async_svci_init();
+    APP_ERROR_CHECK(err_code);
+
     bsp_board_init(BSP_INIT_LEDS);
     timers_init();
     spi_access_init();
@@ -105,7 +110,7 @@ NRF_LOG_INSTANCE_REGISTER(APP_TIMER_LOG_NAME,
 
 static app_timer_t timestamp_timer_data = {
     NRF_LOG_INSTANCE_PTR_INIT(p_log, APP_TIMER_LOG_NAME, timer_id)};
-static app_timer_id_t timestamp_timer; // = &timestamp_timer_data;
+static app_timer_id_t timestamp_timer; 
 
 void timestamp_timer_timeout_handler(void* p_context) { }
 static void timers_init()

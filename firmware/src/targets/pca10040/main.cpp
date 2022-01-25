@@ -20,6 +20,8 @@
 #include <libraries/log/nrf_log.h>
 #include <libraries/log/nrf_log_default_backends.h>
 
+#include "ble_dfu.h"
+
 static void log_init();
 static void idle_state_handle();
 static void timers_init();
@@ -29,9 +31,14 @@ ble::BleSystem bleSystem{};
 int main()
 {
     log_init();
+    const auto err_code = ble_dfu_buttonless_async_svci_init();
+    APP_ERROR_CHECK(err_code);
     bsp_board_init(BSP_INIT_LEDS);
     timers_init();
     bleSystem.init();
+    bleSystem.start();
+    NRF_LOG_INFO("Starting dictofun_pca10040 main app");
+
     for (;;)
     {
         bleSystem.cyclic();
@@ -78,10 +85,8 @@ NRF_LOG_INSTANCE_REGISTER(APP_TIMER_LOG_NAME, timestamp_timer,
                                         APP_TIMER_CONFIG_LOG_LEVEL : NRF_LOG_SEVERITY_NONE);
 
 static app_timer_t timestamp_timer_data = {
-        .active = false,
-        NRF_LOG_INSTANCE_PTR_INIT(p_log, APP_TIMER_LOG_NAME, timer_id)
-};
-static app_timer_id_t timestamp_timer;// = &timestamp_timer_data;
+    NRF_LOG_INSTANCE_PTR_INIT(p_log, APP_TIMER_LOG_NAME, timer_id)};
+static app_timer_id_t timestamp_timer; 
 
 void timestamp_timer_timeout_handler(void * p_context) {}
 static void timers_init()

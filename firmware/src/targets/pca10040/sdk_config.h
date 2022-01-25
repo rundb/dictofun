@@ -53,7 +53,7 @@
  
 
 #ifndef BLE_ADVERTISING_ENABLED
-#define BLE_ADVERTISING_ENABLED 0
+#define BLE_ADVERTISING_ENABLED 1
 #endif
 
 // <e> BLE_DTM_ENABLED - ble_dtm - Module for testing RF/PHY using DTM commands
@@ -162,7 +162,7 @@
 #endif
 // <o> PM_MAX_REGISTRANTS - Number of event handlers that can be registered. 
 #ifndef PM_MAX_REGISTRANTS
-#define PM_MAX_REGISTRANTS 1
+#define PM_MAX_REGISTRANTS 2
 #endif
 
 // <o> PM_FLASH_BUFFERS - Number of internal buffers for flash operations. 
@@ -1322,14 +1322,18 @@
  
 
 #ifndef BLE_DFU_ENABLED
-#define BLE_DFU_ENABLED 0
+#define BLE_DFU_ENABLED 1
 #endif
 
 // <q> NRF_DFU_BLE_BUTTONLESS_SUPPORTS_BONDS  - Buttonless DFU supports bonds.
  
 
 #ifndef NRF_DFU_BLE_BUTTONLESS_SUPPORTS_BONDS
-#define NRF_DFU_BLE_BUTTONLESS_SUPPORTS_BONDS 0
+#define NRF_DFU_BLE_BUTTONLESS_SUPPORTS_BONDS 1
+#endif
+
+#ifndef NRF_DFU_TRANSPORT_BLE
+#define NRF_DFU_TRANSPORT_BLE 1
 #endif
 
 // </h> 
@@ -7690,7 +7694,7 @@
 #endif
 // <o> NRF_LOG_BACKEND_UART_TX_PIN - UART TX pin 
 #ifndef NRF_LOG_BACKEND_UART_TX_PIN
-#define NRF_LOG_BACKEND_UART_TX_PIN 16
+#define NRF_LOG_BACKEND_UART_TX_PIN 11
 #endif
 
 // <o> NRF_LOG_BACKEND_UART_BAUDRATE  - Default Baudrate
@@ -11443,7 +11447,7 @@
  
 
 #ifndef NRF_SDH_BLE_SERVICE_CHANGED
-#define NRF_SDH_BLE_SERVICE_CHANGED 0
+#define NRF_SDH_BLE_SERVICE_CHANGED 1
 #endif
 
 // </h> 

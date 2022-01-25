@@ -22,18 +22,20 @@
 #include <ble/ble_services/ble_lbs/ble_lbs.h>
 #include <ble/common/ble_advdata.h>
 #include <ble/common/ble_conn_params.h>
+#include <ble/peer_manager/peer_manager_handler.h>
 #include <libraries/util/app_error.h>
 #include "ble_file_transfer_service.h"
 #include <nrf_log.h>
 #include <stdint.h>
 #include "BleServices.h"
+#include <boards/boards.h>
 
 // Legacy define. I haven't come up with a replacement for this part of nordic interfaces
 // NRF_BLE_QWR_DEF(m_qwr);
 //BLE_LBS_DEF(m_lbs);                                                             /**< LED Button Service instance. */
 BLE_FTS_DEF(m_fts, NRF_SDH_BLE_TOTAL_LINK_COUNT);
 
-#define APP_ADV_INTERVAL                1600                                      /**< The advertising interval (in units of 0.625 ms; this value corresponds to 40 ms). */
+#define APP_ADV_INTERVAL                200                                      /**< The advertising interval (in units of 0.625 ms; this value corresponds to 40 ms). */
 #define APP_ADV_DURATION                BLE_GAP_ADV_TIMEOUT_GENERAL_UNLIMITED   /**< The advertising time-out (in units of seconds). When set to 0, we will never time out. */
 
 static uint8_t m_enc_advdata[BLE_GAP_ADV_SET_DATA_SIZE_MAX];                    /**< Buffer for storing an encoded advertising set. */
@@ -62,8 +64,8 @@ NRF_SDH_BLE_OBSERVER(m_gatt_obs, NRF_BLE_GATT_BLE_OBSERVER_PRIO, nrf_ble_gatt_on
 namespace ble
 {
 
-BleSystem * BleSystem::_instance;
-const char BleSystem::DEVICE_NAME[] = "pca10040_dbg";
+BleSystem * BleSystem::_instance{nullptr};
+const char BleSystem::DEVICE_NAME[] = BOARD_NAME;
 
 static void services_init();
 static void advertising_init();
@@ -73,11 +75,16 @@ void BleSystem::init()
     initBleStack();
     initGapParams();
     initGatt();
+    initBonding();
     _bleServices.init();
     _qwr_default_handle = _bleServices.getQwrHandle();
     advertising_init();
     initConnParameters();
+}
 
+void BleSystem::start()
+{
+    _isActive = true;
     startAdvertising();
 }
 
@@ -229,6 +236,84 @@ void BleSystem::initGapParams()
 void BleSystem::initGatt()
 {
     ret_code_t err_code = nrf_ble_gatt_init(&m_gatt, NULL);
+    APP_ERROR_CHECK(err_code);
+}
+
+void BleSystem::bonded_client_add(pm_evt_t const * p_evt)
+{
+    uint16_t   conn_handle = p_evt->conn_handle;
+    uint16_t   peer_id     = p_evt->peer_id;
+}
+
+void BleSystem::bonded_client_remove_all()
+{
+    // TODO: implement
+}
+
+void BleSystem::on_bonded_peer_reconnection_lvl_notify(pm_evt_t const * p_evt)
+{
+    ret_code_t        err_code;
+    static uint16_t   peer_id   = PM_PEER_ID_INVALID;
+
+    peer_id = p_evt->peer_id;
+}
+
+void BleSystem::pm_evt_handler(pm_evt_t const * p_evt)
+{
+    pm_handler_on_pm_evt(p_evt);
+    pm_handler_disconnect_on_sec_failure(p_evt);
+    pm_handler_flash_clean(p_evt);
+
+    switch (p_evt->evt_id)
+    {
+        case PM_EVT_BONDED_PEER_CONNECTED:
+            bonded_client_add(p_evt);
+            on_bonded_peer_reconnection_lvl_notify(p_evt);
+            break;
+
+        case PM_EVT_CONN_SEC_SUCCEEDED:
+            bonded_client_add(p_evt);
+            break;
+
+        case PM_EVT_PEERS_DELETE_SUCCEEDED:
+            bonded_client_remove_all();
+
+            // Bonds are deleted. Start scanning.
+            break;
+
+        default:
+            break;
+    }
+}
+
+void BleSystem::initBonding()
+{
+    ble_gap_sec_params_t sec_param;
+    ret_code_t           err_code;
+
+    err_code = pm_init();
+    APP_ERROR_CHECK(err_code);
+
+    memset(&sec_param, 0, sizeof(ble_gap_sec_params_t));
+
+    // Security parameters to be used for all security procedures.
+    sec_param.bond           = SEC_PARAM_BOND;
+    sec_param.mitm           = SEC_PARAM_MITM;
+    sec_param.lesc           = SEC_PARAM_LESC;
+    sec_param.keypress       = SEC_PARAM_KEYPRESS;
+    sec_param.io_caps        = SEC_PARAM_IO_CAPABILITIES;
+    sec_param.oob            = SEC_PARAM_OOB;
+    sec_param.min_key_size   = SEC_PARAM_MIN_KEY_SIZE;
+    sec_param.max_key_size   = SEC_PARAM_MAX_KEY_SIZE;
+    sec_param.kdist_own.enc  = 1;
+    sec_param.kdist_own.id   = 1;
+    sec_param.kdist_peer.enc = 1;
+    sec_param.kdist_peer.id  = 1;
+
+    err_code = pm_sec_params_set(&sec_param);
+    APP_ERROR_CHECK(err_code);
+
+    err_code = pm_register(pm_evt_handler);
     APP_ERROR_CHECK(err_code);
 }
 

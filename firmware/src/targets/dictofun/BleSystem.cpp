@@ -75,9 +75,9 @@ void BleSystem::init()
     initBleStack();
     initGapParams();
     initGatt();
+    initBonding();
     _bleServices.init();
     _qwr_default_handle = _bleServices.getQwrHandle();
-    initBonding();
     advertising_init();
     initConnParameters();
 }
