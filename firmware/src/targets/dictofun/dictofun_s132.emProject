@@ -144,6 +144,8 @@
     <folder Name="Lib">
       <file file_name="../../lib/spi_flash/spi_access.c" />
       <file file_name="../../lib/spi_flash/spi_access.h" />
+      <file file_name="../../lib/spi_flash/spi.cpp" />
+      <file file_name="../../lib/spi_flash/spi_flash.cpp" />
       <file file_name="../../lib/drv_pdm/drv_audio.c" />
       <file file_name="../../lib/drv_pdm/drv_audio.h" />
       <file file_name="../../lib/ble_fts/ble_file_transfer_service.c" />

@@ -14,13 +14,15 @@
  * limitations under the License.
  */
 #include "BleSystem.h"
+#include "ble_dfu.h"
+#include "spi.h"
+#include "spi_flash.h"
 #include <boards/boards.h>
 #include <libraries/log/nrf_log.h>
 #include <libraries/log/nrf_log_ctrl.h>
 #include <libraries/log/nrf_log_default_backends.h>
 #include <nrf_gpio.h>
 #include <spi_access.h>
-#include "ble_dfu.h"
 
 #include <tasks/task_audio.h>
 #include <tasks/task_led.h>
@@ -31,6 +33,15 @@ static void idle_state_handle();
 static void timers_init();
 
 ble::BleSystem bleSystem{};
+spi::Spi flashSpi(0, SPI_FLASH_CS_PIN);
+flash::SpiFlash flashMemory(flashSpi);
+
+static const spi::Spi::Configuration flash_spi_config{NRF_DRV_SPI_FREQ_1M,
+                                                      NRF_DRV_SPI_MODE_0,
+                                                      NRF_DRV_SPI_BIT_ORDER_MSB_FIRST,
+                                                      SPI_FLASH_SCK_PIN,
+                                                      SPI_FLASH_MOSI_PIN,
+                                                      SPI_FLASH_MISO_PIN};
 
 int main()
 {
@@ -47,12 +58,15 @@ int main()
 
     log_init();
 
-    const auto err_code = ble_dfu_buttonless_async_svci_init();
-    APP_ERROR_CHECK(err_code);
+    //const auto err_code = ble_dfu_buttonless_async_svci_init();
+    //APP_ERROR_CHECK(err_code);
 
     bsp_board_init(BSP_INIT_LEDS);
     timers_init();
-    spi_access_init();
+    flashSpi.init(flash_spi_config);
+    flashMemory.init();
+    flashMemory.reset();
+      
     bleSystem.init();
     audio_init();
 
@@ -110,7 +124,7 @@ NRF_LOG_INSTANCE_REGISTER(APP_TIMER_LOG_NAME,
 
 static app_timer_t timestamp_timer_data = {
     NRF_LOG_INSTANCE_PTR_INIT(p_log, APP_TIMER_LOG_NAME, timer_id)};
-static app_timer_id_t timestamp_timer; 
+static app_timer_id_t timestamp_timer;
 
 void timestamp_timer_timeout_handler(void* p_context) { }
 static void timers_init()
