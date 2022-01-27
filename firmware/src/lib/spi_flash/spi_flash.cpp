@@ -18,6 +18,7 @@
 #include "boards/boards.h"
 #include "nrf_gpio.h"
 #include <cstring>
+#include "app_timer.h"
 
 namespace flash
 {

@@ -37,7 +37,8 @@ class BleServices
 {
 public:
     BleServices();
-    void init(lfs_t * fs);
+    void init();
+    void start(lfs_t * fs, lfs_file_t * file);
     void cyclic();
 
     nrf_ble_qwr_t * getQwrHandle();
@@ -55,6 +56,7 @@ public:
 private:
     static BleServices * _instance;
     lfs_t * _fs{nullptr};
+    lfs_file_t * _file{nullptr};
     BleCommands _ble_cmd;
     uint32_t _read_pointer{0};
     static const uint32_t SPI_READ_SIZE = 128;

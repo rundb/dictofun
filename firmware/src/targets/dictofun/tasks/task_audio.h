@@ -20,9 +20,8 @@
 #include <stdint.h>
 #include "lfs.h"
 
-void audio_init(lfs_t * fs);
-void audio_start_record();
+void audio_init();
+void audio_start_record(lfs_t * fs, lfs_file_t * file);
 void audio_stop_record();
 void audio_frame_handle();
 void audio_frame_cb(drv_audio_frame_t * frame);
-size_t audio_get_record_size();

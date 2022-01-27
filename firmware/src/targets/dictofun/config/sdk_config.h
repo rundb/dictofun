@@ -12034,6 +12034,10 @@
 #define POWER_CONFIG_SOC_OBSERVER_PRIO 0
 #endif
 
+#ifndef LOG_LEVEL_DEFAULT
+#define LOG_LEVEL_DEFAULT 2
+#endif
+
 // Application-specific definitions
 
 #define CONFIG_AUDIO_ENABLED 1

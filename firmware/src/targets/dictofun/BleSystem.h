@@ -44,8 +44,8 @@ public:
         _instance = this;
     }
 
-    void init(lfs_t * fs);
-    void start();
+    void init();
+    void start(lfs_t * fs, lfs_file_t * file);
     void cyclic();
 
     static inline BleSystem& getInstance() {return *_instance; }
@@ -61,7 +61,9 @@ public:
 private:
     static BleSystem * _instance;
     lfs_t * _fs{nullptr};
+    lfs_file_t * _record_file{nullptr};
     BleServices _bleServices;
+    bool _isActive{false};
     void initBleStack();
     void startAdvertising();
     void initGapParams();
@@ -74,8 +76,6 @@ private:
     static void bonded_client_add(pm_evt_t const * p_evt);
     static void bonded_client_remove_all(void);
     static void on_bonded_peer_reconnection_lvl_notify(pm_evt_t const * p_evt);
-
-    bool _isActive{false};
 
     uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;
     //uint8_t m_adv_handle = BLE_GAP_ADV_SET_HANDLE_NOT_SET;

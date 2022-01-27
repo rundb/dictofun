@@ -218,14 +218,13 @@ BleServices::BleServices()
     _instance = this;
 }
 
-void BleServices::init(lfs_t * fs)
+void BleServices::init()
 {
     ret_code_t         err_code;
     ble_lbs_init_t     lbs_init = {0};
     ble_fts_init_t     fts_init = {0};
     nrf_ble_qwr_init_t qwr_init = {0};
     ble_dfu_buttonless_init_t dfus_init = {0};
-    _fs = fs;
 
     // Initialize Queued Write Module.
     qwr_init.error_handler = nrf_qwr_error_handler;
@@ -250,6 +249,12 @@ void BleServices::init(lfs_t * fs)
     err_code = ble_dfu_buttonless_init(&dfus_init);
     APP_ERROR_CHECK(err_code);
 
+}
+
+void BleServices::start(lfs_t * fs, lfs_file_t * file)
+{
+    _fs = fs;
+    _file = file;
 }
 
 nrf_ble_qwr_t * BleServices::getQwrHandle()
@@ -287,17 +292,12 @@ void BleServices::cyclic()
     {
         case CMD_GET_FILE:
         {
-            if (!_is_file_transmission_started)
-            {              
-                // open the recorded file
-                const auto res = lfs_file_open(_fs, &file, CURRENT_RECORD_FILE_NAME, LFS_O_RDONLY);
-                if (res)
-                {
-                    // ASSERT
-                    while(1);
-                }
+            if (_fs == nullptr || _file == nullptr)
+            {
+                NRF_LOG_ERROR("BleServices::cyclic(): FS or file is nullptr");
+                return;
             }
-            const auto read_size = lfs_file_read(_fs, &file, readBuffer, READ_BUFFER_SIZE);
+            const auto read_size = lfs_file_read(_fs, _file, readBuffer, READ_BUFFER_SIZE);
             if (read_size < 0)
             {
                 // ERROR!
@@ -308,7 +308,6 @@ void BleServices::cyclic()
                 _is_file_transmission_done = true;
                 NRF_LOG_INFO("File have been sent (requested %d, got %d bytes (count=%d)", READ_BUFFER_SIZE, read_size, bleFramesCounter);
                 _ble_cmd = CMD_EMPTY;
-                lfs_file_close(_fs, &file);
             }
             if (!_is_file_transmission_started) // TODO change to file start
             {

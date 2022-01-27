@@ -39,6 +39,6 @@ enum class AppSmState
 
 AppSmState getApplicationState();
 
-void application_init(lfs_t * fs);
+void application_init();
 void application_cyclic();
 } // namespace application

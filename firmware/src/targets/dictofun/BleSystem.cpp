@@ -70,28 +70,34 @@ const char BleSystem::DEVICE_NAME[] = BOARD_NAME;
 static void services_init();
 static void advertising_init();
 
-void BleSystem::init(lfs_t * fs)
+void BleSystem::init()
 {
-    _fs = fs;
     initBleStack();
     initGapParams();
     initGatt();
     initBonding();
-    _bleServices.init(_fs);
+    _bleServices.init();
     _qwr_default_handle = _bleServices.getQwrHandle();
     advertising_init();
     initConnParameters();
 }
 
-void BleSystem::start()
+void BleSystem::start(lfs_t * fs, lfs_file_t * file)
 {
     _isActive = true;
+    _fs = fs;
+    _record_file = file;
+    _bleServices.start(_fs, _record_file);
     startAdvertising();
+    _isActive = true;
 }
 
 void BleSystem::cyclic()
 {
-    _bleServices.cyclic();
+    if (_isActive)
+    {
+        _bleServices.cyclic();
+    }
 }
 
 void BleSystem::startAdvertising()
