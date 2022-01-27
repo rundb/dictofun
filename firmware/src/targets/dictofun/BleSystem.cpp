@@ -82,15 +82,22 @@ void BleSystem::init()
     initConnParameters();
 }
 
-void BleSystem::start()
+void BleSystem::start(lfs_t * fs, lfs_file_t * file)
 {
     _isActive = true;
+    _fs = fs;
+    _record_file = file;
+    _bleServices.start(_fs, _record_file);
     startAdvertising();
+    _isActive = true;
 }
 
 void BleSystem::cyclic()
 {
-    _bleServices.cyclic();
+    if (_isActive)
+    {
+        _bleServices.cyclic();
+    }
 }
 
 void BleSystem::startAdvertising()

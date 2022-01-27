@@ -30,6 +30,7 @@ void application_cyclic();
 #include <ble/nrf_ble_gatt/nrf_ble_gatt.h>
 #include <ble/peer_manager/peer_manager.h>
 #include "BleServices.h"
+#include "lfs.h"
 
 namespace ble
 {
@@ -44,7 +45,7 @@ public:
     }
 
     void init();
-    void start();
+    void start(lfs_t * fs, lfs_file_t * file);
     void cyclic();
 
     static inline BleSystem& getInstance() {return *_instance; }
@@ -59,7 +60,10 @@ public:
     static const uint8_t APP_BLE_CONN_CFG_TAG = 1;
 private:
     static BleSystem * _instance;
+    lfs_t * _fs{nullptr};
+    lfs_file_t * _record_file{nullptr};
     BleServices _bleServices;
+    bool _isActive{false};
     void initBleStack();
     void startAdvertising();
     void initGapParams();
@@ -72,8 +76,6 @@ private:
     static void bonded_client_add(pm_evt_t const * p_evt);
     static void bonded_client_remove_all(void);
     static void on_bonded_peer_reconnection_lvl_notify(pm_evt_t const * p_evt);
-
-    bool _isActive{false};
 
     uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;
     //uint8_t m_adv_handle = BLE_GAP_ADV_SET_HANDLE_NOT_SET;

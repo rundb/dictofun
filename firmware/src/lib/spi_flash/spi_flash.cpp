@@ -18,9 +18,22 @@
 #include "boards/boards.h"
 #include "nrf_gpio.h"
 #include <cstring>
+#include "app_timer.h"
 
 namespace flash
 {
+enum class Commands
+{
+    READ = 1,
+    ERASE_SECTOR = 2,
+    ERASE_CHIP = 3,
+    PROGRAM = 4,
+};
+
+static const size_t ISSUED_COMMANDS_CNT = 20;
+volatile Commands issued_commands[ISSUED_COMMANDS_CNT];
+int issued_idx = 0;
+
 volatile bool SpiFlash::_isSpiOperationPending;
 SpiFlash* SpiFlash::_instance{nullptr};
 
@@ -44,8 +57,15 @@ void SpiFlash::init()
     nrf_gpio_pin_set(SPI_FLASH_WP_PIN);
 }
 
-void SpiFlash::read(uint32_t address, uint8_t* data, uint32_t size)
+SpiFlash::Result SpiFlash::read(uint32_t address, uint8_t* data, uint32_t size)
 {
+    if (data == nullptr)
+    {
+        return Result::ETC_ERROR;
+    }
+      issued_commands[issued_idx] = Commands::READ;
+      issued_idx = (issued_idx + 1) % ISSUED_COMMANDS_CNT;
+
     // 1. fill in transaction header
     _txBuffer[0] = 0x3U;
     _txBuffer[1] = (address >> 16) & 0xFF;
@@ -59,11 +79,20 @@ void SpiFlash::read(uint32_t address, uint8_t* data, uint32_t size)
     _context.data = data;
     _context.address = address;
     _context.size = size;
+    return Result::OK;
 }
 
-void SpiFlash::program(uint32_t address, uint8_t* data, uint32_t size)
+// TODO: might have to implement programming of several pages
+SpiFlash::Result SpiFlash::program(uint32_t address, const uint8_t * const data, uint32_t size)
 {
-    // add alignment, size checks and nullptr-check
+    if ((address % PAGE_SIZE != 0) || (size > PAGE_SIZE) || (data == nullptr))
+    {
+        return Result::ALIGNMENT_ERROR;
+    }
+
+      issued_commands[issued_idx] = Commands::PROGRAM;
+      issued_idx = (issued_idx + 1) % ISSUED_COMMANDS_CNT;
+
     while(isBusy())
         ;
     writeEnable(true);
@@ -76,52 +105,64 @@ void SpiFlash::program(uint32_t address, uint8_t* data, uint32_t size)
     _isSpiOperationPending = true;
     _spi.xfer(_txBuffer, _rxBuffer, size + 4, spiOperationCallback);
     _context.operation = Operation::WRITE;
-    _context.data = data;
+    _context.data = (uint8_t *)data;
     _context.address = address;
     _context.size = size;
+    return Result::OK;
 }
 
-void SpiFlash::eraseSector(uint32_t address)
+SpiFlash::Result SpiFlash::eraseSector(uint32_t address)
 {
-    if(address % ERASABLE_SIZE != 0)
+    if(address % SECTOR_SIZE != 0)
     {
-        // TODO: assert
-        while(1)
-            ;
+        return Result::ALIGNMENT_ERROR;
     }
+      issued_commands[issued_idx] = Commands::ERASE_SECTOR;
+      issued_idx = (issued_idx + 1) % ISSUED_COMMANDS_CNT;
+
     while(isBusy())
         ;
-
     writeEnable(true);
     _isSpiOperationPending = true;
-    uint8_t tx_data[] = {0xD8,
+    uint8_t tx_data[] = {0x02,
                          static_cast<uint8_t>((address >> 16) & 0xFF),
                          static_cast<uint8_t>((address >> 8) & 0xFF),
                          static_cast<uint8_t>((address)&0xFF)};
     uint8_t rx_data[] = {0, 0, 0, 0};
-    _spi.xfer(tx_data, rx_data, 4);
+    _spi.xfer(tx_data, rx_data, 4, spiOperationCallback);
     _context.operation = Operation::ERASE;
+    return Result::OK;
 }
 
-void SpiFlash::erase(uint32_t address, uint32_t size)
+SpiFlash::Result SpiFlash::erase(uint32_t address, uint32_t size)
 {
+    if ((address % SECTOR_SIZE != 0) || (size % SECTOR_SIZE != 0))
+    {
+        return Result::ALIGNMENT_ERROR;
+    }
+
     while(isBusy())
         ;
 
-    if((address % ERASABLE_SIZE != 0) || (size % ERASABLE_SIZE != 0))
+    if((address % SECTOR_SIZE != 0) || (size % SECTOR_SIZE != 0))
     {
         // assert
         while(1)
             ;
     }
-    for(int i = 0; i < size / ERASABLE_SIZE; ++i)
+    for(int i = 0; i < size / SECTOR_SIZE; ++i)
     {
-        uint32_t addr = address + i * ERASABLE_SIZE;
-        eraseSector(addr);
-        while(isBusy())
-            ;
+        uint32_t addr = address + i * SECTOR_SIZE;
+        const auto res = eraseSector(addr);
+        if (res != Result::OK)
+        {
+            _context.operation = Operation::IDLE;
+            return res;
+        }
+        while(isBusy());
     }
     _context.operation = Operation::IDLE;
+    return Result::OK;
 }
 
 bool SpiFlash::isBusy()
@@ -130,7 +171,9 @@ bool SpiFlash::isBusy()
     {
         return true;
     }
-    return (getSR1() & 0x01) > 0U;
+    auto sr1 = getSR1();
+    auto result = (sr1 & 0x01) > 0U;
+    return result;
 }
 
 void SpiFlash::reset()
@@ -199,6 +242,10 @@ void SpiFlash::eraseChip()
 {
     writeEnable(true);
     const auto sr1 = getSR1();
+
+        issued_commands[issued_idx] = Commands::ERASE_CHIP;
+        issued_idx = (issued_idx + 1) % ISSUED_COMMANDS_CNT;
+
     while(isBusy())
         ;
     _isSpiOperationPending = true;
@@ -213,8 +260,8 @@ void SpiFlash::eraseChip()
 
 void SpiFlash::spiOperationCallback(spi::Spi::Result result)
 {
-    _isSpiOperationPending = false;
     getInstance().completionCallback();
+    _isSpiOperationPending = false;
 }
 
 void SpiFlash::completionCallback()

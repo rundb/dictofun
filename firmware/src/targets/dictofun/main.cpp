@@ -36,7 +36,7 @@ ble::BleSystem bleSystem{};
 spi::Spi flashSpi(0, SPI_FLASH_CS_PIN);
 flash::SpiFlash flashMemory(flashSpi);
 
-static const spi::Spi::Configuration flash_spi_config{NRF_DRV_SPI_FREQ_1M,
+static const spi::Spi::Configuration flash_spi_config{NRF_DRV_SPI_FREQ_2M,
                                                       NRF_DRV_SPI_MODE_0,
                                                       NRF_DRV_SPI_BIT_ORDER_MSB_FIRST,
                                                       SPI_FLASH_SCK_PIN,
@@ -58,25 +58,26 @@ int main()
 
     log_init();
 
+    // TODO: uncomment if bootloader is present
     //const auto err_code = ble_dfu_buttonless_async_svci_init();
     //APP_ERROR_CHECK(err_code);
 
     bsp_board_init(BSP_INIT_LEDS);
     timers_init();
     flashSpi.init(flash_spi_config);
+                 
     flashMemory.init();
     flashMemory.reset();
-      
+
     bleSystem.init();
     audio_init();
-
+    application::application_init();
     led::task_led_init();
 
     for(;;)
     {
         bleSystem.cyclic();
         audio_frame_handle();
-        spi_flash_cyclic();
         application::application_cyclic();
         led::task_led_cyclic();
         idle_state_handle();

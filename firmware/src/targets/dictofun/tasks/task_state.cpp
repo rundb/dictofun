@@ -16,16 +16,46 @@
 
 #include "tasks/task_state.h"
 #include "BleSystem.h"
+#include "block_device_api.h"
+#include "spi_flash.h"
 #include "tasks/task_audio.h"
 #include "tasks/task_led.h"
 #include "tasks/task_memory.h"
+#include <lfs.h>
 #include <libraries/timer/app_timer.h>
 #include <nrf_gpio.h>
 #include <nrf_log.h>
 
+extern void ROTU_printDebugInfo();
+
 namespace application
 {
 AppSmState _applicationState{AppSmState::INIT};
+lfs_t filesystem;
+lfs_file_t current_record;
+lfs_file_t boot_count_file;
+uint32_t _boot_count;
+
+#define CURRENT_RECORD_FILE_NAME "record%d"
+#define BOOT_COUNT_FILE_NAME "boot"
+static const size_t MAX_RECORD_FILE_NAME_SIZE = 9; // record99\0 - 9 symbols
+char record_file_name[MAX_RECORD_FILE_NAME_SIZE];
+static bool is_initialization_error_detected = false;
+
+const char *stateNames[] =
+{
+    "INIT",
+    "PREPARE",
+    "RECORD_START",
+    "RECORD",
+    "RECORD_FINALIZATION",
+    "CONNECT",
+    "TRANSFER",
+    "DISCONNECT",
+    "FINALIZE",
+    "SHUTDOWN",
+    "RESTART"
+};
 
 AppSmState getApplicationState()
 {
@@ -36,6 +66,8 @@ bool isRecordButtonPressed()
 {
     return nrf_gpio_pin_read(BUTTON_PIN) > 0;
 }
+
+void application_init() { }
 
 /**
  * Enum is defined within CPP file, as it's used only inside the implementation
@@ -96,6 +128,10 @@ void application_cyclic()
         {
             _applicationState = AppSmState::RECORD_START;
         }
+        else if (CompletionStatus::ERROR == res)
+        {
+            _applicationState = AppSmState::FINALIZE;
+        }
     }
     break;
     case AppSmState::RECORD_START: {
@@ -103,6 +139,10 @@ void application_cyclic()
         if(CompletionStatus::DONE == res)
         {
             _applicationState = AppSmState::RECORD;
+        }
+        else if (CompletionStatus::ERROR == res)
+        {
+            _applicationState = AppSmState::FINALIZE;
         }
     }
     break;
@@ -120,7 +160,7 @@ void application_cyclic()
         {
             _applicationState = AppSmState::CONNECT;
         }
-        else if (CompletionStatus::ERROR == res)
+        else if(CompletionStatus::ERROR == res)
         {
             _applicationState = AppSmState::FINALIZE;
         }
@@ -176,7 +216,7 @@ void application_cyclic()
         {
             _applicationState = AppSmState::RESTART;
         }
-        else if(CompletionStatus::DONE == res)
+        else if(CompletionStatus::DONE == res || CompletionStatus::ERROR == res)
         {
             _applicationState = AppSmState::SHUTDOWN;
         }
@@ -198,7 +238,9 @@ void application_cyclic()
     if(prevState != _applicationState)
     {
         // TODO: log state change
-        NRF_LOG_INFO("state %d->%d", prevState, _applicationState);
+        const int idx1 = static_cast<int>(prevState);
+        const int idx2 = static_cast<int>(_applicationState);
+        NRF_LOG_INFO("state %s->%s", stateNames[idx1], stateNames[idx2]);
     }
 }
 
@@ -235,41 +277,51 @@ CompletionStatus do_init()
 CompletionStatus do_prepare()
 {
     // TODO: check if SPI flash is operational
-    // TODO: replace primitive access to spi_flash_ methods with FS access
     // TODO: check if microphone is present
 
-    if (_context.state == InternalFsmState::DONE)
+    if(_context.state == InternalFsmState::DONE)
     {
         _context.state == InternalFsmState::RUNNING;
-        // TODO: place SPI Flash operational check here
-        // TODO: place microphone operation check here
+        // mount the filesystem
+        int err = lfs_mount(&filesystem, &lfs_configuration);
 
-        const auto erased = memory::isMemoryErased();
-        if (!erased)
+        // reformat if we can't mount the filesystem
+        // this should only happen on the first boot
+        if(err)
         {
-            NRF_LOG_WARNING("Memory is not erased. Erasing now");
-            int rc = spi_flash_erase_area(0x00, 0xB0000);
-            if (rc != 0)
+            const auto format_res = lfs_format(&filesystem, &lfs_configuration);
+            const auto mount_res = lfs_mount(&filesystem, &lfs_configuration);
+            if(format_res || mount_res)
             {
-                NRF_LOG_ERROR("Erase failed.");
+                // TODO: specify this error handling
+                NRF_LOG_ERROR("FS mounting has failed. Jumping to finalize stage");
                 _context.state = InternalFsmState::DONE;
+                is_initialization_error_detected = true;
+                
                 return CompletionStatus::ERROR;
             }
-            return CompletionStatus::PENDING;
         }
-        else
+        uint32_t boot_count = 0;
+        const auto fopen_res = lfs_file_open(&filesystem, &boot_count_file, BOOT_COUNT_FILE_NAME, LFS_O_RDWR | LFS_O_CREAT);
+        if (fopen_res)
         {
-            _context.state == InternalFsmState::DONE;
-            return CompletionStatus::DONE;
+            NRF_LOG_ERROR("prepare: failed to open boot count file");
+            is_initialization_error_detected = true;
+            return CompletionStatus::ERROR;
         }
+        lfs_file_read(&filesystem, &boot_count_file, &boot_count, sizeof(boot_count));
+        lfs_file_rewind(&filesystem, &boot_count_file);
+        _boot_count = boot_count;
+        ++boot_count;
+        lfs_file_write(&filesystem, &boot_count_file, &boot_count, sizeof(boot_count));
+        lfs_file_close(&filesystem, &boot_count_file);
+
+        _context.state == InternalFsmState::DONE;
+        return CompletionStatus::DONE;
     }
-    else if (_context.state == InternalFsmState::RUNNING)
+    else if(_context.state == InternalFsmState::RUNNING)
     {
-        if (!spi_flash_is_busy())
-        {
-            _context.state = InternalFsmState::DONE;
-            return CompletionStatus::DONE;
-        }
+        return CompletionStatus::DONE;
     }
 
     _context.state = InternalFsmState::DONE;
@@ -279,9 +331,25 @@ CompletionStatus do_prepare()
 CompletionStatus do_record_start()
 {
     // trigger start of FS operations
-    // trigger start of PDM
-    audio_start_record();
+    const auto idx = snprintf(record_file_name, MAX_RECORD_FILE_NAME_SIZE, CURRENT_RECORD_FILE_NAME, _boot_count);
+    record_file_name[idx] = '\0';
+    const auto res = lfs_file_open(
+        &filesystem, &current_record, record_file_name, LFS_O_WRONLY | LFS_O_CREAT);
+    if(res)
+    {
+        // Failed to open file.
+        NRF_LOG_ERROR("Record start: failed to open file for write");
+        is_initialization_error_detected = true;
+        return CompletionStatus::ERROR;
+    }
+    // write first 1 kB of data. by doing so, we pass the slow start of file write.
+    uint8_t data[256] = {0};
+    lfs_file_write(&filesystem, &current_record, data, 256);
 
+    // trigger start of PDM
+    audio_start_record(&filesystem, &current_record);
+
+    NRF_LOG_INFO("Record: saving data into file %s", record_file_name);
     led::task_led_set_indication_state(led::RECORDING);
 
     return CompletionStatus::DONE;
@@ -292,7 +360,7 @@ CompletionStatus do_record()
     // basically all operations are done in interrupts.
     // here we only have to track button status and handle operation errors
     const auto isButtonPressed = isRecordButtonPressed();
-    if (!isButtonPressed)
+    if(!isButtonPressed)
     {
         // TODO: maybe a good idea to implement a slightly delayed end of writing
         audio_stop_record();
@@ -305,11 +373,10 @@ CompletionStatus do_record()
 CompletionStatus do_record_finalize()
 {
     // close the audio file
-    // update the FS
-    const auto record_size = audio_get_record_size();
-    NRF_LOG_INFO("Recorded %d bytes", record_size);
-    if (0U == record_size)
+    const auto close_res = lfs_file_close(&filesystem, &current_record);
+    if (close_res != 0)
     {
+        NRF_LOG_ERROR("Record finalize: failed to close the file");
         return CompletionStatus::ERROR;
     }
 
@@ -319,16 +386,37 @@ CompletionStatus do_record_finalize()
 CompletionStatus do_connect()
 {
     // start advertising, establish connection to the phone
-    if (!ble::BleSystem::getInstance().isActive())
+    if(!ble::BleSystem::getInstance().isActive())
     {
-        ble::BleSystem::getInstance().start();
-        const auto record_size = audio_get_record_size();
+        struct lfs_info info;
+        const auto stat_res = lfs_stat(&filesystem, record_file_name, &info);
+        if (stat_res != 0)
+        {
+            NRF_LOG_ERROR("Record finalize: failed to read size of the file");
+            return CompletionStatus::ERROR;
+        }
+        
+        const auto record_size = info.size;
+        NRF_LOG_INFO("Recorded %d bytes", record_size);
+        if(0U == record_size)
+        {
+            return CompletionStatus::ERROR;
+        }
+        const auto res = lfs_file_open(
+            &filesystem, &current_record, record_file_name, LFS_O_RDONLY);
+        if(res)
+        {
+            // Failed to open file.
+            NRF_LOG_ERROR("Connect: failed to open file for read");
+            return CompletionStatus::ERROR;
+        }
+        ble::BleSystem::getInstance().start(&filesystem, &current_record);
         ble::BleSystem::getInstance().getServices().setFileSizeForTransfer(record_size);
 
         led::task_led_set_indication_state(led::CONNECTING);
     }
 
-    if (ble::BleSystem::getInstance().getConnectionHandle() != BLE_CONN_HANDLE_INVALID)
+    if(ble::BleSystem::getInstance().getConnectionHandle() != BLE_CONN_HANDLE_INVALID)
     {
         return CompletionStatus::DONE;
     }
@@ -344,8 +432,14 @@ CompletionStatus do_transfer()
     led::task_led_set_indication_state(led::SENDING);
 
     // transfer the data to the phone
-    if (ble::BleSystem::getInstance().getServices().isFileTransmissionComplete())
+    if(ble::BleSystem::getInstance().getServices().isFileTransmissionComplete())
     {
+        const auto close_res = lfs_file_close(&filesystem, &current_record);
+        if (close_res)
+        {
+            NRF_LOG_ERROR("Transfer end: failed to close record file, code: %d", close_res);
+            return CompletionStatus::ERROR;
+        }
         return CompletionStatus::DONE;
     }
 
@@ -366,36 +460,68 @@ CompletionStatus do_finalize()
     // finalize Flash memory operations
     // if files have been succesfully transmitted - erase the memory and FS descriptos
     // if not - update FS descriptors
-    if (_context.state == InternalFsmState::DONE)
+    if(_context.state == InternalFsmState::DONE)
     {
         _context.state = InternalFsmState::RUNNING;
         led::task_led_set_indication_state(led::SHUTTING_DOWN);
-        NRF_LOG_INFO("Finalize: erasing memory");
-        // trigger flash memory erase
-        int rc = spi_flash_erase_area(0x00, 0xB0000);
-        if (rc != 0)
+        NRF_LOG_INFO("Finalize: unmounting the FS");
+        const auto umount_res = lfs_unmount(&filesystem);
+
+        if (is_initialization_error_detected || umount_res)
         {
-            NRF_LOG_ERROR("Erase failed.");
+            NRF_LOG_ERROR("Finalize: triggering chip erase due to previous error");
+            auto& flashmem = flash::SpiFlash::getInstance();
+            flashmem.eraseChip();
+            return CompletionStatus::PENDING;
+        }
+        
+        // TODO: implement free space calculation and trigger a chip erase, if no space is left. 
+
+        // if(!enough_space)
+        // {
+        //     NRF_LOG_ERROR("Finalize: memory comes to end. Triggering chip erase.");
+        //     auto& flashmem = flash::SpiFlash::getInstance();
+        //     flashmem.eraseChip();
+        //     return CompletionStatus::PENDING;
+        // }
+
+        return CompletionStatus::DONE;
+    }
+    else if(_context.state == InternalFsmState::RUNNING)
+    {
+        auto& flashmem = flash::SpiFlash::getInstance();
+        if(!flashmem.isBusy())
+        {
+            NRF_LOG_INFO("Finalize: erase done. Formatting the FS.");
+            const auto format_res = lfs_format(&filesystem, &lfs_configuration);
+            const auto mount_res = lfs_mount(&filesystem, &lfs_configuration);
+            if (format_res || mount_res)
+            {
+                NRF_LOG_ERROR("finalize: formatting (%d) or mounting has failed (%d). Fatal error.", format_res, mount_res);
+                return CompletionStatus::ERROR;
+            }
+            uint32_t boot_count = 0;
+            lfs_file_open(&filesystem, &boot_count_file, BOOT_COUNT_FILE_NAME, LFS_O_RDWR | LFS_O_CREAT);
+            lfs_file_rewind(&filesystem, &boot_count_file);
+            lfs_file_write(&filesystem, &boot_count_file, &boot_count, sizeof(boot_count));
+            lfs_file_close(&filesystem, &boot_count_file);
+            lfs_unmount(&filesystem);
+
+            // print the boot count
+            printf("finalize: boot_count file has been created\n");
+
             _context.state = InternalFsmState::DONE;
             return CompletionStatus::DONE;
         }
         return CompletionStatus::PENDING;
     }
-    else if (_context.state == InternalFsmState::RUNNING)
-    {
-        if (!spi_flash_is_busy())
-        {
-            _context.state = InternalFsmState::DONE;
-            return CompletionStatus::DONE;
-        }
-    }
-    
+
     return CompletionStatus::INVALID;
 }
 
 CompletionStatus do_restart()
 {
-    // handle the previous state of the operation, assure consistency of FS and 
+    // handle the previous state of the operation, assure consistency of FS and
     // trigger rec_start ASAP
     return CompletionStatus::INVALID;
 }
@@ -403,7 +529,9 @@ CompletionStatus do_restart()
 CompletionStatus do_shutdown()
 {
     // pull LDO_EN down
-    nrf_gpio_pin_clear(LDO_EN_PIN);
+    //nrf_gpio_pin_clear(LDO_EN_PIN);
+    //while(1);
+    ROTU_printDebugInfo();
     return CompletionStatus::DONE;
 }
 

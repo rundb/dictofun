@@ -38,9 +38,14 @@
 #include "nrf_ble_gatt.h"
 #include "nrf_ble_qwr.h"
 
+#include "lfs.h"
+
 NRF_BLE_QWR_DEF(m_qwr);
 BLE_LBS_DEF(m_lbs);
 BLE_FTS_DEF(m_fts, NRF_SDH_BLE_TOTAL_LINK_COUNT);
+
+#define CURRENT_RECORD_FILE_NAME "record.wav"
+lfs_file_t file;
 
 #define APP_ADV_INTERVAL                300
 #define APP_ADV_DURATION                18000
@@ -246,6 +251,12 @@ void BleServices::init()
 
 }
 
+void BleServices::start(lfs_t * fs, lfs_file_t * file)
+{
+    _fs = fs;
+    _file = file;
+}
+
 nrf_ble_qwr_t * BleServices::getQwrHandle()
 {
     return &m_qwr;
@@ -272,38 +283,41 @@ static void led_write_handler(uint16_t conn_handle, ble_lbs_t * p_lbs, uint8_t l
     }
 }
 
+static const size_t READ_BUFFER_SIZE = 128;
+uint8_t readBuffer[READ_BUFFER_SIZE];
+uint32_t bleFramesCounter = 0;
 void BleServices::cyclic()
 {
     switch(_ble_cmd)
     {
         case CMD_GET_FILE:
         {
-            if (_read_pointer == 0) // TODO change to file start
+            if (_fs == nullptr || _file == nullptr)
             {
-                NRF_LOG_INFO("Starting file sending...");
+                NRF_LOG_ERROR("BleServices::cyclic(): FS or file is nullptr");
+                return;
             }
-
-            if (!_file_size || _read_pointer >= _file_size)
+            const auto read_size = lfs_file_read(_fs, _file, readBuffer, READ_BUFFER_SIZE);
+            if (read_size < 0)
+            {
+                // ERROR!
+                NRF_LOG_ERROR("File reading failure!");
+            }
+            else if (read_size != READ_BUFFER_SIZE)
             {
                 _is_file_transmission_done = true;
+                NRF_LOG_INFO("File have been sent (requested %d, got %d bytes (count=%d)", READ_BUFFER_SIZE, read_size, bleFramesCounter);
                 _ble_cmd = CMD_EMPTY;
-                NRF_LOG_INFO("File have been sent.");
-                break;
             }
-
-            uint8_t buffer[SPI_READ_SIZE];
-            spi_flash_trigger_read(_read_pointer, sizeof(buffer));
-            while (spi_flash_is_spi_bus_busy());
-            spi_flash_copy_received_data(buffer, sizeof(buffer));
-            
-            if(_read_pointer == 0)
+            if (!_is_file_transmission_started) // TODO change to file start
             {
-              drv_audio_wav_header_apply(buffer, _file_size / 2);
+                drv_audio_wav_header_apply(readBuffer, _file_size);
+                _is_file_transmission_started = true;
             }
 
-            send_data(buffer, sizeof(buffer));
+            send_data(readBuffer, read_size);
+            bleFramesCounter++;
 
-            _read_pointer += 2 * SPI_READ_SIZE;
             break;
         }
         case CMD_GET_FILE_INFO:
@@ -311,7 +325,7 @@ void BleServices::cyclic()
             NRF_LOG_INFO("Sending file info, size %d (%X)", _file_size, _file_size);
 
             ble_fts_file_info_t file_info;
-            file_info.file_size_bytes = _file_size / 2;
+            file_info.file_size_bytes = _file_size;
 
             ble_fts_file_info_send(&m_fts, &file_info);
             _ble_cmd = CMD_EMPTY;
