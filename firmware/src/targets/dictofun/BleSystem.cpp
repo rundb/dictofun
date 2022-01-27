@@ -70,13 +70,14 @@ const char BleSystem::DEVICE_NAME[] = BOARD_NAME;
 static void services_init();
 static void advertising_init();
 
-void BleSystem::init()
+void BleSystem::init(lfs_t * fs)
 {
+    _fs = fs;
     initBleStack();
     initGapParams();
     initGatt();
     initBonding();
-    _bleServices.init();
+    _bleServices.init(_fs);
     _qwr_default_handle = _bleServices.getQwrHandle();
     advertising_init();
     initConnParameters();

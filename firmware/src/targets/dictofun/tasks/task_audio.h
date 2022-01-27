@@ -18,8 +18,9 @@
 
 #include <drv_audio.h>
 #include <stdint.h>
+#include "lfs.h"
 
-void audio_init();
+void audio_init(lfs_t * fs);
 void audio_start_record();
 void audio_stop_record();
 void audio_frame_handle();

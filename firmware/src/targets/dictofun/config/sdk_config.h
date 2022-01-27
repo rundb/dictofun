@@ -10540,7 +10540,7 @@
 // <4=> Debug 
 
 #ifndef PM_LOG_LEVEL
-#define PM_LOG_LEVEL 4
+#define PM_LOG_LEVEL 3
 #endif
 
 // <o> PM_LOG_INFO_COLOR  - ANSI escape code prefix.

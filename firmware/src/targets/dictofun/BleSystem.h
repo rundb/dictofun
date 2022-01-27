@@ -30,6 +30,7 @@ void application_cyclic();
 #include <ble/nrf_ble_gatt/nrf_ble_gatt.h>
 #include <ble/peer_manager/peer_manager.h>
 #include "BleServices.h"
+#include "lfs.h"
 
 namespace ble
 {
@@ -43,7 +44,7 @@ public:
         _instance = this;
     }
 
-    void init();
+    void init(lfs_t * fs);
     void start();
     void cyclic();
 
@@ -59,6 +60,7 @@ public:
     static const uint8_t APP_BLE_CONN_CFG_TAG = 1;
 private:
     static BleSystem * _instance;
+    lfs_t * _fs{nullptr};
     BleServices _bleServices;
     void initBleStack();
     void startAdvertising();

@@ -22,6 +22,8 @@
 #include <libraries/timer/app_timer.h>
 #include <nrf_gpio.h>
 #include <nrf_log.h>
+#include "block_device_api.h"
+#include "spi_flash.h"
 
 namespace application
 {
@@ -35,6 +37,12 @@ AppSmState getApplicationState()
 bool isRecordButtonPressed()
 {
     return nrf_gpio_pin_read(BUTTON_PIN) > 0;
+}
+
+lfs_t * _fs{nullptr};
+void application_init(lfs_t * fs)
+{
+    _fs = fs;
 }
 
 /**
@@ -235,41 +243,43 @@ CompletionStatus do_init()
 CompletionStatus do_prepare()
 {
     // TODO: check if SPI flash is operational
-    // TODO: replace primitive access to spi_flash_ methods with FS access
     // TODO: check if microphone is present
 
     if (_context.state == InternalFsmState::DONE)
     {
         _context.state == InternalFsmState::RUNNING;
-        // TODO: place SPI Flash operational check here
-        // TODO: place microphone operation check here
+        // mount the filesystem
+        int err = lfs_mount(_fs, &lfs_configuration);
 
-        const auto erased = memory::isMemoryErased();
-        if (!erased)
-        {
-            NRF_LOG_WARNING("Memory is not erased. Erasing now");
-            int rc = spi_flash_erase_area(0x00, 0xB0000);
-            if (rc != 0)
+        // reformat if we can't mount the filesystem
+        // this should only happen on the first boot
+        if (err) {
+            const auto format_res = lfs_format(_fs, &lfs_configuration);
+            const auto mount_res = lfs_mount(_fs, &lfs_configuration);
+            if (format_res || mount_res)
             {
-                NRF_LOG_ERROR("Erase failed.");
-                _context.state = InternalFsmState::DONE;
-                return CompletionStatus::ERROR;
+                // TODO: specify this error handling
+                NRF_LOG_ERROR("FS mounting has failed");
+                auto& flashmem = flash::SpiFlash::getInstance();
+                flashmem.eraseChip();
+                _context.state == InternalFsmState::RUNNING;
+
+                return CompletionStatus::PENDING;
             }
-            return CompletionStatus::PENDING;
-        }
-        else
-        {
-            _context.state == InternalFsmState::DONE;
-            return CompletionStatus::DONE;
-        }
+        } 
+        _context.state == InternalFsmState::DONE;
+        return CompletionStatus::DONE;
     }
     else if (_context.state == InternalFsmState::RUNNING)
     {
-        if (!spi_flash_is_busy())
+        auto& flashmem = flash::SpiFlash::getInstance();
+        if (!flashmem.isBusy())
         {
-            _context.state = InternalFsmState::DONE;
-            return CompletionStatus::DONE;
+            _context.state = InternalFsmState::DONE;   
+            NRF_LOG_ERROR("Chip erase had to be called. Performing no record, just finalizing");
+            return CompletionStatus::ERROR;
         }
+        return CompletionStatus::PENDING;
     }
 
     _context.state = InternalFsmState::DONE;
@@ -370,24 +380,29 @@ CompletionStatus do_finalize()
     {
         _context.state = InternalFsmState::RUNNING;
         led::task_led_set_indication_state(led::SHUTTING_DOWN);
-        NRF_LOG_INFO("Finalize: erasing memory");
-        // trigger flash memory erase
-        int rc = spi_flash_erase_area(0x00, 0xB0000);
-        if (rc != 0)
+        NRF_LOG_INFO("Finalize: formatting the FS");
+        const auto umount_res = lfs_unmount(_fs);
+        const auto format_res = lfs_format(_fs, &lfs_configuration);
+        if (format_res)
         {
-            NRF_LOG_ERROR("Erase failed.");
+            NRF_LOG_ERROR("Finalize: formatting has failed. Triggering chip erase.");
+            auto& flashmem = flash::SpiFlash::getInstance();
+            flashmem.eraseChip();
+            return CompletionStatus::PENDING;
+        }
+        
+        return CompletionStatus::DONE;
+    }
+    else if (_context.state == InternalFsmState::RUNNING)
+    {
+        auto& flashmem = flash::SpiFlash::getInstance();
+        if (!flashmem.isBusy())
+        {
+            NRF_LOG_INFO("Finalize: erase done");
             _context.state = InternalFsmState::DONE;
             return CompletionStatus::DONE;
         }
         return CompletionStatus::PENDING;
-    }
-    else if (_context.state == InternalFsmState::RUNNING)
-    {
-        if (!spi_flash_is_busy())
-        {
-            _context.state = InternalFsmState::DONE;
-            return CompletionStatus::DONE;
-        }
     }
     
     return CompletionStatus::INVALID;

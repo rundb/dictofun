@@ -34,28 +34,35 @@ public:
     void readJedecId(uint8_t* id);
     void reset();
 
+    enum class Result
+    {
+        OK,
+        ALIGNMENT_ERROR,
+        ETC_ERROR,
+    };
+
     // Asynchronous subset
-    void read(uint32_t address, uint8_t* data, uint32_t size);
-    void program(uint32_t address, uint8_t * data, uint32_t size);
-    void erase(uint32_t address, uint32_t size);
+    Result read(uint32_t address, uint8_t* data, uint32_t size);
+    Result program(uint32_t address, const uint8_t * const data, uint32_t size);
+    Result erase(uint32_t address, uint32_t size);
 
     // These 2 calls are asynchronous
-    void eraseSector(uint32_t address);
+    Result eraseSector(uint32_t address);
     void eraseChip();
 
     bool isBusy();
 
     uint8_t getSR1();
-    void writeEnable(bool shouldEnable);
 
+    static inline SpiFlash& getInstance() { return *_instance; }
 private:
     spi::Spi& _spi;
-    static inline SpiFlash& getInstance() { return *_instance; }
     static SpiFlash * _instance;
     static const size_t MAX_TRANSACTION_SIZE = 265;
     uint8_t _txBuffer[MAX_TRANSACTION_SIZE];
     uint8_t _rxBuffer[MAX_TRANSACTION_SIZE];
-    static const uint32_t ERASABLE_SIZE = 0x10000;
+    static const uint32_t SECTOR_SIZE = 0x1000;
+    static const uint32_t PAGE_SIZE = 0x100;
 
     static void spiOperationCallback(spi::Spi::Result result);
     static volatile bool _isSpiOperationPending;
@@ -77,7 +84,7 @@ private:
     };
 
     Context _context;
-
+    void writeEnable(bool shouldEnable);
 };
 
 } // namespace flash
