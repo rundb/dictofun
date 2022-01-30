@@ -26,6 +26,8 @@
 #include <nrf_gpio.h>
 #include <nrf_log.h>
 
+extern void ROTU_printDebugInfo();
+
 namespace application
 {
 AppSmState _applicationState{AppSmState::INIT};
@@ -529,6 +531,7 @@ CompletionStatus do_shutdown()
     // pull LDO_EN down
     //nrf_gpio_pin_clear(LDO_EN_PIN);
     //while(1);
+    ROTU_printDebugInfo();
     return CompletionStatus::DONE;
 }
 

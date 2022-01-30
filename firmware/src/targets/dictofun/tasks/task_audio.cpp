@@ -66,7 +66,7 @@ void audio_frame_handle()
         const int data_size = pending_frame->buffer_occupied;
         NRFX_ASSERT(data_size < SPI_XFER_DATA_STEP);
         NRFX_ASSERT(application::getApplicationState() == application::AppSmState::RECORD);
-
+        
         lfs_file_write(_audio_fs, _audio_record_file, pending_frame->buffer, data_size);
         written_data += data_size;
 
