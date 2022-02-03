@@ -21,7 +21,6 @@
 #include <ble_file_transfer_service.h>
 #include <boards/boards.h>
 #include <nrf_log.h>
-#include "spi_access.h"
 #include "drv_audio.h"
 
 #include "nrf_dfu_ble_svci_bond_sharing.h"

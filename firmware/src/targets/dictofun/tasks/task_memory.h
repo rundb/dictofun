@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 
-#include "spi_access.h"
-
 namespace memory
 {
 bool isMemoryErased();

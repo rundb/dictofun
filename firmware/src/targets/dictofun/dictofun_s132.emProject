@@ -151,6 +151,8 @@
       <file file_name="../../lib/littlefs/lfs.c" />
       <file file_name="../../lib/littlefs/lfs_util.c" />
       <file file_name="../../lib/spi_flash/block_device_api.cpp" />
+      <file file_name="../../lib/logging_fs/fs_spi_flash.cpp" />
+      <file file_name="../../lib/logging_fs/fs_test.cpp" />
       <file file_name="assert.c" />
     </folder>
     <folder Name="nRF_Segger_RTT">

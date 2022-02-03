@@ -22,7 +22,6 @@
 #include <libraries/log/nrf_log_ctrl.h>
 #include <libraries/log/nrf_log_default_backends.h>
 #include <nrf_gpio.h>
-#include <spi_access.h>
 
 #include <tasks/task_audio.h>
 #include <tasks/task_led.h>
@@ -35,6 +34,9 @@ static void timers_init();
 ble::BleSystem bleSystem{};
 spi::Spi flashSpi(0, SPI_FLASH_CS_PIN);
 flash::SpiFlash flashMemory(flashSpi);
+flash::SpiFlash& getSpiFlash() { return flashMemory;}
+
+extern void run_flash_tests();
 
 static const spi::Spi::Configuration flash_spi_config{NRF_DRV_SPI_FREQ_2M,
                                                       NRF_DRV_SPI_MODE_0,
@@ -59,17 +61,19 @@ int main()
     log_init();
 
     // TODO: uncomment if bootloader is present
-    //const auto err_code = ble_dfu_buttonless_async_svci_init();
-    //APP_ERROR_CHECK(err_code);
+    // const auto err_code = ble_dfu_buttonless_async_svci_init();
+    // APP_ERROR_CHECK(err_code);
 
     bsp_board_init(BSP_INIT_LEDS);
     timers_init();
     flashSpi.init(flash_spi_config);
-                 
     flashMemory.init();
     flashMemory.reset();
-
     bleSystem.init();
+
+    run_flash_tests();
+    while(1) {idle_state_handle(); }
+
     audio_init();
     application::application_init();
     led::task_led_init();

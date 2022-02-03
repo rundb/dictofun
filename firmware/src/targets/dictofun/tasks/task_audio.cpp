@@ -16,7 +16,6 @@
 
 #include "tasks/task_audio.h"
 #include "tasks/task_state.h"
-#include <spi_access.h>
 #include <nrfx.h>
 #include "lfs.h"
 #include "nrf_log.h"
