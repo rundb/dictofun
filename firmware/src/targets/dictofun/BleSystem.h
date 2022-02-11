@@ -30,7 +30,7 @@ void application_cyclic();
 #include <ble/nrf_ble_gatt/nrf_ble_gatt.h>
 #include <ble/peer_manager/peer_manager.h>
 #include "BleServices.h"
-#include "lfs.h"
+#include "simple_fs.h"
 
 namespace ble
 {
@@ -45,7 +45,7 @@ public:
     }
 
     void init();
-    void start(lfs_t * fs, lfs_file_t * file);
+    void start(filesystem::File& file);
     void cyclic();
 
     static inline BleSystem& getInstance() {return *_instance; }
@@ -60,8 +60,7 @@ public:
     static const uint8_t APP_BLE_CONN_CFG_TAG = 1;
 private:
     static BleSystem * _instance;
-    lfs_t * _fs{nullptr};
-    lfs_file_t * _record_file{nullptr};
+    filesystem::File * _file{nullptr};
     BleServices _bleServices;
     bool _isActive{false};
     void initBleStack();

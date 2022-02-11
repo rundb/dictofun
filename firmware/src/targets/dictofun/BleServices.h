@@ -19,7 +19,7 @@
 #include <stdint.h>
 #include <ble/nrf_ble_qwr/nrf_ble_qwr.h>
 #include "ble_file_transfer_service.h"
-#include "lfs.h"
+#include "simple_fs.h"
 
 namespace ble
 {
@@ -38,7 +38,7 @@ class BleServices
 public:
     BleServices();
     void init();
-    void start(lfs_t * fs, lfs_file_t * file);
+    void start(filesystem::File * file);
     void cyclic();
 
     nrf_ble_qwr_t * getQwrHandle();
@@ -55,8 +55,7 @@ public:
 
 private:
     static BleServices * _instance;
-    lfs_t * _fs{nullptr};
-    lfs_file_t * _file{nullptr};
+    filesystem::File * _file{nullptr};
     BleCommands _ble_cmd;
     uint32_t _read_pointer{0};
     static const uint32_t SPI_READ_SIZE = 128;

@@ -17,17 +17,15 @@
 #include "tasks/task_audio.h"
 #include "tasks/task_state.h"
 #include <nrfx.h>
-#include "lfs.h"
 #include "nrf_log.h"
+#include "simple_fs.h"
 
 #include "app_timer.h"
 
 drv_audio_frame_t * pending_frame = NULL;
 #define SPI_XFER_DATA_STEP 0x100
 
-lfs_t * _audio_fs{nullptr};
-lfs_file_t * _audio_record_file{nullptr};
-
+filesystem::File * _current_audio_file{nullptr};
 uint32_t start_time, end_time, frames_count, total_data, written_data;
 
 void audio_init()
@@ -35,10 +33,9 @@ void audio_init()
     drv_audio_init(audio_frame_cb);   
 }
 
-void audio_start_record(lfs_t * fs, lfs_file_t * file)
+void audio_start_record(filesystem::File& file)
 {
-    _audio_record_file = file;
-    _audio_fs = fs;
+    _current_audio_file = &file;
     drv_audio_transmission_enable();
 
     start_time = app_timer_cnt_get();
@@ -66,7 +63,8 @@ void audio_frame_handle()
         NRFX_ASSERT(data_size < SPI_XFER_DATA_STEP);
         NRFX_ASSERT(application::getApplicationState() == application::AppSmState::RECORD);
         
-        lfs_file_write(_audio_fs, _audio_record_file, pending_frame->buffer, data_size);
+        /* const auto res = */ filesystem::write(*_current_audio_file, pending_frame->buffer, data_size);
+        // TODO: assert on wrong res
         written_data += data_size;
 
         pending_frame->buffer_free_flag = true;

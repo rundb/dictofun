@@ -4,13 +4,11 @@
  */
 
 #pragma once
-#include "lfs.h"
+#include <simple_fs.h>
 
-int spi_flash_block_device_read(const struct lfs_config *c, lfs_block_t block,
-        lfs_off_t off, void *buffer, lfs_size_t size);
-int spi_flash_block_device_prog(const struct lfs_config *c, lfs_block_t block,
-        lfs_off_t off, const void *buffer, lfs_size_t size);
-int spi_flash_block_device_erase(const struct lfs_config *c, lfs_block_t block);
-int spi_flash_block_device_sync(const struct lfs_config *c);
+namespace integration
+{
 
-extern const struct lfs_config lfs_configuration;
+static const size_t MEMORY_VOLUME = 0x800000UL;
+extern const filesystem::SpiFlashConfiguration spi_flash_simple_fs_config;
+}

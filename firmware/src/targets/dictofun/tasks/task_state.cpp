@@ -1,18 +1,8 @@
+// SPDX-License-Identifier:  Apache-2.0
 /*
- * Copyright (c) 2021 Roman Turkin 
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) 2022, Roman Turkin
  */
+#pragma once
 
 #include "tasks/task_state.h"
 #include "BleSystem.h"
@@ -21,26 +11,15 @@
 #include "tasks/task_audio.h"
 #include "tasks/task_led.h"
 #include "tasks/task_memory.h"
-#include <lfs.h>
 #include <libraries/timer/app_timer.h>
 #include <nrf_gpio.h>
 #include <nrf_log.h>
-
-extern void ROTU_printDebugInfo();
+#include "block_device_api.h"
 
 namespace application
 {
 AppSmState _applicationState{AppSmState::INIT};
-lfs_t filesystem;
-lfs_file_t current_record;
-lfs_file_t boot_count_file;
-uint32_t _boot_count;
-
-#define CURRENT_RECORD_FILE_NAME "record%d"
-#define BOOT_COUNT_FILE_NAME "boot"
-static const size_t MAX_RECORD_FILE_NAME_SIZE = 9; // record99\0 - 9 symbols
-char record_file_name[MAX_RECORD_FILE_NAME_SIZE];
-static bool is_initialization_error_detected = false;
+filesystem::File _currentFile;
 
 const char *stateNames[] =
 {
@@ -283,38 +262,16 @@ CompletionStatus do_prepare()
     {
         _context.state == InternalFsmState::RUNNING;
         // mount the filesystem
-        int err = lfs_mount(&filesystem, &lfs_configuration);
-
-        // reformat if we can't mount the filesystem
-        // this should only happen on the first boot
-        if(err)
+        const auto fs_init_res = filesystem::init(integration::spi_flash_simple_fs_config);
+        if (fs_init_res != result::Result::OK)
         {
-            const auto format_res = lfs_format(&filesystem, &lfs_configuration);
-            const auto mount_res = lfs_mount(&filesystem, &lfs_configuration);
-            if(format_res || mount_res)
-            {
-                // TODO: specify this error handling
-                NRF_LOG_ERROR("FS mounting has failed. Jumping to finalize stage");
-                _context.state = InternalFsmState::DONE;
-                is_initialization_error_detected = true;
-                
-                return CompletionStatus::ERROR;
-            }
-        }
-        uint32_t boot_count = 0;
-        const auto fopen_res = lfs_file_open(&filesystem, &boot_count_file, BOOT_COUNT_FILE_NAME, LFS_O_RDWR | LFS_O_CREAT);
-        if (fopen_res)
-        {
-            NRF_LOG_ERROR("prepare: failed to open boot count file");
-            is_initialization_error_detected = true;
             return CompletionStatus::ERROR;
         }
-        lfs_file_read(&filesystem, &boot_count_file, &boot_count, sizeof(boot_count));
-        lfs_file_rewind(&filesystem, &boot_count_file);
-        _boot_count = boot_count;
-        ++boot_count;
-        lfs_file_write(&filesystem, &boot_count_file, &boot_count, sizeof(boot_count));
-        lfs_file_close(&filesystem, &boot_count_file);
+        const auto file_open_res = filesystem::open(_currentFile, filesystem::FileMode::WRONLY);
+        if (file_open_res != result::Result::OK)
+        {
+            return CompletionStatus::ERROR;
+        }
 
         _context.state == InternalFsmState::DONE;
         return CompletionStatus::DONE;
@@ -330,26 +287,10 @@ CompletionStatus do_prepare()
 
 CompletionStatus do_record_start()
 {
-    // trigger start of FS operations
-    const auto idx = snprintf(record_file_name, MAX_RECORD_FILE_NAME_SIZE, CURRENT_RECORD_FILE_NAME, _boot_count);
-    record_file_name[idx] = '\0';
-    const auto res = lfs_file_open(
-        &filesystem, &current_record, record_file_name, LFS_O_WRONLY | LFS_O_CREAT);
-    if(res)
-    {
-        // Failed to open file.
-        NRF_LOG_ERROR("Record start: failed to open file for write");
-        is_initialization_error_detected = true;
-        return CompletionStatus::ERROR;
-    }
-    // write first 1 kB of data. by doing so, we pass the slow start of file write.
-    uint8_t data[256] = {0};
-    lfs_file_write(&filesystem, &current_record, data, 256);
-
     // trigger start of PDM
-    audio_start_record(&filesystem, &current_record);
+    audio_start_record(_currentFile);
 
-    NRF_LOG_INFO("Record: saving data into file %s", record_file_name);
+    NRF_LOG_INFO("Record: saving data into a file");
     led::task_led_set_indication_state(led::RECORDING);
 
     return CompletionStatus::DONE;
@@ -373,8 +314,8 @@ CompletionStatus do_record()
 CompletionStatus do_record_finalize()
 {
     // close the audio file
-    const auto close_res = lfs_file_close(&filesystem, &current_record);
-    if (close_res != 0)
+    const auto close_res = filesystem::close(_currentFile);
+    if (close_res != result::Result::OK)
     {
         NRF_LOG_ERROR("Record finalize: failed to close the file");
         return CompletionStatus::ERROR;
@@ -388,29 +329,21 @@ CompletionStatus do_connect()
     // start advertising, establish connection to the phone
     if(!ble::BleSystem::getInstance().isActive())
     {
-        struct lfs_info info;
-        const auto stat_res = lfs_stat(&filesystem, record_file_name, &info);
-        if (stat_res != 0)
+        const auto open_res = filesystem::open(_currentFile, filesystem::FileMode::RDONLY);
+        if (open_res != result::Result::OK)
         {
-            NRF_LOG_ERROR("Record finalize: failed to read size of the file");
+            NRF_LOG_ERROR("Record finalize: failed to open the file");
             return CompletionStatus::ERROR;
         }
         
-        const auto record_size = info.size;
+        const auto record_size = _currentFile.rom.size;
         NRF_LOG_INFO("Recorded %d bytes", record_size);
         if(0U == record_size)
         {
             return CompletionStatus::ERROR;
         }
-        const auto res = lfs_file_open(
-            &filesystem, &current_record, record_file_name, LFS_O_RDONLY);
-        if(res)
-        {
-            // Failed to open file.
-            NRF_LOG_ERROR("Connect: failed to open file for read");
-            return CompletionStatus::ERROR;
-        }
-        ble::BleSystem::getInstance().start(&filesystem, &current_record);
+
+        ble::BleSystem::getInstance().start(_currentFile);
         ble::BleSystem::getInstance().getServices().setFileSizeForTransfer(record_size);
 
         led::task_led_set_indication_state(led::CONNECTING);
@@ -434,10 +367,10 @@ CompletionStatus do_transfer()
     // transfer the data to the phone
     if(ble::BleSystem::getInstance().getServices().isFileTransmissionComplete())
     {
-        const auto close_res = lfs_file_close(&filesystem, &current_record);
-        if (close_res)
+        const auto close_res = filesystem::close(_currentFile);
+        if (close_res != result::Result::OK)
         {
-            NRF_LOG_ERROR("Transfer end: failed to close record file, code: %d", close_res);
+            NRF_LOG_ERROR("Transfer end: failed to close record file");
             return CompletionStatus::ERROR;
         }
         return CompletionStatus::DONE;
@@ -465,25 +398,15 @@ CompletionStatus do_finalize()
         _context.state = InternalFsmState::RUNNING;
         led::task_led_set_indication_state(led::SHUTTING_DOWN);
         NRF_LOG_INFO("Finalize: unmounting the FS");
-        const auto umount_res = lfs_unmount(&filesystem);
-
-        if (is_initialization_error_detected || umount_res)
+        const auto occupied_mem_size = filesystem::get_occupied_memory_size();
+        const auto total_size = integration::MEMORY_VOLUME;
+        if (occupied_mem_size * 100 / total_size > 80)
         {
-            NRF_LOG_ERROR("Finalize: triggering chip erase due to previous error");
+            NRF_LOG_INFO("Finalize: memory is occupied by 80%. Formatting");
             auto& flashmem = flash::SpiFlash::getInstance();
             flashmem.eraseChip();
             return CompletionStatus::PENDING;
         }
-        
-        // TODO: implement free space calculation and trigger a chip erase, if no space is left. 
-
-        // if(!enough_space)
-        // {
-        //     NRF_LOG_ERROR("Finalize: memory comes to end. Triggering chip erase.");
-        //     auto& flashmem = flash::SpiFlash::getInstance();
-        //     flashmem.eraseChip();
-        //     return CompletionStatus::PENDING;
-        // }
 
         return CompletionStatus::DONE;
     }
@@ -492,24 +415,7 @@ CompletionStatus do_finalize()
         auto& flashmem = flash::SpiFlash::getInstance();
         if(!flashmem.isBusy())
         {
-            NRF_LOG_INFO("Finalize: erase done. Formatting the FS.");
-            const auto format_res = lfs_format(&filesystem, &lfs_configuration);
-            const auto mount_res = lfs_mount(&filesystem, &lfs_configuration);
-            if (format_res || mount_res)
-            {
-                NRF_LOG_ERROR("finalize: formatting (%d) or mounting has failed (%d). Fatal error.", format_res, mount_res);
-                return CompletionStatus::ERROR;
-            }
-            uint32_t boot_count = 0;
-            lfs_file_open(&filesystem, &boot_count_file, BOOT_COUNT_FILE_NAME, LFS_O_RDWR | LFS_O_CREAT);
-            lfs_file_rewind(&filesystem, &boot_count_file);
-            lfs_file_write(&filesystem, &boot_count_file, &boot_count, sizeof(boot_count));
-            lfs_file_close(&filesystem, &boot_count_file);
-            lfs_unmount(&filesystem);
-
-            // print the boot count
-            printf("finalize: boot_count file has been created\n");
-
+            NRF_LOG_INFO("Finalize: erase done.");
             _context.state = InternalFsmState::DONE;
             return CompletionStatus::DONE;
         }
@@ -531,7 +437,6 @@ CompletionStatus do_shutdown()
     // pull LDO_EN down
     //nrf_gpio_pin_clear(LDO_EN_PIN);
     //while(1);
-    ROTU_printDebugInfo();
     return CompletionStatus::DONE;
 }
 

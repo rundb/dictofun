@@ -71,7 +71,6 @@ int main()
     flashMemory.reset();
     bleSystem.init();
 
-    run_flash_tests();
     while(1) {idle_state_handle(); }
 
     audio_init();

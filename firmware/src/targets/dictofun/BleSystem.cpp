@@ -29,6 +29,7 @@
 #include <stdint.h>
 #include "BleServices.h"
 #include <boards/boards.h>
+#include "simple_fs.h"
 
 // Legacy define. I haven't come up with a replacement for this part of nordic interfaces
 // NRF_BLE_QWR_DEF(m_qwr);
@@ -82,12 +83,11 @@ void BleSystem::init()
     initConnParameters();
 }
 
-void BleSystem::start(lfs_t * fs, lfs_file_t * file)
+void BleSystem::start(filesystem::File& file)
 {
     _isActive = true;
-    _fs = fs;
-    _record_file = file;
-    _bleServices.start(_fs, _record_file);
+    _file = &file;
+    _bleServices.start(_file);
     startAdvertising();
     _isActive = true;
 }

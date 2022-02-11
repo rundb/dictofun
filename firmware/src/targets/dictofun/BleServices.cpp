@@ -37,14 +37,11 @@
 #include "nrf_ble_gatt.h"
 #include "nrf_ble_qwr.h"
 
-#include "lfs.h"
+#include "simple_fs.h"
 
 NRF_BLE_QWR_DEF(m_qwr);
 BLE_LBS_DEF(m_lbs);
 BLE_FTS_DEF(m_fts, NRF_SDH_BLE_TOTAL_LINK_COUNT);
-
-#define CURRENT_RECORD_FILE_NAME "record.wav"
-lfs_file_t file;
 
 #define APP_ADV_INTERVAL                300
 #define APP_ADV_DURATION                18000
@@ -250,9 +247,8 @@ void BleServices::init()
 
 }
 
-void BleServices::start(lfs_t * fs, lfs_file_t * file)
+void BleServices::start(filesystem::File * file)
 {
-    _fs = fs;
     _file = file;
 }
 
@@ -291,13 +287,15 @@ void BleServices::cyclic()
     {
         case CMD_GET_FILE:
         {
-            if (_fs == nullptr || _file == nullptr)
+            if (_file == nullptr)
             {
                 NRF_LOG_ERROR("BleServices::cyclic(): FS or file is nullptr");
                 return;
             }
-            const auto read_size = lfs_file_read(_fs, _file, readBuffer, READ_BUFFER_SIZE);
-            if (read_size < 0)
+            //const auto read_size = lfs_file_read(_fs, _file, readBuffer, READ_BUFFER_SIZE);
+            size_t read_size = 0;
+            const auto read_result = filesystem::read(*_file, readBuffer, READ_BUFFER_SIZE, read_size);
+            if (read_result != result::Result::OK)
             {
                 // ERROR!
                 NRF_LOG_ERROR("File reading failure!");

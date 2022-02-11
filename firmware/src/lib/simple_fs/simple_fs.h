@@ -25,7 +25,7 @@
  * - support editing the files
  */
 
-#include "common/result.h"
+#include "result.h"
 #include "stdint.h"
 #include <cstddef>
 
@@ -94,7 +94,9 @@ enum class FileMode
 
 // todo: define signatures for methods necessary for SPI Flash memory
 using ReadFunction = result::Result (*)(const uint32_t address, uint8_t* data, const size_t size);
-using WriteFunction = result::Result (*)(const uint32_t address, const uint8_t* const data, const size_t size);
+using WriteFunction = result::Result (*)(const uint32_t address,
+                                         const uint8_t* const data,
+                                         const size_t size);
 using EraseFunction = result::Result (*)(const uint32_t address, const size_t size);
 struct SpiFlashConfiguration
 {
@@ -147,7 +149,7 @@ FilesCount get_files_count();
 
 /**
  * Calculate how much memory is taken
- */ 
+ */
 size_t get_occupied_memory_size();
 
 } // namespace filesystem
