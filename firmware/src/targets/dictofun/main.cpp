@@ -22,6 +22,8 @@
 #include <libraries/log/nrf_log_ctrl.h>
 #include <libraries/log/nrf_log_default_backends.h>
 #include <nrf_gpio.h>
+#include "simple_fs.h"
+#include "block_device_api.h"
 
 #include <tasks/task_audio.h>
 #include <tasks/task_led.h>
@@ -69,9 +71,9 @@ int main()
     flashSpi.init(flash_spi_config);
     flashMemory.init();
     flashMemory.reset();
-    bleSystem.init();
+    integration::init_filesystem(&flashMemory);
 
-    while(1) {idle_state_handle(); }
+    bleSystem.init();
 
     audio_init();
     application::application_init();
