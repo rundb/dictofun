@@ -1,3 +1,13 @@
+// SPDX-License-Identifier:  Apache-2.0
+/*
+ * Copyright (c) 2022, Roman Turkin
+ */
+
+/**
+ * This file has been created by me during the red belt course on CPP from Yandex
+ * on Coursera. If it brings any license-related concerns, please contact me directly over
+ * the e-mail used in this repo
+ */
 #pragma once
 
 #include <sstream>

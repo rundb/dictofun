@@ -41,9 +41,9 @@ result::Result spiMockWrite(const uint32_t address, const uint8_t* const data, c
 
 result::Result spiMockErase(const uint32_t address, const size_t size)
 {
-    if (address % SECTOR_SIZE != 0 || size % SECTOR_SIZE != 0)
+    if(address % SECTOR_SIZE != 0 || size % SECTOR_SIZE != 0)
         return result::Result::ERROR_INVALID_PARAMETER;
-    for (uint32_t pos = address; pos < address + size; ++pos)
+    for(uint32_t pos = address; pos < address + size; ++pos)
     {
         _memory_mock[pos] = 0xFF;
     }
@@ -52,24 +52,20 @@ result::Result spiMockErase(const uint32_t address, const size_t size)
 
 void print_memory(size_t offset, size_t size)
 {
-    if (offset > sizeof(_memory_mock)) return;
+    if(offset > sizeof(_memory_mock))
+        return;
     size_t printed = 0;
     cout << offset << "\t";
-    while (printed < size)
+    while(printed < size)
     {
         cout << hex << (int)_memory_mock[offset + printed] << " ";
         printed++;
-        if ((offset + printed) % 16 == 0) cout << endl << hex << (offset + printed) << "\t";
+        if((offset + printed) % 16 == 0)
+            cout << endl << hex << (offset + printed) << "\t";
     }
 }
 
-filesystem::SpiFlashConfiguration test_spi_flash_config =
-{
-    spiMockRead,
-    spiMockWrite,
-    spiMockErase,
-    PAGE_SIZE,
-    SECTOR_SIZE
-};
+filesystem::SpiFlashConfiguration test_spi_flash_config = {
+    spiMockRead, spiMockWrite, spiMockErase, PAGE_SIZE, SECTOR_SIZE};
 
 } // namespace test
