@@ -127,12 +127,27 @@ result::Result close(File& file);
 /**
  * Write <size> bytes to the end of the file <file> open for write
  */
-result::Result write(File& file, const uint8_t* const data, const size_t size);
+result::Result write(File& file, uint8_t* const data, const size_t size);
 
 /**
  * Attempt to read <size> bytes from the file. Write data to <data> memory and read the actual size 
  *  that has been read into variable read_size
  */
 result::Result read(File& file, uint8_t* data, const size_t size, size_t& read_size);
+
+struct FilesCount
+{
+    size_t valid;
+    size_t invalid;
+};
+/**
+ * Iterate through the file system and count valid and invalid files
+ */
+FilesCount get_files_count();
+
+/**
+ * Calculate how much memory is taken
+ */ 
+size_t get_occupied_memory_size();
 
 } // namespace filesystem
