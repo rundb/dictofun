@@ -397,8 +397,10 @@ CompletionStatus do_finalize()
         _context.state = InternalFsmState::RUNNING;
         led::task_led_set_indication_state(led::SHUTTING_DOWN);
         NRF_LOG_INFO("Finalize: unmounting the FS");
+        const auto files_stats = filesystem::get_files_count();
         const auto occupied_mem_size = filesystem::get_occupied_memory_size();
         const auto total_size = integration::MEMORY_VOLUME;
+        NRF_LOG_INFO("File stats: valid files: %d, invalid files: %d, memory occupied: %d/%d", files_stats.valid, files_stats.invalid, occupied_mem_size, total_size);
         if (occupied_mem_size * 100 / total_size > 80)
         {
             NRF_LOG_INFO("Finalize: memory is occupied by 80%. Formatting");
