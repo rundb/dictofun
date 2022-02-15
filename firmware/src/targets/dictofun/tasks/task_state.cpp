@@ -2,7 +2,6 @@
 /*
  * Copyright (c) 2022, Roman Turkin
  */
-#pragma once
 
 #include "tasks/task_state.h"
 #include "BleSystem.h"

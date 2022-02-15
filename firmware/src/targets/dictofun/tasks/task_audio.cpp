@@ -48,10 +48,10 @@ void audio_frame_handle()
     if(pending_frame) 
     {
         const int data_size = pending_frame->buffer_occupied;
-        NRFX_ASSERT(data_size < SPI_XFER_DATA_STEP);
+        NRFX_ASSERT(data_size <= SPI_XFER_DATA_STEP);
         NRFX_ASSERT(application::getApplicationState() == application::AppSmState::RECORD);
         
-        /* const auto res = */ filesystem::write(*_current_audio_file, pending_frame->buffer, data_size);
+        const auto res = filesystem::write(*_current_audio_file, pending_frame->buffer, data_size);
         // TODO: assert on wrong res
         written_data += data_size;
 
