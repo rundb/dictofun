@@ -15,6 +15,8 @@ drv_audio_frame_t * pending_frame = NULL;
 
 filesystem::File * _current_audio_file{nullptr};
 uint32_t start_time, end_time, frames_count, total_data, written_data;
+uint32_t valid_writes_counter = 0;
+uint32_t invalid_writes_counter = 0;
 
 void audio_init()
 {
@@ -30,17 +32,22 @@ void audio_start_record(filesystem::File& file)
     frames_count = 0;
     total_data = 0;
     written_data = 0;
+
+    valid_writes_counter = 0;
+    invalid_writes_counter = 0;
 }
 
 // TODO: replace with setting a flag that stops the recording in 
 //       the interrupt. Thus we can assure that last chunk is saved.
-void audio_stop_record()
+result::Result audio_stop_record()
 {
     drv_audio_transmission_disable();
     end_time = app_timer_cnt_get();
     float data_rate = (float)total_data * 1000 / float(end_time - start_time);
     float store_rate = (float)written_data * 1000 / float(end_time - start_time);
     NRF_LOG_INFO("audio: timespan=%d, data rate = %d, store rate = %d", end_time - start_time, (int)data_rate, (int)store_rate);
+
+    return (invalid_writes_counter > valid_writes_counter) ? result::Result::ERROR_GENERAL : result::Result::OK;
 }
 
 void audio_frame_handle()
@@ -52,6 +59,14 @@ void audio_frame_handle()
         NRFX_ASSERT(application::getApplicationState() == application::AppSmState::RECORD);
         
         const auto res = filesystem::write(*_current_audio_file, pending_frame->buffer, data_size);
+        if (res != result::Result::OK)
+        {
+            invalid_writes_counter++;
+        }
+        else
+        {
+            valid_writes_counter++;
+        }
         // TODO: assert on wrong res
         written_data += data_size;
 

@@ -19,6 +19,7 @@ namespace application
 {
 AppSmState _applicationState{AppSmState::INIT};
 filesystem::File _currentFile;
+static const int SHUTDOWN_COUNTER_INIT_VALUE = 100;
 
 const char *stateNames[] =
 {
@@ -106,7 +107,7 @@ void application_cyclic()
         {
             _applicationState = AppSmState::RECORD_START;
         }
-        else if (CompletionStatus::ERROR == res)
+        else //if (CompletionStatus::ERROR == res)
         {
             _applicationState = AppSmState::FINALIZE;
         }
@@ -118,7 +119,7 @@ void application_cyclic()
         {
             _applicationState = AppSmState::RECORD;
         }
-        else if (CompletionStatus::ERROR == res)
+        else //if (CompletionStatus::ERROR == res)
         {
             _applicationState = AppSmState::FINALIZE;
         }
@@ -129,6 +130,14 @@ void application_cyclic()
         if(CompletionStatus::DONE == res)
         {
             _applicationState = AppSmState::RECORD_FINALIZATION;
+        }
+        else if (CompletionStatus::ERROR == res)
+        {
+            _applicationState = AppSmState::FINALIZE;
+        }
+        else
+        {
+          // do nothing
         }
     }
     break;
@@ -150,13 +159,17 @@ void application_cyclic()
         {
             _applicationState = AppSmState::TRANSFER;
         }
-        else if(CompletionStatus::TIMEOUT == res)
-        {
-            _applicationState = AppSmState::FINALIZE;
-        }
         else if(CompletionStatus::RESTART_DETECTED == res)
         {
             _applicationState = AppSmState::RESTART;
+        }
+        else if (CompletionStatus::ERROR == res)
+        {
+            _applicationState = AppSmState::FINALIZE;
+        }
+        else
+        {
+            // pending - do nothing 
         }
     }
     break;
@@ -232,13 +245,15 @@ enum class InternalFsmState
 struct FsmContext
 {
     InternalFsmState state;
+    bool is_unrecoverable_error_detected;
+    int counter;
 };
 
 /**
  * This context is used inside each of the do_<> functions in order to distinguish
  * first, last and other executions.
  */
-FsmContext _context{InternalFsmState::DONE};
+FsmContext _context{InternalFsmState::DONE, false, 0};
 
 CompletionStatus do_init()
 {
@@ -264,11 +279,15 @@ CompletionStatus do_prepare()
         const auto fs_init_res = filesystem::init(integration::spi_flash_simple_fs_config);
         if (fs_init_res != result::Result::OK)
         {
+            _context.state = InternalFsmState::DONE;
+            _context.is_unrecoverable_error_detected = true;
             return CompletionStatus::ERROR;
         }
         const auto file_open_res = filesystem::open(_currentFile, filesystem::FileMode::WRONLY);
         if (file_open_res != result::Result::OK)
         {
+            _context.state = InternalFsmState::DONE;
+            _context.is_unrecoverable_error_detected = true;
             return CompletionStatus::ERROR;
         }
 
@@ -302,9 +321,14 @@ CompletionStatus do_record()
     const auto isButtonPressed = isRecordButtonPressed();
     if(!isButtonPressed)
     {
-        // TODO: maybe a good idea to implement a slightly delayed end of writing
-        audio_stop_record();
-        return CompletionStatus::DONE;
+        const auto result = audio_stop_record();
+        if (result == result::Result::OK)
+        {
+            return CompletionStatus::DONE;
+        }
+        _context.is_unrecoverable_error_detected = true;
+        _context.state = InternalFsmState::DONE;
+        return CompletionStatus::ERROR;
     }
 
     return CompletionStatus::PENDING;
@@ -317,6 +341,7 @@ CompletionStatus do_record_finalize()
     if (close_res != result::Result::OK)
     {
         NRF_LOG_ERROR("Record finalize: failed to close the file");
+        _context.is_unrecoverable_error_detected = true;
         return CompletionStatus::ERROR;
     }
 
@@ -395,20 +420,29 @@ CompletionStatus do_finalize()
     if(_context.state == InternalFsmState::DONE)
     {
         _context.state = InternalFsmState::RUNNING;
-        led::task_led_set_indication_state(led::SHUTTING_DOWN);
-        NRF_LOG_INFO("Finalize: unmounting the FS");
-        const auto files_stats = filesystem::get_files_count();
-        const auto occupied_mem_size = filesystem::get_occupied_memory_size();
-        const auto total_size = integration::MEMORY_VOLUME;
-        NRF_LOG_INFO("File stats: valid files: %d, invalid files: %d, memory occupied: %d/%d", files_stats.valid, files_stats.invalid, occupied_mem_size, total_size);
-        if (occupied_mem_size * 100 / total_size > 80)
+        auto& flashmem = flash::SpiFlash::getInstance();
+        if (!_context.is_unrecoverable_error_detected)
         {
-            NRF_LOG_INFO("Finalize: memory is occupied by 80%. Formatting");
-            auto& flashmem = flash::SpiFlash::getInstance();
+            led::task_led_set_indication_state(led::SHUTTING_DOWN);
+            NRF_LOG_INFO("Finalize: unmounting the FS");
+            const auto files_stats = filesystem::get_files_count();
+            const auto occupied_mem_size = filesystem::get_occupied_memory_size();
+            const auto total_size = integration::MEMORY_VOLUME;
+            NRF_LOG_INFO("File stats: valid files: %d, invalid files: %d, memory occupied: %d/%d", files_stats.valid, files_stats.invalid, occupied_mem_size, total_size);
+            if (occupied_mem_size * 100 / total_size > 80)
+            {
+                NRF_LOG_INFO("Finalize: memory is occupied by 80%. Formatting");
+                flashmem.eraseChip();
+                return CompletionStatus::PENDING;
+            }
+        }
+        else
+        {
+            NRF_LOG_INFO("Finalize: unrecoverable error detected. Erasing.");
             flashmem.eraseChip();
             return CompletionStatus::PENDING;
         }
-
+        _context.state = InternalFsmState::DONE;
         return CompletionStatus::DONE;
     }
     else if(_context.state == InternalFsmState::RUNNING)
@@ -435,8 +469,23 @@ CompletionStatus do_restart()
 
 CompletionStatus do_shutdown()
 {
-    // pull LDO_EN down
-    //nrf_gpio_pin_clear(LDO_EN_PIN);
+    if(_context.state == InternalFsmState::DONE)
+    {
+        led::task_led_set_indication_state(led::INDICATION_OFF);
+        // start finalization preparation.
+        // downcount ~100-200 ms to let logger print data
+        _context.counter = SHUTDOWN_COUNTER_INIT_VALUE;
+        _context.state = InternalFsmState::RUNNING;
+    }
+    else if (_context.state == InternalFsmState::RUNNING)
+    {
+        if (--_context.counter == 0)
+        {
+            // pull LDO_EN down
+            nrf_gpio_pin_clear(LDO_EN_PIN);
+            while(1);
+        }
+    }
     //while(1);
     return CompletionStatus::DONE;
 }
