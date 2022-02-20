@@ -72,11 +72,9 @@ void BleSystem::init()
     initConnParameters();
 }
 
-void BleSystem::start(filesystem::File& file)
+void BleSystem::start()
 {
-    _isActive = true;
-    _file = &file;
-    _bleServices.start(_file);
+    _bleServices.start();
     startAdvertising();
     _isActive = true;
 }

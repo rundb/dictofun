@@ -5,23 +5,23 @@
 
 #include "BleServices.h"
 
-#include <ble_services/ble_lbs/ble_lbs.h>
+#include "drv_audio.h"
 #include <ble/nrf_ble_qwr/nrf_ble_qwr.h>
 #include <ble_file_transfer_service.h>
+#include <ble_services/ble_lbs/ble_lbs.h>
 #include <boards/boards.h>
 #include <nrf_log.h>
-#include "drv_audio.h"
 
 #include "nrf_dfu_ble_svci_bond_sharing.h"
 #include "nrf_svci_async_function.h"
 #include "nrf_svci_async_handler.h"
 
+#include "ble_advertising.h"
 #include "ble_dfu.h"
 #include "nrf_bootloader_info.h"
-#include "nrf_sdh.h"
 #include "nrf_power.h"
 #include "nrf_pwr_mgmt.h"
-#include "ble_advertising.h"
+#include "nrf_sdh.h"
 
 #include "nrf_ble_gatt.h"
 #include "nrf_ble_qwr.h"
@@ -32,69 +32,81 @@ NRF_BLE_QWR_DEF(m_qwr);
 BLE_LBS_DEF(m_lbs);
 BLE_FTS_DEF(m_fts, NRF_SDH_BLE_TOTAL_LINK_COUNT);
 
-#define APP_ADV_INTERVAL                300
-#define APP_ADV_DURATION                18000
+#define APP_ADV_INTERVAL 300
+#define APP_ADV_DURATION 18000
+
+// TODO: move this buffer to class instance
+static const size_t READ_BUFFER_SIZE = 256;
+uint8_t readBuffer[READ_BUFFER_SIZE];
 
 BLE_ADVERTISING_DEF(m_advertising);
 
 namespace ble
 {
 
-BleServices * BleServices::_instance{nullptr};
+BleServices* BleServices::_instance{nullptr};
 
 static void nrf_qwr_error_handler(uint32_t nrf_error)
 {
     APP_ERROR_HANDLER(nrf_error);
 }
 
-static void led_write_handler(uint16_t conn_handle, ble_lbs_t * p_lbs, uint8_t led_state);
+static void led_write_handler(uint16_t conn_handle, ble_lbs_t* p_lbs, uint8_t led_state);
 
-static void fts_data_handler(ble_fts_t * p_fts, uint8_t const * p_data, uint16_t length)
+static void fts_data_handler(ble_fts_t* p_fts, uint8_t const* p_data, uint16_t length)
 {
     BleServices::getInstance().handleFtsData(p_fts, p_data, length);
 }
 
-void BleServices::handleFtsData(ble_fts_t * p_fts, uint8_t const * p_data, uint16_t length)
+void BleServices::handleFtsData(ble_fts_t* p_fts, uint8_t const* p_data, uint16_t length)
 {
     switch(p_data[0])
     {
-        case CMD_GET_FILE:
-            NRF_LOG_INFO("CMD_GET_FILE");
-            _ble_cmd = (ble::BleCommands)p_data[0];
-            break;
-        case CMD_GET_FILE_INFO:
-            NRF_LOG_INFO("CMD_GET_FILE_INFO");
-            _ble_cmd = (ble::BleCommands)p_data[0];
-            break;
-        default:
-            NRF_LOG_ERROR("Unknown command: %02x", p_data[0]);
-            break;
+    case CMD_GET_FILE: {
+        NRF_LOG_DEBUG("cmd: get_file");
+        _ble_cmd = (ble::BleCommands)p_data[0];
+        break;
+    }
+    case CMD_GET_FILE_INFO: {
+        NRF_LOG_DEBUG("cmd: file_info");
+        _ble_cmd = (ble::BleCommands)p_data[0];
+        break;
+    }
+    case CMD_GET_VALID_FILES_COUNT: {
+        NRF_LOG_DEBUG("cmd: files_count");
+        _ble_cmd = (ble::BleCommands)p_data[0];
+        break;
+    }
+    default: {
+        NRF_LOG_ERROR("Unknown command: %02x", p_data[0]);
+        break;
+    }
     }
 }
 
-uint32_t BleServices::send_data(const uint8_t *data, uint32_t data_size)
+uint32_t BleServices::send_data(const uint8_t* data, uint32_t data_size)
 {
-    if (data_size > 0)
+    if(data_size > 0)
     {
         unsigned i = 0;
 
         uint32_t size_left = data_size;
-        uint8_t *send_buffer = (uint8_t *)data;
+        uint8_t* send_buffer = (uint8_t*)data;
 
-        while (size_left)
+        while(size_left)
         {
             uint8_t send_size = MIN(size_left, BLE_ITS_MAX_DATA_LEN);
             size_left -= send_size;
 
             uint32_t err_code = NRF_SUCCESS;
-            while (true)
+            while(true)
             {
                 err_code = ble_fts_send_file_fragment(&m_fts, send_buffer, send_size);
-                if (err_code == NRF_SUCCESS)
+                if(err_code == NRF_SUCCESS)
                 {
                     break;
                 }
-                else if (err_code != NRF_ERROR_RESOURCES)
+                else if(err_code != NRF_ERROR_RESOURCES)
                 {
                     NRF_LOG_ERROR("Failed to send file, err = %d", err_code);
                     return err_code;
@@ -109,9 +121,9 @@ uint32_t BleServices::send_data(const uint8_t *data, uint32_t data_size)
 }
 
 // DFU-related stuff
-static void buttonless_dfu_sdh_state_observer(nrf_sdh_state_evt_t state, void * p_context)
+static void buttonless_dfu_sdh_state_observer(nrf_sdh_state_evt_t state, void* p_context)
 {
-    if (state == NRF_SDH_EVT_STATE_DISABLED)
+    if(state == NRF_SDH_EVT_STATE_DISABLED)
     {
         // Softdevice was disabled before going into reset. Inform bootloader to skip CRC on next boot.
         nrf_power_gpregret2_set(BOOTLOADER_DFU_SKIP_CRC);
@@ -122,28 +134,30 @@ static void buttonless_dfu_sdh_state_observer(nrf_sdh_state_evt_t state, void * 
 }
 
 /* nrf_sdh state observer. */
-NRF_SDH_STATE_OBSERVER(m_buttonless_dfu_state_obs, 0) =
-{
+NRF_SDH_STATE_OBSERVER(m_buttonless_dfu_state_obs, 0) = {
     .handler = buttonless_dfu_sdh_state_observer,
 };
 
-static void advertising_config_get(ble_adv_modes_config_t * p_config)
+static void advertising_config_get(ble_adv_modes_config_t* p_config)
 {
     memset(p_config, 0, sizeof(ble_adv_modes_config_t));
 
-    p_config->ble_adv_fast_enabled  = true;
+    p_config->ble_adv_fast_enabled = true;
     p_config->ble_adv_fast_interval = APP_ADV_INTERVAL;
-    p_config->ble_adv_fast_timeout  = APP_ADV_DURATION;
+    p_config->ble_adv_fast_timeout = APP_ADV_DURATION;
 }
 
-static void disconnect(uint16_t conn_handle, void * p_context)
+static void disconnect(uint16_t conn_handle, void* p_context)
 {
     UNUSED_PARAMETER(p_context);
 
-    ret_code_t err_code = sd_ble_gap_disconnect(conn_handle, BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
-    if (err_code != NRF_SUCCESS)
+    ret_code_t err_code =
+        sd_ble_gap_disconnect(conn_handle, BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+    if(err_code != NRF_SUCCESS)
     {
-        NRF_LOG_WARNING("Failed to disconnect connection. Connection handle: %d Error: %d", conn_handle, err_code);
+        NRF_LOG_WARNING("Failed to disconnect connection. Connection handle: %d Error: %d",
+                        conn_handle,
+                        err_code);
     }
     else
     {
@@ -153,61 +167,60 @@ static void disconnect(uint16_t conn_handle, void * p_context)
 
 static void ble_dfu_evt_handler(ble_dfu_buttonless_evt_type_t event)
 {
-    switch (event)
+    switch(event)
     {
-        case BLE_DFU_EVT_BOOTLOADER_ENTER_PREPARE:
-        {
-            NRF_LOG_INFO("Device is preparing to enter bootloader mode.");
+    case BLE_DFU_EVT_BOOTLOADER_ENTER_PREPARE: {
+        NRF_LOG_INFO("Device is preparing to enter bootloader mode.");
 
-            // Prevent device from advertising on disconnect.
-            ble_adv_modes_config_t config;
-            advertising_config_get(&config);
-            config.ble_adv_on_disconnect_disabled = true;
-            ble_advertising_modes_config_set(&m_advertising, &config);
+        // Prevent device from advertising on disconnect.
+        ble_adv_modes_config_t config;
+        advertising_config_get(&config);
+        config.ble_adv_on_disconnect_disabled = true;
+        ble_advertising_modes_config_set(&m_advertising, &config);
 
-            // Disconnect all other bonded devices that currently are connected.
-            // This is required to receive a service changed indication
-            // on bootup after a successful (or aborted) Device Firmware Update.
-            uint32_t conn_count = ble_conn_state_for_each_connected(disconnect, NULL);
-            NRF_LOG_INFO("Disconnected %d links.", conn_count);
-            break;
-        }
+        // Disconnect all other bonded devices that currently are connected.
+        // This is required to receive a service changed indication
+        // on bootup after a successful (or aborted) Device Firmware Update.
+        uint32_t conn_count = ble_conn_state_for_each_connected(disconnect, NULL);
+        NRF_LOG_INFO("Disconnected %d links.", conn_count);
+        break;
+    }
 
-        case BLE_DFU_EVT_BOOTLOADER_ENTER:
-            // YOUR_JOB: Write app-specific unwritten data to FLASH, control finalization of this
-            //           by delaying reset by reporting false in app_shutdown_handler
-            NRF_LOG_INFO("Device will enter bootloader mode.");
-            break;
+    case BLE_DFU_EVT_BOOTLOADER_ENTER:
+        // YOUR_JOB: Write app-specific unwritten data to FLASH, control finalization of this
+        //           by delaying reset by reporting false in app_shutdown_handler
+        NRF_LOG_INFO("Device will enter bootloader mode.");
+        break;
 
-        case BLE_DFU_EVT_BOOTLOADER_ENTER_FAILED:
-            NRF_LOG_ERROR("Request to enter bootloader mode failed asynchroneously.");
-            // YOUR_JOB: Take corrective measures to resolve the issue
-            //           like calling APP_ERROR_CHECK to reset the device.
-            break;
+    case BLE_DFU_EVT_BOOTLOADER_ENTER_FAILED:
+        NRF_LOG_ERROR("Request to enter bootloader mode failed asynchroneously.");
+        // YOUR_JOB: Take corrective measures to resolve the issue
+        //           like calling APP_ERROR_CHECK to reset the device.
+        break;
 
-        case BLE_DFU_EVT_RESPONSE_SEND_ERROR:
-            NRF_LOG_ERROR("Request to send a response to client failed.");
-            // YOUR_JOB: Take corrective measures to resolve the issue
-            //           like calling APP_ERROR_CHECK to reset the device.
-            APP_ERROR_CHECK(false);
-            break;
+    case BLE_DFU_EVT_RESPONSE_SEND_ERROR:
+        NRF_LOG_ERROR("Request to send a response to client failed.");
+        // YOUR_JOB: Take corrective measures to resolve the issue
+        //           like calling APP_ERROR_CHECK to reset the device.
+        APP_ERROR_CHECK(false);
+        break;
 
-        default:
-            NRF_LOG_ERROR("Unknown event from ble_dfu_buttonless.");
-            break;
+    default:
+        NRF_LOG_ERROR("Unknown event from ble_dfu_buttonless.");
+        break;
     }
 }
 
-BleServices::BleServices() 
+BleServices::BleServices()
 {
     _instance = this;
 }
 
 void BleServices::init()
 {
-    ret_code_t         err_code;
-    ble_lbs_init_t     lbs_init = {0};
-    ble_fts_init_t     fts_init = {0};
+    ret_code_t err_code;
+    ble_lbs_init_t lbs_init = {0};
+    ble_fts_init_t fts_init = {0};
     nrf_ble_qwr_init_t qwr_init = {0};
     ble_dfu_buttonless_init_t dfus_init = {0};
 
@@ -233,95 +246,132 @@ void BleServices::init()
     dfus_init.evt_handler = ble_dfu_evt_handler;
     err_code = ble_dfu_buttonless_init(&dfus_init);
     APP_ERROR_CHECK(err_code);
-
 }
 
-void BleServices::start(filesystem::File * file)
+void BleServices::start()
 {
-    _file = file;
+    // Figure out how many files we have to be transmitted
+    _files_count = filesystem::get_files_count();
+
+    const auto open_result = filesystem::open(_file, filesystem::FileMode::RDONLY);
+    if(open_result != result::Result::OK)
+    {
+        NRF_LOG_ERROR("BleServices::start(): file opening failure!");
+        _is_file_transmission_done = true;
+    }
+    _file_size = _file.rom.size;
 }
 
-nrf_ble_qwr_t * BleServices::getQwrHandle()
+nrf_ble_qwr_t* BleServices::getQwrHandle()
 {
     return &m_qwr;
 }
 
 // TODO: assert nullptr on uuids, assert when max_uuids is not enough
-size_t BleServices::setAdvUuids(ble_uuid_t * uuids, size_t max_uuids)
+size_t BleServices::setAdvUuids(ble_uuid_t* uuids, size_t max_uuids)
 {
     uuids[0] = {LBS_UUID_SERVICE, m_lbs.uuid_type};
     return 1U;
 }
 
-#define LEDBUTTON_LED                   BSP_BOARD_LED_2
-
-static void led_write_handler(uint16_t conn_handle, ble_lbs_t * p_lbs, uint8_t led_state)
+static void led_write_handler(uint16_t conn_handle, ble_lbs_t* p_lbs, uint8_t led_state)
 {
-    if (led_state)
-    {
-        NRF_LOG_INFO("Received LED ON!");
-    }
-    else
-    {
-        NRF_LOG_INFO("Received LED OFF!");
-    }
+    // TODO: get rid or fix to use the write LED
 }
 
-static const size_t READ_BUFFER_SIZE = 128;
-uint8_t readBuffer[READ_BUFFER_SIZE];
-uint32_t bleFramesCounter = 0;
+/**
+ * TODO: implement a more consistent logic on several files transmission. 
+ * TODO: implement consistency check for the commands' sequence from the application 
+ *       expectation: GET_FILES_COUNT -> (M times) x {GET_FILE_SIZE -> GET_FILE (N times)},
+ *       where M - valid files' count, N - number of chunks in single file
+ * TODO: refactor to a more consistent structure (currently CMD_GET_FILE also does files' closing and opening)
+ */
 void BleServices::cyclic()
 {
     switch(_ble_cmd)
     {
-        case CMD_GET_FILE:
+    case CMD_GET_FILE: {
+        size_t read_size = 0;
+        const auto read_result = filesystem::read(_file, readBuffer, READ_BUFFER_SIZE, read_size);
+        if(read_result != result::Result::OK)
         {
-            if (_file == nullptr)
+            // ERROR!
+            NRF_LOG_ERROR("BleSystem::cyclic(): file reading failure!");
+            _is_file_transmission_done = true;
+        }
+        else 
+        if(read_size != READ_BUFFER_SIZE)
+        {
+            const auto close_res = filesystem::close(_file);
+            if (close_res != result::Result::OK)
             {
-                NRF_LOG_ERROR("BleServices::cyclic(): FS or file is nullptr");
-                return;
+                NRF_LOG_ERROR("File closing failure! Might require an invalidation of FS");
+                _is_file_transmission_done = true;
             }
-            //const auto read_size = lfs_file_read(_fs, _file, readBuffer, READ_BUFFER_SIZE);
-            size_t read_size = 0;
-            const auto read_result = filesystem::read(*_file, readBuffer, READ_BUFFER_SIZE, read_size);
-            if (read_result != result::Result::OK)
-            {
-                // ERROR!
-                NRF_LOG_ERROR("File reading failure!");
-            }
-            else if (read_size != READ_BUFFER_SIZE)
+            _files_count = filesystem::get_files_count();
+
+            if (_files_count.valid == 0)
             {
                 _is_file_transmission_done = true;
-                NRF_LOG_INFO("File have been sent (requested %d, got %d bytes (count=%d)", READ_BUFFER_SIZE, read_size, bleFramesCounter);
-                _ble_cmd = CMD_EMPTY;
+                NRF_LOG_DEBUG("All files have been sent");
             }
-            if (!_is_file_transmission_started) // TODO change to file start
+            else
             {
-                drv_audio_wav_header_apply(readBuffer, _file_size);
-                _is_file_transmission_started = true;
+                _is_file_transmission_started = false;
+                const auto open_result = filesystem::open(_file, filesystem::FileMode::RDONLY);
+                if(open_result != result::Result::OK)
+                {
+                    NRF_LOG_ERROR("File opening failure!");
+                    _is_file_transmission_done = true;
+                }
+                else
+                {
+                    _file_size = _file.rom.size;
+                    NRF_LOG_DEBUG("File has been sent, waiting for the next request");
+                }
             }
-
-            send_data(readBuffer, read_size);
-            bleFramesCounter++;
-
-            break;
+            
+            _ble_cmd = CMD_EMPTY;
         }
-        case CMD_GET_FILE_INFO:
+        if(!_is_file_transmission_started) // TODO change to file start
         {
-            NRF_LOG_INFO("Sending file info, size %d (%X)", _file_size, _file_size);
-
-            ble_fts_file_info_t file_info;
-            file_info.file_size_bytes = _file_size;
-
-            ble_fts_file_info_send(&m_fts, &file_info);
-            _ble_cmd = CMD_EMPTY;
-
-            break;
+            drv_audio_wav_header_apply(readBuffer, _file_size);
+            _is_file_transmission_started = true;
         }
-        default:
-            _ble_cmd = CMD_EMPTY;
+
+        send_data(readBuffer, read_size);
+
+        break;
+    }
+    case CMD_GET_FILE_INFO: {
+        NRF_LOG_DEBUG("Sending file info, size %d", _file_size);
+
+        ble_fts_file_info_t file_info;
+        file_info.file_size_bytes = _file_size;
+
+        ble_fts_file_info_send(&m_fts, &file_info);
+        _ble_cmd = CMD_EMPTY;
+
+        break;
+    }
+    case CMD_GET_VALID_FILES_COUNT: {
+        _files_count = filesystem::get_files_count();
+        NRF_LOG_DEBUG("Sending files' count: %d", _files_count.valid);
+
+        ble_fts_filesystem_info_t fs_info;
+        fs_info.valid_files_count = _files_count.valid;
+        const auto res = ble_fts_filesystem_info_send(&m_fts, &fs_info);
+        if (res != 0)
+        {
+            NRF_LOG_ERROR("fts filesystem info send has failed, error code %d", res);
+        }
+
+        _ble_cmd = CMD_EMPTY;
+        break;
+    }
+    default:
+        _ble_cmd = CMD_EMPTY;
     }
 }
 
-
-}
+} // namespace ble

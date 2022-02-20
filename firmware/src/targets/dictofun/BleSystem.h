@@ -36,7 +36,7 @@ public:
     }
 
     void init();
-    void start(filesystem::File& file);
+    void start();
     void cyclic();
 
     static inline BleSystem& getInstance() {return *_instance; }
@@ -51,7 +51,6 @@ public:
     static const uint8_t APP_BLE_CONN_CFG_TAG = 1;
 private:
     static BleSystem * _instance;
-    filesystem::File * _file{nullptr};
     BleServices _bleServices;
     bool _isActive{false};
     void initBleStack();

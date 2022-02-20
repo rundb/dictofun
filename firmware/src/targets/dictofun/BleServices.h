@@ -14,9 +14,10 @@ namespace ble
 {
 enum BleCommands
 {
-    CMD_EMPTY,
-    CMD_GET_FILE,
-    CMD_GET_FILE_INFO,
+    CMD_EMPTY = 0,
+    CMD_GET_FILE = 1,
+    CMD_GET_FILE_INFO = 2,
+    CMD_GET_VALID_FILES_COUNT = 3,
 };
 
 /**
@@ -27,11 +28,11 @@ class BleServices
 public:
     BleServices();
     void init();
-    void start(filesystem::File * file);
+    void start();
     void cyclic();
 
     nrf_ble_qwr_t * getQwrHandle();
-    //uint16_t getLbsUUID();
+
     size_t setAdvUuids(ble_uuid_t * uuids, size_t max_uuids);
 
     static BleServices& getInstance() {return *_instance;}
@@ -44,10 +45,11 @@ public:
 
 private:
     static BleServices * _instance;
-    filesystem::File * _file{nullptr};
+    filesystem::File _file;
+    filesystem::FilesCount _files_count{0,0};
     BleCommands _ble_cmd;
     uint32_t _read_pointer{0};
-    static const uint32_t SPI_READ_SIZE = 128;
+
     size_t _file_size{0UL};
     bool _is_file_transmission_started{false};
     bool _is_file_transmission_done{false};

@@ -187,6 +187,10 @@ void application_cyclic()
         {
             _applicationState = AppSmState::RESTART;
         }
+        else if (CompletionStatus::ERROR == res)
+        {
+            _applicationState = AppSmState::FINALIZE;
+        }
     }
     break;
     case AppSmState::DISCONNECT: {
@@ -274,9 +278,9 @@ CompletionStatus do_prepare()
 
     if(_context.state == InternalFsmState::DONE)
     {
+        volatile auto fs_init_res = filesystem::init(integration::spi_flash_simple_fs_config);
         _context.state == InternalFsmState::RUNNING;
         // mount the filesystem
-        const auto fs_init_res = filesystem::init(integration::spi_flash_simple_fs_config);
         if (fs_init_res != result::Result::OK)
         {
             _context.state = InternalFsmState::DONE;
@@ -353,22 +357,7 @@ CompletionStatus do_connect()
     // start advertising, establish connection to the phone
     if(!ble::BleSystem::getInstance().isActive())
     {
-        const auto open_res = filesystem::open(_currentFile, filesystem::FileMode::RDONLY);
-        if (open_res != result::Result::OK)
-        {
-            NRF_LOG_ERROR("Record finalize: failed to open the file");
-            return CompletionStatus::ERROR;
-        }
-        
-        const auto record_size = _currentFile.rom.size;
-        NRF_LOG_INFO("Recorded %d bytes", record_size);
-        if(0U == record_size)
-        {
-            return CompletionStatus::ERROR;
-        }
-
-        ble::BleSystem::getInstance().start(_currentFile);
-        ble::BleSystem::getInstance().getServices().setFileSizeForTransfer(record_size);
+        ble::BleSystem::getInstance().start();
 
         led::task_led_set_indication_state(led::CONNECTING);
     }
@@ -391,12 +380,6 @@ CompletionStatus do_transfer()
     // transfer the data to the phone
     if(ble::BleSystem::getInstance().getServices().isFileTransmissionComplete())
     {
-        const auto close_res = filesystem::close(_currentFile);
-        if (close_res != result::Result::OK)
-        {
-            NRF_LOG_ERROR("Transfer end: failed to close record file");
-            return CompletionStatus::ERROR;
-        }
         return CompletionStatus::DONE;
     }
 
