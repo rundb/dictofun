@@ -151,6 +151,10 @@ void application_cyclic()
         {
             _applicationState = AppSmState::FINALIZE;
         }
+        else if(CompletionStatus::INVALID == res)
+        {
+            _applicationState = AppSmState::FINALIZE;
+        }
     }
     break;
     case AppSmState::CONNECT: {
@@ -341,12 +345,17 @@ CompletionStatus do_record()
 CompletionStatus do_record_finalize()
 {
     // close the audio file
+    const auto file_size = _currentFile.ram.size;
     const auto close_res = filesystem::close(_currentFile);
     if (close_res != result::Result::OK)
     {
         NRF_LOG_ERROR("Record finalize: failed to close the file");
         _context.is_unrecoverable_error_detected = true;
         return CompletionStatus::ERROR;
+    }
+    if (file_size == 0)
+    {
+        return CompletionStatus::INVALID;
     }
 
     return CompletionStatus::DONE;

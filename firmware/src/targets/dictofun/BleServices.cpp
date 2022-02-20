@@ -253,13 +253,20 @@ void BleServices::start()
     // Figure out how many files we have to be transmitted
     _files_count = filesystem::get_files_count();
 
-    const auto open_result = filesystem::open(_file, filesystem::FileMode::RDONLY);
-    if(open_result != result::Result::OK)
-    {
-        NRF_LOG_ERROR("BleServices::start(): file opening failure!");
-        _is_file_transmission_done = true;
-    }
-    _file_size = _file.rom.size;
+    int size = 0;
+    do {
+        const auto open_result = filesystem::open(_file, filesystem::FileMode::RDONLY);
+        if(open_result != result::Result::OK)
+        {
+            NRF_LOG_ERROR("BleServices::start(): file opening failure!");
+            _is_file_transmission_done = true;
+        }
+        _file_size = _file.rom.size;
+        if (_file_size == 0)
+        {
+            filesystem::close(_file);
+        }
+    } while (_file_size == 0);
 }
 
 nrf_ble_qwr_t* BleServices::getQwrHandle()
