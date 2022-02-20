@@ -267,6 +267,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    fun eraseAllRecords(view: View)
+    {
+        externalStorageService?.eraseAllRecords()
+    }
+
     fun isPairedDeviceFound(): Boolean {
         val bluetoothAdapter: BluetoothAdapter? = BluetoothAdapter.getDefaultAdapter()
 
