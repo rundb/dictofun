@@ -45,6 +45,7 @@ enum IndicationState
     CONNECTING,
     SENDING,
     SHUTTING_DOWN,
+    INDICATION_OFF,
 };
 
 void task_led_init();

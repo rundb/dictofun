@@ -79,6 +79,9 @@ class MainActivity : AppCompatActivity() {
     private var fileTransferService: FileTransferService? = null
     private var expandableRecordingAdapter: ExpandableRecordingAdapter? = null
 
+    private var filesToReceiveCount: Int = 0
+    private var currentFileBytesToReceiveLeft: Int = 0;
+
     private val mServiceConnection = object : ServiceConnection {
 
         override fun onServiceConnected(componentName: ComponentName, service: IBinder) {
@@ -115,35 +118,65 @@ class MainActivity : AppCompatActivity() {
         override fun onReceive(context: Context?, intent: Intent) {
             val action = intent.action
             val mIntent = intent
+            val LOG_TAG = "bleStatusChange"
 
-            Log.d("bleStatusChange", "Command: $action")
+            Log.d(LOG_TAG, "Command: $action")
             if (action == FileTransferService.ACTION_GATT_CONNECTED) {
-                Log.i("bleStatusChange", "File Transfer Service connected")
+                Log.i(LOG_TAG, "File Transfer Service connected")
             }
 
             if (action == FileTransferService.ACTION_GATT_DISCONNECTED) {
-                Log.i("bleStatusChange", "File Transfer Service disconnected")
+                Log.i(LOG_TAG, "File Transfer Service disconnected")
             }
 
             if (action == FileTransferService.ACTION_GATT_SERVICES_DISCOVERED) {
                 // Subscribe to characteristics once BLE services have been discovered.
-                fileTransferService?.enableTXNotification()
+                fileTransferService?.enableFileSystemInfoNotification()
                 Thread.sleep(1_000)
-                fileTransferService?.sendCommand(FileTransferService.Command.GetFileInfo)
+                fileTransferService?.sendCommand(FileTransferService.Command.GetFilesystemInfo)
+            }
+
+            if (action == FileTransferService.ACTION_FILESYSTEM_INFO_AVAILABLE) {
+                fileTransferService?.enableFileInfoNotification();
+                Thread.sleep(1_000)
+
+                // TODO: process fs info available state
+                val txValue = intent.getByteArrayExtra(FileTransferService.EXTRA_DATA)
+
+                if (txValue != null) {
+                    filesToReceiveCount =
+                        ByteBuffer.wrap(txValue.copyOfRange(1, txValue.size).reversedArray()).int
+                    if (filesToReceiveCount != 0) {
+                        Log.i(LOG_TAG, "Files to receive count == $filesToReceiveCount")
+                        // extract next file's size
+                        fileTransferService?.sendCommand(FileTransferService.Command.GetFileInfo)
+                    }
+                }
+                else
+                {
+                    Log.e(LOG_TAG, "FS Info available: NP txValue")
+                }
             }
 
             if (action == FileTransferService.ACTION_FILE_INFO_AVAILABLE) {
+                fileTransferService?.enableTXNotification()
+                Thread.sleep(1_000)
                 val txValue = intent.getByteArrayExtra(FileTransferService.EXTRA_DATA)
 
                 if (txValue != null) {
                     val fileSize =
                         ByteBuffer.wrap(txValue.copyOfRange(1, txValue.size).reversedArray()).int
+                    Log.i(TAG, "Starting reception of the next file, $fileSize bytes")
                     if (fileSize != 0) {
-                        Log.i(TAG, "New file is ready, size: $fileSize bytes")
+                        Log.i(TAG, "New file is ready for reception, size: $fileSize bytes")
+                        currentFileBytesToReceiveLeft = fileSize
 
                         // Request file.
                         externalStorageService?.initNewFileSaving(fileSize)
                         fileTransferService?.sendCommand(FileTransferService.Command.GetFile);
+                    }
+                    else {
+                        Log.e(TAG, "Received file size equal 0, likely an error in FileInfo request")
                     }
                 }
 
@@ -153,7 +186,7 @@ class MainActivity : AppCompatActivity() {
             if (action == FileTransferService.ACTION_FILE_DATA) {
                 val txValue = intent.getByteArrayExtra(FileTransferService.EXTRA_DATA)
                 if (txValue != null) {
-                    Log.d(TAG, "Data available: ${txValue.contentToString()}")
+                    Log.d(TAG, "received: ${txValue.contentToString()}")
                     externalStorageService?.appendToCurrentFile(txValue)?.ifPresent {
                         // Get transcription.
                         Log.i(
@@ -174,6 +207,15 @@ class MainActivity : AppCompatActivity() {
 
                         externalStorageService?.getFile(it)?.let { it1 ->
                             createRecordingAdapter()
+                        }
+                    }
+                    currentFileBytesToReceiveLeft -= (txValue.size);
+                    //Log.d(TAG, "Bytes to receive left: ${currentFileBytesToReceiveLeft}")
+                    if (currentFileBytesToReceiveLeft == 0) {
+                        Log.i( TAG, "Requesting the next file")
+                        filesToReceiveCount--
+                        if (filesToReceiveCount != 0) {
+                            fileTransferService?.sendCommand(FileTransferService.Command.GetFileInfo)
                         }
                     }
                 }
@@ -223,6 +265,11 @@ class MainActivity : AppCompatActivity() {
                 m.invoke(device)
             }
         }
+    }
+
+    fun eraseAllRecords(view: View)
+    {
+        externalStorageService?.eraseAllRecords()
     }
 
     fun isPairedDeviceFound(): Boolean {
@@ -365,6 +412,7 @@ class MainActivity : AppCompatActivity() {
         intentFilter.addAction(FileTransferService.ACTION_GATT_SERVICES_DISCOVERED)
         intentFilter.addAction(FileTransferService.ACTION_FILE_DATA)
         intentFilter.addAction(FileTransferService.ACTION_FILE_INFO_AVAILABLE)
+        intentFilter.addAction(FileTransferService.ACTION_FILESYSTEM_INFO_AVAILABLE)
         intentFilter.addAction(FileTransferService.DEVICE_DOES_NOT_SUPPORT_IMAGE_TRANSFER)
         return intentFilter
     }
@@ -372,7 +420,6 @@ class MainActivity : AppCompatActivity() {
     private fun bindFileTransferService() {
         val gattServiceIntent = Intent(this, FileTransferService::class.java)
         bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE)
-
 
         LocalBroadcastManager.getInstance(this)
             .registerReceiver(bleStatusChangeReceiver, makeGattUpdateIntentFilter());

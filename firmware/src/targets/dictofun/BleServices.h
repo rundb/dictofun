@@ -1,32 +1,23 @@
-#pragma once
-
+// SPDX-License-Identifier:  Apache-2.0
 /*
- * Copyright (c) 2021 Roman Turkin 
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) 2022, Roman Turkin
  */
+
+#pragma once
 
 #include <stdint.h>
 #include <ble/nrf_ble_qwr/nrf_ble_qwr.h>
 #include "ble_file_transfer_service.h"
+#include "simple_fs.h"
 
 namespace ble
 {
 enum BleCommands
 {
-    CMD_EMPTY,
-    CMD_GET_FILE,
-    CMD_GET_FILE_INFO,
+    CMD_EMPTY = 0,
+    CMD_GET_FILE = 1,
+    CMD_GET_FILE_INFO = 2,
+    CMD_GET_VALID_FILES_COUNT = 3,
 };
 
 /**
@@ -37,10 +28,11 @@ class BleServices
 public:
     BleServices();
     void init();
+    void start();
     void cyclic();
 
     nrf_ble_qwr_t * getQwrHandle();
-    //uint16_t getLbsUUID();
+
     size_t setAdvUuids(ble_uuid_t * uuids, size_t max_uuids);
 
     static BleServices& getInstance() {return *_instance;}
@@ -53,10 +45,13 @@ public:
 
 private:
     static BleServices * _instance;
+    filesystem::File _file;
+    filesystem::FilesCount _files_count{0,0};
     BleCommands _ble_cmd;
     uint32_t _read_pointer{0};
-    static const uint32_t SPI_READ_SIZE = 128;
+
     size_t _file_size{0UL};
+    bool _is_file_transmission_started{false};
     bool _is_file_transmission_done{false};
 
     uint32_t send_data(const uint8_t *data, uint32_t data_size);

@@ -19,6 +19,9 @@
 #include <libraries/log/nrf_log_ctrl.h>
 #include <libraries/log/nrf_log.h>
 #include <libraries/log/nrf_log_default_backends.h>
+#include "fs.h"
+#include "spi.h"
+#include "spi_flash.h"
 
 #include "ble_dfu.h"
 
@@ -26,15 +29,34 @@ static void log_init();
 static void idle_state_handle();
 static void timers_init();
 
+spi::Spi flashSpi(0, SPI_FLASH_CS_PIN);
+flash::SpiFlash flashMemory(flashSpi);
+extern void run_flash_tests();
+
+static const spi::Spi::Configuration flash_spi_config{NRF_DRV_SPI_FREQ_1M,
+                                                      NRF_DRV_SPI_MODE_0,
+                                                      NRF_DRV_SPI_BIT_ORDER_MSB_FIRST,
+                                                      SPI_FLASH_SCK_PIN,
+                                                      SPI_FLASH_MOSI_PIN,
+                                                      SPI_FLASH_MISO_PIN};
+
+flash::SpiFlash& getSpiFlash() { return flashMemory;}
+
 ble::BleSystem bleSystem{};
 
 int main()
 {
     log_init();
-    const auto err_code = ble_dfu_buttonless_async_svci_init();
-    APP_ERROR_CHECK(err_code);
+    //const auto err_code = ble_dfu_buttonless_async_svci_init();
+    //APP_ERROR_CHECK(err_code);
     bsp_board_init(BSP_INIT_LEDS);
     timers_init();
+
+    flashSpi.init(flash_spi_config);
+    flashMemory.init();
+    //flashMemory.reset();
+    run_flash_tests();
+
     bleSystem.init();
     bleSystem.start();
     NRF_LOG_INFO("Starting dictofun_pca10040 main app");

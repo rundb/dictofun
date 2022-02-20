@@ -83,6 +83,7 @@ class FileTransferService : Service() {
             characteristic: BluetoothGattCharacteristic,
             status: Int
         ) {
+            Log.d(TAG, "onCharacteristicRead() is called")
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 broadcastUpdate(ACTION_FILE_DATA, characteristic)
             }
@@ -91,11 +92,21 @@ class FileTransferService : Service() {
         override fun onCharacteristicChanged(
             gatt: BluetoothGatt,
             characteristic: BluetoothGattCharacteristic
-        ) {
+        )
+        {
             if (FILE_INFO_CHAR_UUID == characteristic.uuid) {
                 broadcastUpdate(ACTION_FILE_INFO_AVAILABLE, characteristic)
+                Log.d(TAG, "onCharacteristicChanged(FILE_INFO) is called")
+            }
+            else if (FILESYSTEM_INFO_CHAR_UUID == characteristic.uuid) {
+                broadcastUpdate(ACTION_FILESYSTEM_INFO_AVAILABLE, characteristic)
+                Log.d(
+                    TAG,
+                    "onCharacteristicChanged(FS_INFO) is called, value=${characteristic.value.contentToString()}"
+                )
             } else {
                 broadcastUpdate(ACTION_FILE_DATA, characteristic)
+                Log.d(TAG, "onCharacteristicChanged(TX_DATA) is called")
             }
         }
 
@@ -115,6 +126,8 @@ class FileTransferService : Service() {
             Log.w(TAG, "OnDescWrite!!!")
 
             if (TX_CHAR_UUID == descriptor.characteristic.uuid) {
+                subscribeToFilesystemInfoCharacteristic()
+            } else if (FILESYSTEM_INFO_CHAR_UUID == descriptor.characteristic.uuid) {
                 subscribeToFileInfoCharacteristic()
             }
         }
@@ -129,18 +142,35 @@ class FileTransferService : Service() {
         val fileTransferService = mBluetoothGatt!!.getService(FILE_TRANSFER_SERVICE_UUID)
         val fileInfoCharacteristic = fileTransferService.getCharacteristic(FILE_INFO_CHAR_UUID)
         if (fileInfoCharacteristic == null) {
-            showMessage("Img Info characteristic not found!")
-            broadcastUpdate(DEVICE_DOES_NOT_SUPPORT_IMAGE_TRANSFER)
+            showMessage("File Info characteristic not found!")
+            broadcastUpdate("subscribe to file info char " + DEVICE_DOES_NOT_SUPPORT_IMAGE_TRANSFER)
             return
         }
         mBluetoothGatt!!.setCharacteristicNotification(fileInfoCharacteristic, true)
         val descriptor2 = fileInfoCharacteristic.getDescriptor(CCCD)
         descriptor2.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
         val result = mBluetoothGatt!!.writeDescriptor(descriptor2)
-        Log.e(
-            TAG,
-            "set descriptor = " + descriptor2.characteristic.writeType + ", success = $result"
-        )
+        if (!result) {
+            Log.e(TAG, "Failed to subscribe to file info characteristic")
+        }
+    }
+
+    private fun subscribeToFilesystemInfoCharacteristic() {
+        val fileTransferService = mBluetoothGatt!!.getService(FILE_TRANSFER_SERVICE_UUID)
+        val filesystemInfoCharacteristic =
+            fileTransferService.getCharacteristic(FILESYSTEM_INFO_CHAR_UUID)
+        if (filesystemInfoCharacteristic == null) {
+            showMessage("FS Info characteristic not found!")
+            broadcastUpdate("subscribe to FS info char" + DEVICE_DOES_NOT_SUPPORT_IMAGE_TRANSFER)
+            return
+        }
+        mBluetoothGatt!!.setCharacteristicNotification(filesystemInfoCharacteristic, true)
+        val descriptor2 = filesystemInfoCharacteristic.getDescriptor(CCCD)
+        descriptor2.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+        val result = mBluetoothGatt!!.writeDescriptor(descriptor2)
+        if (!result) {
+            Log.e(TAG, "Failed to subscribe to FS info characteristic")
+        }
     }
 
     private fun broadcastUpdate(action: String) {
@@ -154,18 +184,20 @@ class FileTransferService : Service() {
     ) {
         val intent = Intent(action)
 
-        // This is special handling for the Heart Rate Measurement profile.  Data parsing is
-        // carried out as per profile specifications:
-        // http://developer.bluetooth.org/gatt/characteristics/Pages/CharacteristicViewer.aspx?u=org.bluetooth.characteristic.heart_rate_measurement.xml
         if (TX_CHAR_UUID == characteristic.uuid) {
-
-            Log.d(TAG, "Received TX: ${characteristic.value.contentToString()}");
             intent.putExtra(EXTRA_DATA, characteristic.value)
-        } else if (FILE_INFO_CHAR_UUID == characteristic.uuid) {
-            intent.putExtra(EXTRA_DATA, characteristic.value)
-        } else {
         }
-        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+        else if (FILE_INFO_CHAR_UUID == characteristic.uuid) {
+            intent.putExtra(EXTRA_DATA, characteristic.value)
+        }
+        else if (FILESYSTEM_INFO_CHAR_UUID == characteristic.uuid) {
+            Log.i(TAG, "broadcasting an update of FILESYSTEM_INFO_CHAR_UUID characteristic")
+            intent.putExtra(EXTRA_DATA, characteristic.value)
+        }
+        else {
+        }
+        val broadcastManager = LocalBroadcastManager.getInstance(this)
+        broadcastManager.sendBroadcast(intent)
     }
 
     inner class LocalBinder : Binder() {
@@ -303,14 +335,17 @@ class FileTransferService : Service() {
         }
         mBluetoothGatt!!.readCharacteristic(characteristic)
     }
+
     /**
      * Enables or disables notification on a give characteristic.
      *
      * @param characteristic Characteristic to act on.
      * @param enabled If true, enable notification.  False otherwise.
      */
-    fun setCharacteristicNotification(characteristic: BluetoothGattCharacteristic,
-                                              enabled: Boolean) {
+    fun setCharacteristicNotification(
+        characteristic: BluetoothGattCharacteristic,
+        enabled: Boolean
+    ) {
         if (mBluetoothAdapter == null || mBluetoothGatt == null) {
             Log.w(TAG, "BluetoothAdapter not initialized");
             return;
@@ -326,6 +361,54 @@ class FileTransferService : Service() {
         }
     }
 
+    fun enableFileSystemInfoNotification() {
+        Log.i(TAG, "enable file system info notification.")
+        val fileTransferService = mBluetoothGatt!!.getService(FILE_TRANSFER_SERVICE_UUID)
+        if (fileTransferService == null) {
+            showMessage("FTS is null!")
+            broadcastUpdate("enableFileSystemInfoNotification " + DEVICE_DOES_NOT_SUPPORT_IMAGE_TRANSFER)
+            return
+        }
+        val filesystemInfoChar = fileTransferService.getCharacteristic(FILESYSTEM_INFO_CHAR_UUID)
+        if (filesystemInfoChar == null) {
+            showMessage("File Info characteristic not found!")
+            broadcastUpdate("enableFileSystemInfoNotification: " + DEVICE_DOES_NOT_SUPPORT_IMAGE_TRANSFER)
+            return
+        }
+
+        mBluetoothGatt!!.setCharacteristicNotification(filesystemInfoChar, true)
+        val descriptor = filesystemInfoChar.getDescriptor(CCCD)
+        descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+        val status = mBluetoothGatt!!.writeDescriptor(descriptor)
+        if (!status) {
+            Log.e(TAG, "Failed to enable file system info notification")
+        }
+    }
+
+    fun enableFileInfoNotification() {
+        Log.i(TAG, "enable file info notification.")
+        val fileTransferService = mBluetoothGatt!!.getService(FILE_TRANSFER_SERVICE_UUID)
+        if (fileTransferService == null) {
+            showMessage("FTS is null!")
+            broadcastUpdate(DEVICE_DOES_NOT_SUPPORT_IMAGE_TRANSFER)
+            return
+        }
+        val fileInfoChar = fileTransferService.getCharacteristic(FILE_INFO_CHAR_UUID)
+        if (fileInfoChar == null) {
+            showMessage("File Info characteristic not found!")
+            broadcastUpdate(DEVICE_DOES_NOT_SUPPORT_IMAGE_TRANSFER)
+            return
+        }
+
+        mBluetoothGatt!!.setCharacteristicNotification(fileInfoChar, true)
+        val descriptor = fileInfoChar.getDescriptor(CCCD)
+        descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+        val status = mBluetoothGatt!!.writeDescriptor(descriptor)
+        if (!status) {
+            Log.e(TAG, "Failed to enable file info notification")
+        }
+    }
+
     /**
      * Subscribe to file info characteristic.
      *
@@ -336,36 +419,36 @@ class FileTransferService : Service() {
         val fileTransferService = mBluetoothGatt!!.getService(FILE_TRANSFER_SERVICE_UUID)
         if (fileTransferService == null) {
             showMessage("Rx service not found!")
-            broadcastUpdate(DEVICE_DOES_NOT_SUPPORT_IMAGE_TRANSFER)
+            broadcastUpdate("enableTxNotification " + DEVICE_DOES_NOT_SUPPORT_IMAGE_TRANSFER)
             return
         }
+
         val TxChar = fileTransferService.getCharacteristic(TX_CHAR_UUID)
         if (TxChar == null) {
             showMessage("Tx characteristic not found!")
-            broadcastUpdate(DEVICE_DOES_NOT_SUPPORT_IMAGE_TRANSFER)
+            broadcastUpdate("enableTxNotification " + DEVICE_DOES_NOT_SUPPORT_IMAGE_TRANSFER)
             return
         }
         mBluetoothGatt!!.setCharacteristicNotification(TxChar, true)
-        val descriptor = TxChar.getDescriptor(CCCD)
+        var descriptor = TxChar.getDescriptor(CCCD)
         descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-        val status = mBluetoothGatt!!.writeDescriptor(descriptor)
-        Log.e(
-            TAG,
-            "set descriptor = " + descriptor.characteristic.writeType + ", success = $status"
-        )
+        var status = mBluetoothGatt!!.writeDescriptor(descriptor)
+        if (!status) {
+            Log.e(TAG, "Failed to enable TX notification")
+        }
     }
 
     fun writeRXCharacteristic(value: ByteArray?) {
         val RxService = mBluetoothGatt!!.getService(FILE_TRANSFER_SERVICE_UUID)
         if (RxService == null) {
             showMessage("Rx service not found!")
-            broadcastUpdate(DEVICE_DOES_NOT_SUPPORT_IMAGE_TRANSFER)
+            broadcastUpdate("writeRxChar " + DEVICE_DOES_NOT_SUPPORT_IMAGE_TRANSFER)
             return
         }
         val RxChar = RxService.getCharacteristic(RX_CHAR_UUID)
         if (RxChar == null) {
             showMessage("Rx characteristic not found!")
-            broadcastUpdate(DEVICE_DOES_NOT_SUPPORT_IMAGE_TRANSFER)
+            broadcastUpdate("writeRxChar " + DEVICE_DOES_NOT_SUPPORT_IMAGE_TRANSFER)
             return
         }
         RxChar.value = value
@@ -405,6 +488,7 @@ class FileTransferService : Service() {
         const val ACTION_GATT_DISCONNECTED = "ACTION_GATT_DISCONNECTED"
         const val ACTION_GATT_SERVICES_DISCOVERED = "ACTION_GATT_SERVICES_DISCOVERED"
         const val ACTION_FILE_INFO_AVAILABLE = "ACTION_FILE_INFO_AVAILABLE"
+        const val ACTION_FILESYSTEM_INFO_AVAILABLE = "ACTION_FILESYSTEM_INFO_AVAILABLE"
         const val ACTION_FILE_DATA = "ACTION_FILE_DATA"
         const val EXTRA_DATA = "EXTRA_DATA"
         const val DEVICE_DOES_NOT_SUPPORT_IMAGE_TRANSFER = "DEVICE_DOES_NOT_SUPPORT_IMAGE_TRANSFER"
@@ -419,10 +503,12 @@ class FileTransferService : Service() {
         val RX_CHAR_UUID = UUID.fromString("03000002-4202-a882-ec11-b10da4ae3ceb")
         val TX_CHAR_UUID = UUID.fromString("03000003-4202-a882-ec11-b10da4ae3ceb")
         val FILE_INFO_CHAR_UUID = UUID.fromString("03000004-4202-a882-ec11-b10da4ae3ceb")
+        val FILESYSTEM_INFO_CHAR_UUID = UUID.fromString("03000005-4202-a882-ec11-b10da4ae3ceb")
     }
 
     enum class Command {
         GetFile,
-        GetFileInfo
+        GetFileInfo,
+        GetFilesystemInfo
     }
 }

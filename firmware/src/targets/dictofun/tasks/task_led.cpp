@@ -138,6 +138,12 @@ void task_led_set_indication_state(IndicationState state)
             colors[BLUE] = OFF;
             break;
         }
+        case INDICATION_OFF:
+        {
+            colors[RED] = SLOW_BLINKING;
+            colors[GREEN] = SLOW_BLINKING;
+            colors[BLUE] = SLOW_BLINKING;
+        }
     }
 }
 

@@ -35,8 +35,8 @@ extern "C" {
     BLE_LINK_CTX_MANAGER_DEF(CONCAT_2(_name, _link_ctx_storage),  \
                              (_fts_max_clients),                  \
                              sizeof(ble_fts_client_context_t));   \
-    static ble_fts_t _name = {0, 0, {0,0,0,0},{0,0,0,0},{0,0,0,0}, \
-                              0, 0, 0,                            \
+    static ble_fts_t _name = {0, 0, {0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}, \
+                              0, 0, 0, 0,                            \
                               &CONCAT_2(_name, _link_ctx_storage)}; \
     NRF_SDH_BLE_OBSERVER(_name ## _obs,                           \
                          BLE_NUS_BLE_OBSERVER_PRIO,               \
@@ -99,9 +99,11 @@ struct ble_fts_s
     ble_gatts_char_handles_t tx_handles;              /**< Handles related to the TX characteristic (as provided by the SoftDevice). */
     ble_gatts_char_handles_t rx_handles;              /**< Handles related to the RX characteristic (as provided by the SoftDevice). */
     ble_gatts_char_handles_t file_info_handles;
+    ble_gatts_char_handles_t filesystem_info_handles;
     uint16_t                 conn_handle;             /**< Handle of the current connection (as provided by the SoftDevice). BLE_CONN_HANDLE_INVALID if not in a connection. */
     bool                     is_notification_enabled; /**< Variable to indicate if the peer has enabled notification of the RX characteristic.*/
     bool                     is_info_char_notification_enabled;
+    bool                     is_fsinfo_char_notification_enabled;
     blcm_link_ctx_storage_t * const p_link_ctx_storage;
     ble_fts_data_handler_t   data_handler;            /**< Event handler to be called for handling received data. */
 };
@@ -111,6 +113,12 @@ typedef struct
     uint32_t file_size_bytes;
     
 }ble_fts_file_info_t;
+
+typedef struct
+{
+    uint32_t valid_files_count;
+    
+}ble_fts_filesystem_info_t;
 
 typedef PACKED_STRUCT
 {
@@ -157,9 +165,9 @@ void ble_fts_on_ble_evt(ble_evt_t const * p_ble_evt, void * p_context);
  */
 uint32_t ble_fts_string_send(ble_fts_t * p_fts, uint8_t * p_string, uint16_t length);
 
-uint32_t ble_fts_ble_params_info_send(ble_fts_t * p_fts, ble_fts_ble_params_info_t * ble_params_info);
-
 uint32_t ble_fts_file_info_send(ble_fts_t * p_fts, ble_fts_file_info_t * file_info);
+
+uint32_t ble_fts_filesystem_info_send(ble_fts_t * p_fts, ble_fts_filesystem_info_t * fs_info);
 
 uint32_t ble_fts_send_file(ble_fts_t * p_fts, uint8_t * p_data, uint32_t data_length, uint32_t max_packet_length);
 

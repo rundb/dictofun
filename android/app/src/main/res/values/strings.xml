@@ -6,4 +6,5 @@
     <string name="connections_device_list_title">Discovered devices:</string>
     <string name="connecting_device_1">dictofun (-75 dB RSSI, id: 0001)</string>
     <string name="erase_bonds_button">Erase bonds</string>
+    <string name="erase_records_button">Erase all records</string>
 </resources>

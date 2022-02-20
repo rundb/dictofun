@@ -1,17 +1,6 @@
+// SPDX-License-Identifier:  Apache-2.0
 /*
- * Copyright (c) 2021 Roman Turkin 
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) 2022, Roman Turkin
  */
 
 #include "BleSystem.h"
@@ -29,6 +18,7 @@
 #include <stdint.h>
 #include "BleServices.h"
 #include <boards/boards.h>
+#include "simple_fs.h"
 
 // Legacy define. I haven't come up with a replacement for this part of nordic interfaces
 // NRF_BLE_QWR_DEF(m_qwr);
@@ -84,13 +74,17 @@ void BleSystem::init()
 
 void BleSystem::start()
 {
-    _isActive = true;
+    _bleServices.start();
     startAdvertising();
+    _isActive = true;
 }
 
 void BleSystem::cyclic()
 {
-    _bleServices.cyclic();
+    if (_isActive)
+    {
+        _bleServices.cyclic();
+    }
 }
 
 void BleSystem::startAdvertising()

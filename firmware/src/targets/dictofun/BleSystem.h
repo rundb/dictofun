@@ -1,19 +1,10 @@
-#pragma once
+// SPDX-License-Identifier:  Apache-2.0
 /*
- * Copyright (c) 2021 Roman Turkin 
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) 2022, Roman Turkin
  */
+
+#pragma once
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -30,6 +21,7 @@ void application_cyclic();
 #include <ble/nrf_ble_gatt/nrf_ble_gatt.h>
 #include <ble/peer_manager/peer_manager.h>
 #include "BleServices.h"
+#include "simple_fs.h"
 
 namespace ble
 {
@@ -60,6 +52,7 @@ public:
 private:
     static BleSystem * _instance;
     BleServices _bleServices;
+    bool _isActive{false};
     void initBleStack();
     void startAdvertising();
     void initGapParams();
@@ -72,8 +65,6 @@ private:
     static void bonded_client_add(pm_evt_t const * p_evt);
     static void bonded_client_remove_all(void);
     static void on_bonded_peer_reconnection_lvl_notify(pm_evt_t const * p_evt);
-
-    bool _isActive{false};
 
     uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;
     //uint8_t m_adv_handle = BLE_GAP_ADV_SET_HANDLE_NOT_SET;

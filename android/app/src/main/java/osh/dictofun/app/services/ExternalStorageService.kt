@@ -46,6 +46,20 @@ class ExternalStorageService(context: Context) {
         return listFiles.toMutableList()
     }
 
+    fun eraseAllRecords() {
+        val file = File(dir.toString())
+        val listFiles = file.listFiles().filter { it.name.endsWith(".wav") }
+        for (file in listFiles)
+        {
+            val result = file.delete()
+            if (!result)
+            {
+                Log.e("FilesErase", "erase operation has failed")
+                return
+            }
+        }
+    }
+
     fun getTranscription(recordingName: String) : String {
         val file = File(dir.toString())
 
