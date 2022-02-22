@@ -58,7 +58,7 @@ class MainActivity : AppCompatActivity() {
     private val REQUEST_CODE_PERMISSIONS: Int = 1545
     private val NEW_DEVICE_REGISTRATION_ACTIVITY_INTENT: Int = 1547
 
-    private val RECOGNITION_ENABLED = false
+    private val RECOGNITION_ENABLED = true
     private val RESET_ASSOTIATIONS_ON_STARTUP = false
 
     companion object {
@@ -120,7 +120,7 @@ class MainActivity : AppCompatActivity() {
             val mIntent = intent
             val LOG_TAG = "bleStatusChange"
 
-            Log.d(LOG_TAG, "Command: $action")
+            //Log.d(LOG_TAG, "Command: $action")
             if (action == FileTransferService.ACTION_GATT_CONNECTED) {
                 Log.i(LOG_TAG, "File Transfer Service connected")
             }
@@ -186,14 +186,14 @@ class MainActivity : AppCompatActivity() {
             if (action == FileTransferService.ACTION_FILE_DATA) {
                 val txValue = intent.getByteArrayExtra(FileTransferService.EXTRA_DATA)
                 if (txValue != null) {
-                    Log.d(TAG, "received: ${txValue.contentToString()}")
+                    //Log.d(TAG, "received: ${txValue.contentToString()}")
                     externalStorageService?.appendToCurrentFile(txValue)?.ifPresent {
                         // Get transcription.
-                        Log.i(
-                            TAG,
-                            "Getting transcription from recognition service: filename=$it"
-                        )
                         if (RECOGNITION_ENABLED) {
+                            Log.i(
+                                TAG,
+                                "Getting transcription from recognition service: filename=$it"
+                            )
                             val result =
                                 recognitionService?.recognize(externalStorageService!!.getFile(it))
                             Log.i(TAG, "Result: $result")
@@ -345,6 +345,7 @@ class MainActivity : AppCompatActivity() {
     fun runMainActivity() {
         externalStorageService = ExternalStorageService(this)
         if (RECOGNITION_ENABLED) {
+            Log.d(TAG, "enabling GoogleSpeechRecognitionService")
             recognitionService = GoogleSpeechRecognitionService(this)
         }
 

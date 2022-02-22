@@ -42,7 +42,8 @@ public:
     void setFileSizeForTransfer(const size_t size) { _file_size = size; }
 
     bool isFileTransmissionComplete() { return _is_file_transmission_done; }
-
+    
+    static void disconnect(uint16_t conn_handle, void* p_context);
 private:
     static BleServices * _instance;
     filesystem::File _file;

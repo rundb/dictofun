@@ -19,6 +19,7 @@ enum class Commands
     PROGRAM = 4,
 };
 
+static const uint32_t MAX_SPI_WAIT_TIMEOUT = 100000;
 static const size_t ISSUED_COMMANDS_CNT = 20;
 volatile Commands issued_commands[ISSUED_COMMANDS_CNT];
 int issued_idx = 0;
@@ -169,10 +170,11 @@ void SpiFlash::reset()
 {
     _isSpiOperationPending = true;
     uint8_t tx_data[] = {0x99};
-    uint8_t rx_data[] = {0xcc};
+    uint8_t rx_data[] = {0x00};
     _spi.xfer(tx_data, rx_data, 1, spiOperationCallback);
 
-    while(_isSpiOperationPending)
+    volatile uint32_t timeout = MAX_SPI_WAIT_TIMEOUT;
+    while(_isSpiOperationPending && ((timeout--) > 0))
         ;
 
     for(volatile int i = 0; i < 1000000; ++i)
@@ -181,16 +183,18 @@ void SpiFlash::reset()
 
 uint8_t SpiFlash::getSR1()
 {
-    while(_isSpiOperationPending)
+    volatile uint32_t timeout = MAX_SPI_WAIT_TIMEOUT;
+    while(_isSpiOperationPending && ((timeout--) > 0))
         ;
 
     uint8_t tx_data[] = {0x05, 0x00};
-    uint8_t rx_data[] = {0xcc, 0xcc, 0xcc, 0xcc};
+    uint8_t rx_data[] = {0xcc, 0xcc, 0x00, 0x00};
 
     _isSpiOperationPending = true;
     _spi.xfer(tx_data, rx_data, 2, spiOperationCallback);
 
-    while(_isSpiOperationPending)
+    timeout = MAX_SPI_WAIT_TIMEOUT;
+    while(_isSpiOperationPending && ((timeout--) > 0))
         ;
     return rx_data[1];
 }
@@ -203,7 +207,8 @@ void SpiFlash::readJedecId(uint8_t* id)
     uint8_t tx_data[] = {0x9F, 0x00, 0x00, 0x00, 0x00, 0x00};
     uint8_t rx_data[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     _spi.xfer(tx_data, rx_data, 6, spiOperationCallback);
-    while(_isSpiOperationPending)
+    volatile uint32_t timeout = MAX_SPI_WAIT_TIMEOUT;
+    while(_isSpiOperationPending && ((timeout--) > 0))
         ;
     memcpy(id, &rx_data[1], 4);
 }
@@ -223,7 +228,8 @@ void SpiFlash::writeEnable(bool shouldEnable)
         tx_data[0] = 0x04;
     }
     _spi.xfer(tx_data, rx_data, 1, spiOperationCallback);
-    while(_isSpiOperationPending)
+    volatile uint32_t timeout = MAX_SPI_WAIT_TIMEOUT;
+    while(_isSpiOperationPending && ((timeout--) > 0))
         ;
 }
 
@@ -243,7 +249,8 @@ void SpiFlash::eraseChip()
     uint8_t rx_data[] = {0x0};
 
     _spi.xfer(tx_data, rx_data, 1, spiOperationCallback);
-    while(_isSpiOperationPending)
+    volatile uint32_t timeout = MAX_SPI_WAIT_TIMEOUT;
+    while(_isSpiOperationPending && ((timeout--) > 0))
         ;
 }
 

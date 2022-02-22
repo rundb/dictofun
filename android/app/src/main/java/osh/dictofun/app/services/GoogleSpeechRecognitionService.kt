@@ -32,6 +32,7 @@ class GoogleSpeechRecognitionService(context: Context) : ISpeechRecognitionServi
 
     override fun recognize(file: File) : String? {
         try {
+            Log.i("recognize", "starting recognition ")
             SpeechClient.create(
                 SpeechSettings.newBuilder()
                     .setCredentialsProvider { credentials }

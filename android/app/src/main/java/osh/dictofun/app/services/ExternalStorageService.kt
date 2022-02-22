@@ -101,12 +101,13 @@ class ExternalStorageService(context: Context) {
         if (remainingFilesize > 0) {
             addToFile(currentFilename!!, bytes)
             remainingFilesize -= bytes.size
-            Log.d("StorageService", "Remaining file size ${remainingFilesize}")
+            //Log.d("StorageService", "Remaining file size ${remainingFilesize}")
         }
 
         if (remainingFilesize <= 0) {
             val receivedFile = currentFilename
             currentFilename = null
+            Log.i("ExternalStorageService", "finished file reception, returning file name")
             return Optional.ofNullable(receivedFile)
         }
         return Optional.empty()

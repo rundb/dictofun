@@ -96,17 +96,17 @@ class FileTransferService : Service() {
         {
             if (FILE_INFO_CHAR_UUID == characteristic.uuid) {
                 broadcastUpdate(ACTION_FILE_INFO_AVAILABLE, characteristic)
-                Log.d(TAG, "onCharacteristicChanged(FILE_INFO) is called")
+                //Log.d(TAG, "onCharacteristicChanged(FILE_INFO) is called")
             }
             else if (FILESYSTEM_INFO_CHAR_UUID == characteristic.uuid) {
                 broadcastUpdate(ACTION_FILESYSTEM_INFO_AVAILABLE, characteristic)
-                Log.d(
-                    TAG,
-                    "onCharacteristicChanged(FS_INFO) is called, value=${characteristic.value.contentToString()}"
-                )
+//                Log.d(
+//                    TAG,
+//                    "onCharacteristicChanged(FS_INFO) is called, value=${characteristic.value.contentToString()}"
+//                )
             } else {
                 broadcastUpdate(ACTION_FILE_DATA, characteristic)
-                Log.d(TAG, "onCharacteristicChanged(TX_DATA) is called")
+                //Log.d(TAG, "onCharacteristicChanged(TX_DATA) is called")
             }
         }
 
