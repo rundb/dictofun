@@ -14,6 +14,7 @@
 #include <nrf_gpio.h>
 #include <nrf_log.h>
 
+extern volatile uint32_t ROTU_max_mainloop_duration;
 namespace application
 {
 AppSmState _applicationState{AppSmState::INIT};
@@ -464,11 +465,13 @@ CompletionStatus do_disconnect()
 
 CompletionStatus do_finalize()
 {
+
     // finalize Flash memory operations
     // if files have been succesfully transmitted - erase the memory and FS descriptos
     // if not - update FS descriptors
     if(_context.state == InternalFsmState::DONE)
     {
+        NRF_LOG_INFO("Max main loop duration == %d ms", ROTU_max_mainloop_duration);
         _context.state = InternalFsmState::RUNNING;
         auto& flashmem = flash::SpiFlash::getInstance();
         if(!_context.is_unrecoverable_error_detected)
