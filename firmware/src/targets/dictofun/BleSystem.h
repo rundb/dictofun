@@ -43,6 +43,8 @@ public:
     bool isActive() { return _isActive;}
     inline BleServices& getServices() { return _bleServices; }
 
+    void disconnect() { _bleServices.disconnect(m_conn_handle, nullptr); }
+
     void bleEventHandler(ble_evt_t const * p_ble_evt, void * p_context);
 
     uint16_t& getConnectionHandle() const { return getInstance().m_conn_handle; }

@@ -13,7 +13,6 @@
 #include <libraries/timer/app_timer.h>
 #include <nrf_gpio.h>
 #include <nrf_log.h>
-#include "block_device_api.h"
 
 namespace application
 {
@@ -21,20 +20,17 @@ AppSmState _applicationState{AppSmState::INIT};
 filesystem::File _currentFile;
 static const int SHUTDOWN_COUNTER_INIT_VALUE = 100;
 
-const char *stateNames[] =
-{
-    "INIT",
-    "PREPARE",
-    "RECORD_START",
-    "RECORD",
-    "RECORD_FINALIZATION",
-    "CONNECT",
-    "TRANSFER",
-    "DISCONNECT",
-    "FINALIZE",
-    "SHUTDOWN",
-    "RESTART"
-};
+const char* stateNames[] = {"INIT",
+                            "PREPARE",
+                            "RECORD_START",
+                            "RECORD",
+                            "RECORD_FINALIZATION",
+                            "CONNECT",
+                            "TRANSFER",
+                            "DISCONNECT",
+                            "FINALIZE",
+                            "SHUTDOWN",
+                            "RESTART"};
 
 AppSmState getApplicationState()
 {
@@ -60,6 +56,32 @@ enum class CompletionStatus
     RESTART_DETECTED,
     ERROR
 };
+
+enum class InternalFsmState
+{
+    INIT,
+    RUNNING,
+    DONE
+};
+
+struct FsmContext
+{
+    InternalFsmState state;
+    bool is_unrecoverable_error_detected;
+    int counter;
+    uint32_t start_timestamp;
+};
+
+// connection timeout in milliseconds (60 seconds)
+static const uint32_t CONNECT_STATE_TIMEOUT = 60000;
+
+// transfer timeout in milliseconds (120 seconds)
+static const uint32_t TRANSFER_STATE_TIMEOUT = 120000;
+/**
+ * This context is used inside each of the do_<> functions in order to distinguish
+ * first, last and other executions.
+ */
+FsmContext _context{InternalFsmState::DONE, false, 0, 0};
 
 /**
  * FSM action steps. 
@@ -99,6 +121,14 @@ void application_cyclic()
         {
             _applicationState = AppSmState::PREPARE;
         }
+        else if (CompletionStatus::PENDING == res)
+        {
+            // do nothing, wait
+        }
+        else
+        {
+            _applicationState = AppSmState::FINALIZE;
+        }
     }
     break;
     case AppSmState::PREPARE: {
@@ -107,7 +137,11 @@ void application_cyclic()
         {
             _applicationState = AppSmState::RECORD_START;
         }
-        else //if (CompletionStatus::ERROR == res)
+        else if (CompletionStatus::PENDING == res)
+        {
+            // do nothing, wait
+        }
+        else
         {
             _applicationState = AppSmState::FINALIZE;
         }
@@ -119,7 +153,11 @@ void application_cyclic()
         {
             _applicationState = AppSmState::RECORD;
         }
-        else //if (CompletionStatus::ERROR == res)
+        else  if (CompletionStatus::PENDING == res)
+        {
+            // do nothing, wait
+        }
+        else
         {
             _applicationState = AppSmState::FINALIZE;
         }
@@ -131,13 +169,17 @@ void application_cyclic()
         {
             _applicationState = AppSmState::RECORD_FINALIZATION;
         }
-        else if (CompletionStatus::ERROR == res)
+        else if(CompletionStatus::ERROR == res)
         {
             _applicationState = AppSmState::FINALIZE;
         }
+        else if (CompletionStatus::PENDING == res)
+        {
+            // do nothing, wait
+        }
         else
         {
-          // do nothing
+            _applicationState = AppSmState::FINALIZE;
         }
     }
     break;
@@ -147,11 +189,11 @@ void application_cyclic()
         {
             _applicationState = AppSmState::CONNECT;
         }
-        else if(CompletionStatus::ERROR == res)
+        else if (CompletionStatus::PENDING == res)
         {
-            _applicationState = AppSmState::FINALIZE;
+            // do nothing, wait
         }
-        else if(CompletionStatus::INVALID == res)
+        else
         {
             _applicationState = AppSmState::FINALIZE;
         }
@@ -167,13 +209,13 @@ void application_cyclic()
         {
             _applicationState = AppSmState::RESTART;
         }
-        else if (CompletionStatus::ERROR == res)
+        else if (CompletionStatus::PENDING == res)
         {
-            _applicationState = AppSmState::FINALIZE;
+            // do nothing, wait
         }
         else
         {
-            // pending - do nothing 
+            _applicationState = AppSmState::FINALIZE;
         }
     }
     break;
@@ -191,7 +233,11 @@ void application_cyclic()
         {
             _applicationState = AppSmState::RESTART;
         }
-        else if (CompletionStatus::ERROR == res)
+        else if (CompletionStatus::PENDING == res)
+        {
+            // do nothing, wait
+        }
+        else
         {
             _applicationState = AppSmState::FINALIZE;
         }
@@ -207,6 +253,14 @@ void application_cyclic()
         {
             _applicationState = AppSmState::RESTART;
         }
+        else if (CompletionStatus::PENDING == res)
+        {
+            // do nothing, wait
+        }
+        else
+        {
+            _applicationState = AppSmState::FINALIZE;
+        }        
     }
     break;
     case AppSmState::FINALIZE: {
@@ -216,6 +270,14 @@ void application_cyclic()
             _applicationState = AppSmState::RESTART;
         }
         else if(CompletionStatus::DONE == res || CompletionStatus::ERROR == res)
+        {
+            _applicationState = AppSmState::SHUTDOWN;
+        }
+        else if (CompletionStatus::PENDING == res)
+        {
+            // do nothing, wait
+        }
+        else
         {
             _applicationState = AppSmState::SHUTDOWN;
         }
@@ -231,6 +293,11 @@ void application_cyclic()
         {
             _applicationState = AppSmState::RECORD_START;
         }
+        else
+        {
+            // by default restart is not supported, proceed directly to finalize
+            _applicationState = AppSmState::FINALIZE;
+        }
     }
     break;
     }
@@ -240,28 +307,9 @@ void application_cyclic()
         const int idx1 = static_cast<int>(prevState);
         const int idx2 = static_cast<int>(_applicationState);
         NRF_LOG_INFO("state %s->%s", stateNames[idx1], stateNames[idx2]);
+        _context.start_timestamp = app_timer_cnt_get();
     }
 }
-
-enum class InternalFsmState
-{
-    INIT,
-    RUNNING,
-    DONE
-};
-
-struct FsmContext
-{
-    InternalFsmState state;
-    bool is_unrecoverable_error_detected;
-    int counter;
-};
-
-/**
- * This context is used inside each of the do_<> functions in order to distinguish
- * first, last and other executions.
- */
-FsmContext _context{InternalFsmState::DONE, false, 0};
 
 CompletionStatus do_init()
 {
@@ -269,8 +317,6 @@ CompletionStatus do_init()
     nrf_gpio_pin_set(LDO_EN_PIN);
 
     led::task_led_set_indication_state(led::PREPARING);
-
-    // TODO: check that crystals are operating
 
     return CompletionStatus::DONE;
 }
@@ -285,14 +331,14 @@ CompletionStatus do_prepare()
         volatile auto fs_init_res = filesystem::init(integration::spi_flash_simple_fs_config);
         _context.state == InternalFsmState::RUNNING;
         // mount the filesystem
-        if (fs_init_res != result::Result::OK)
+        if(fs_init_res != result::Result::OK)
         {
             _context.state = InternalFsmState::DONE;
             _context.is_unrecoverable_error_detected = true;
             return CompletionStatus::ERROR;
         }
         const auto file_open_res = filesystem::open(_currentFile, filesystem::FileMode::WRONLY);
-        if (file_open_res != result::Result::OK)
+        if(file_open_res != result::Result::OK)
         {
             _context.state = InternalFsmState::DONE;
             _context.is_unrecoverable_error_detected = true;
@@ -330,7 +376,7 @@ CompletionStatus do_record()
     if(!isButtonPressed)
     {
         const auto result = audio_stop_record();
-        if (result == result::Result::OK)
+        if(result == result::Result::OK)
         {
             return CompletionStatus::DONE;
         }
@@ -347,13 +393,13 @@ CompletionStatus do_record_finalize()
     // close the audio file
     const auto file_size = _currentFile.ram.size;
     const auto close_res = filesystem::close(_currentFile);
-    if (close_res != result::Result::OK)
+    if(close_res != result::Result::OK)
     {
         NRF_LOG_ERROR("Record finalize: failed to close the file");
         _context.is_unrecoverable_error_detected = true;
         return CompletionStatus::ERROR;
     }
-    if (file_size == 0)
+    if(file_size == 0)
     {
         return CompletionStatus::INVALID;
     }
@@ -369,6 +415,7 @@ CompletionStatus do_connect()
         ble::BleSystem::getInstance().start();
 
         led::task_led_set_indication_state(led::CONNECTING);
+
     }
 
     if(ble::BleSystem::getInstance().getConnectionHandle() != BLE_CONN_HANDLE_INVALID)
@@ -377,7 +424,12 @@ CompletionStatus do_connect()
     }
 
     // TODO: add restart detection
-    // TODO: add timeout handler
+    
+    const auto timestamp = app_timer_cnt_get();
+    if (timestamp - _context.start_timestamp > CONNECT_STATE_TIMEOUT)
+    {
+        return CompletionStatus::TIMEOUT;
+    }
 
     return CompletionStatus::PENDING;
 }
@@ -394,6 +446,11 @@ CompletionStatus do_transfer()
 
     // TODO: add restart detection
     // TODO: add transmission error detection (or incapsulate it in FTS)
+    const auto timestamp = app_timer_cnt_get();
+    if (timestamp - _context.start_timestamp > TRANSFER_STATE_TIMEOUT)
+    {
+        return CompletionStatus::TIMEOUT;
+    }
 
     return CompletionStatus::PENDING;
 }
@@ -401,11 +458,13 @@ CompletionStatus do_transfer()
 CompletionStatus do_disconnect()
 {
     // TODO: close the BLE connection
+    ble::BleSystem::getInstance().disconnect();
     return CompletionStatus::DONE;
 }
 
 CompletionStatus do_finalize()
 {
+
     // finalize Flash memory operations
     // if files have been succesfully transmitted - erase the memory and FS descriptos
     // if not - update FS descriptors
@@ -413,15 +472,19 @@ CompletionStatus do_finalize()
     {
         _context.state = InternalFsmState::RUNNING;
         auto& flashmem = flash::SpiFlash::getInstance();
-        if (!_context.is_unrecoverable_error_detected)
+        if(!_context.is_unrecoverable_error_detected)
         {
             led::task_led_set_indication_state(led::SHUTTING_DOWN);
             NRF_LOG_INFO("Finalize: unmounting the FS");
             const auto files_stats = filesystem::get_files_count();
             const auto occupied_mem_size = filesystem::get_occupied_memory_size();
             const auto total_size = integration::MEMORY_VOLUME;
-            NRF_LOG_INFO("File stats: valid files: %d, invalid files: %d, memory occupied: %d/%d", files_stats.valid, files_stats.invalid, occupied_mem_size, total_size);
-            if (occupied_mem_size * 100 / total_size > 80)
+            NRF_LOG_INFO("File stats: valid files: %d, invalid files: %d, memory occupied: %d/%d",
+                         files_stats.valid,
+                         files_stats.invalid,
+                         occupied_mem_size,
+                         total_size);
+            if(occupied_mem_size * 100 / total_size > 80)
             {
                 NRF_LOG_INFO("Finalize: memory is occupied by 80%. Formatting");
                 flashmem.eraseChip();
@@ -469,13 +532,14 @@ CompletionStatus do_shutdown()
         _context.counter = SHUTDOWN_COUNTER_INIT_VALUE;
         _context.state = InternalFsmState::RUNNING;
     }
-    else if (_context.state == InternalFsmState::RUNNING)
+    else if(_context.state == InternalFsmState::RUNNING)
     {
-        if (--_context.counter == 0)
+        if(--_context.counter == 0)
         {
             // pull LDO_EN down
             nrf_gpio_pin_clear(LDO_EN_PIN);
-            while(1);
+            while(1)
+                ;
         }
     }
     //while(1);

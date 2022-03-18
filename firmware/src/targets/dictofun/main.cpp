@@ -14,6 +14,8 @@
 #include <nrf_gpio.h>
 #include "simple_fs.h"
 #include "block_device_api.h"
+#include "nrf_drv_clock.h"
+#include "nrf_drv_wdt.h"
 
 #include <tasks/task_audio.h>
 #include <tasks/task_led.h>
@@ -28,7 +30,16 @@ spi::Spi flashSpi(0, SPI_FLASH_CS_PIN);
 flash::SpiFlash flashMemory(flashSpi);
 flash::SpiFlash& getSpiFlash() { return flashMemory;}
 
-extern void run_flash_tests();
+nrf_drv_wdt_config_t wdt_config = 
+{
+    .behaviour          = (nrf_wdt_behaviour_t)NRFX_WDT_CONFIG_BEHAVIOUR, \
+    .reload_value       = NRFX_WDT_CONFIG_RELOAD_VALUE,                   \
+    NRFX_WDT_IRQ_CONFIG
+};
+nrf_drv_wdt_channel_id m_channel_id;
+void init_watchdog();
+void start_watchdog();
+void feed_watchdog();
 
 static const spi::Spi::Configuration flash_spi_config{NRF_DRV_SPI_FREQ_2M,
                                                       NRF_DRV_SPI_MODE_0,
@@ -36,7 +47,6 @@ static const spi::Spi::Configuration flash_spi_config{NRF_DRV_SPI_FREQ_2M,
                                                       SPI_FLASH_SCK_PIN,
                                                       SPI_FLASH_MOSI_PIN,
                                                       SPI_FLASH_MISO_PIN};
-
 int main()
 {
     nrf_gpio_cfg_output(LDO_EN_PIN);
@@ -49,6 +59,10 @@ int main()
                  NRF_GPIO_PIN_PULLDOWN,
                  NRF_GPIO_PIN_H0S1,
                  NRF_GPIO_PIN_NOSENSE);
+
+    const auto err_code = nrf_drv_clock_init();
+    APP_ERROR_CHECK(err_code);
+    nrf_drv_clock_lfclk_request(NULL);
 
     log_init();
 
@@ -68,6 +82,9 @@ int main()
     audio_init();
     application::application_init();
     led::task_led_init();
+
+    //init_watchdog();
+    //start_watchdog();
 
     for(;;)
     {
@@ -97,6 +114,7 @@ static void log_init()
 static void idle_state_handle()
 {
     NRF_LOG_PROCESS();
+    //feed_watchdog();
 }
 
 uint32_t get_timestamp_delta(uint32_t base)
@@ -132,4 +150,29 @@ static void timers_init()
     app_timer_create(&timestamp_timer, APP_TIMER_MODE_REPEATED, timestamp_timer_timeout_handler);
     err_code = app_timer_start(timestamp_timer, 32768, NULL);
     APP_ERROR_CHECK(err_code);
+}
+
+void wdt_event_handler(void)
+{
+    //NOTE: The max amount of time we can spend in WDT interrupt is two cycles of 32768[Hz] clock - after that, reset occurs
+
+    // TODO: pull LDO_EN low
+}
+
+void init_watchdog()
+{
+    auto err_code = nrf_drv_wdt_init(&wdt_config, wdt_event_handler);
+    APP_ERROR_CHECK(err_code);
+    err_code = nrf_drv_wdt_channel_alloc(&m_channel_id);
+    APP_ERROR_CHECK(err_code);
+}
+
+void start_watchdog()
+{
+    nrf_drv_wdt_enable();
+}
+
+void feed_watchdog()
+{
+    nrf_drv_wdt_channel_feed(m_channel_id);
 }

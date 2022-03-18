@@ -68,6 +68,76 @@
 
 // </e>
 
+// <e> NRFX_WDT_ENABLED - nrfx_wdt - WDT peripheral driver
+//==========================================================
+#ifndef NRFX_WDT_ENABLED
+#define NRFX_WDT_ENABLED 1
+#endif
+// <o> NRFX_WDT_CONFIG_BEHAVIOUR  - WDT behavior in CPU SLEEP or HALT mode
+ 
+// <1=> Run in SLEEP, Pause in HALT 
+// <8=> Pause in SLEEP, Run in HALT 
+// <9=> Run in SLEEP and HALT 
+// <0=> Pause in SLEEP and HALT 
+
+#ifndef NRFX_WDT_CONFIG_BEHAVIOUR
+#define NRFX_WDT_CONFIG_BEHAVIOUR 1
+#endif
+
+// <o> NRFX_WDT_CONFIG_RELOAD_VALUE - Reload value in ms  <1-131072000> 
+
+
+#ifndef NRFX_WDT_CONFIG_RELOAD_VALUE
+#define NRFX_WDT_CONFIG_RELOAD_VALUE 2000
+#endif
+
+// <o> NRFX_WDT_CONFIG_NO_IRQ  - Remove WDT IRQ handling from WDT driver
+ 
+// <0=> Include WDT IRQ handling 
+// <1=> Remove WDT IRQ handling 
+
+#ifndef NRFX_WDT_CONFIG_NO_IRQ
+#define NRFX_WDT_CONFIG_NO_IRQ 0
+#endif
+
+#ifndef WDT_ENABLED
+#define WDT_ENABLED 1
+#endif
+// <o> WDT_CONFIG_BEHAVIOUR  - WDT behavior in CPU SLEEP or HALT mode
+ 
+// <1=> Run in SLEEP, Pause in HALT 
+// <8=> Pause in SLEEP, Run in HALT 
+// <9=> Run in SLEEP and HALT 
+// <0=> Pause in SLEEP and HALT 
+
+#ifndef WDT_CONFIG_BEHAVIOUR
+#define WDT_CONFIG_BEHAVIOUR 1
+#endif
+
+// <o> WDT_CONFIG_RELOAD_VALUE - Reload value  <15-4294967295> 
+
+
+#ifndef WDT_CONFIG_RELOAD_VALUE
+#define WDT_CONFIG_RELOAD_VALUE 2000
+#endif
+
+// <o> WDT_CONFIG_IRQ_PRIORITY  - Interrupt priority
+ 
+
+// <i> Priorities 0,2 (nRF51) and 0,1,4,5 (nRF52) are reserved for SoftDevice
+// <0=> 0 (highest) 
+// <1=> 1 
+// <2=> 2 
+// <3=> 3 
+// <4=> 4 
+// <5=> 5 
+// <6=> 6 
+// <7=> 7 
+
+#ifndef WDT_CONFIG_IRQ_PRIORITY
+#define WDT_CONFIG_IRQ_PRIORITY 6
+#endif
+
 // <q> BLE_RACP_ENABLED  - ble_racp - Record Access Control Point library
  
 

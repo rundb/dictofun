@@ -147,7 +147,7 @@ static void advertising_config_get(ble_adv_modes_config_t* p_config)
     p_config->ble_adv_fast_timeout = APP_ADV_DURATION;
 }
 
-static void disconnect(uint16_t conn_handle, void* p_context)
+void BleServices::disconnect(uint16_t conn_handle, void* p_context)
 {
     UNUSED_PARAMETER(p_context);
 
@@ -181,7 +181,7 @@ static void ble_dfu_evt_handler(ble_dfu_buttonless_evt_type_t event)
         // Disconnect all other bonded devices that currently are connected.
         // This is required to receive a service changed indication
         // on bootup after a successful (or aborted) Device Firmware Update.
-        uint32_t conn_count = ble_conn_state_for_each_connected(disconnect, NULL);
+        uint32_t conn_count = ble_conn_state_for_each_connected(BleServices::disconnect, NULL);
         NRF_LOG_INFO("Disconnected %d links.", conn_count);
         break;
     }
@@ -316,7 +316,7 @@ void BleServices::cyclic()
                 _is_file_transmission_done = true;
             }
             _files_count = filesystem::get_files_count();
-
+            NRF_LOG_INFO("files count: valid=%d, invalid=%d", _files_count.valid, _files_count.invalid);
             if (_files_count.valid == 0)
             {
                 _is_file_transmission_done = true;
@@ -340,7 +340,7 @@ void BleServices::cyclic()
             
             _ble_cmd = CMD_EMPTY;
         }
-        if(!_is_file_transmission_started) // TODO change to file start
+        else if(!_is_file_transmission_started)
         {
             drv_audio_wav_header_apply(readBuffer, _file_size);
             _is_file_transmission_started = true;
