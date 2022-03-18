@@ -120,7 +120,6 @@ class MainActivity : AppCompatActivity() {
             val mIntent = intent
             val LOG_TAG = "bleStatusChange"
 
-            //Log.d(LOG_TAG, "Command: $action")
             if (action == FileTransferService.ACTION_GATT_CONNECTED) {
                 Log.i(LOG_TAG, "File Transfer Service connected")
             }
@@ -186,7 +185,6 @@ class MainActivity : AppCompatActivity() {
             if (action == FileTransferService.ACTION_FILE_DATA) {
                 val txValue = intent.getByteArrayExtra(FileTransferService.EXTRA_DATA)
                 if (txValue != null) {
-                    //Log.d(TAG, "received: ${txValue.contentToString()}")
                     externalStorageService?.appendToCurrentFile(txValue)?.ifPresent {
                         // Get transcription.
                         if (RECOGNITION_ENABLED) {
@@ -210,7 +208,6 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                     currentFileBytesToReceiveLeft -= (txValue.size);
-                    //Log.d(TAG, "Bytes to receive left: ${currentFileBytesToReceiveLeft}")
                     if (currentFileBytesToReceiveLeft == 0) {
                         Log.i( TAG, "Requesting the next file")
                         filesToReceiveCount--
@@ -224,7 +221,6 @@ class MainActivity : AppCompatActivity() {
             if (action == FileTransferService.DEVICE_DOES_NOT_SUPPORT_IMAGE_TRANSFER) {
                 Log.i(TAG, "APP: Invalid BLE service, disconnecting!")
                 fileTransferService?.disconnect()
-//                externalStorageService?.resetCurrentFile()
             }
         }
     }
@@ -345,7 +341,6 @@ class MainActivity : AppCompatActivity() {
     fun runMainActivity() {
         externalStorageService = ExternalStorageService(this)
         if (RECOGNITION_ENABLED) {
-            Log.d(TAG, "enabling GoogleSpeechRecognitionService")
             recognitionService = GoogleSpeechRecognitionService(this)
         }
 

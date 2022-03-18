@@ -340,10 +340,9 @@ void BleServices::cyclic()
             
             _ble_cmd = CMD_EMPTY;
         }
-        else if(!_is_file_transmission_started) // TODO change to file start
+        else if(!_is_file_transmission_started)
         {
             drv_audio_wav_header_apply(readBuffer, _file_size);
-            NRF_LOG_DEBUG("Applying WAV header");
             _is_file_transmission_started = true;
         }
 

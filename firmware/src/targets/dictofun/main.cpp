@@ -93,7 +93,6 @@ int main()
         application::application_cyclic();
         led::task_led_cyclic();
         idle_state_handle();
-        const auto timestamp = app_timer_cnt_get();
     }
 }
 
