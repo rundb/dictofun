@@ -52,7 +52,7 @@ uint8_t samples[64*270*2];
 size_t samples_offset =0;
 
 #define PCM_RES_BYTES  2
-#define PCM_DEC_FACTOR 2
+#define PCM_DEC_FACTOR 1
 
 #define PCM_BASE_FREQ 16000
 
