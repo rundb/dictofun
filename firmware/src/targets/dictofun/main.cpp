@@ -47,10 +47,6 @@ static const spi::Spi::Configuration flash_spi_config{NRF_DRV_SPI_FREQ_2M,
                                                       SPI_FLASH_SCK_PIN,
                                                       SPI_FLASH_MOSI_PIN,
                                                       SPI_FLASH_MISO_PIN};
-
-volatile uint32_t ROTU_max_mainloop_duration = 0;
-static volatile uint32_t ROTU_last_mainloop_timestamp = 0;
-
 int main()
 {
     nrf_gpio_cfg_output(LDO_EN_PIN);
@@ -87,10 +83,9 @@ int main()
     application::application_init();
     led::task_led_init();
 
-    init_watchdog();
-    start_watchdog();
+    //init_watchdog();
+    //start_watchdog();
 
-    ROTU_last_mainloop_timestamp = app_timer_cnt_get();
     for(;;)
     {
         bleSystem.cyclic();
@@ -99,11 +94,6 @@ int main()
         led::task_led_cyclic();
         idle_state_handle();
         const auto timestamp = app_timer_cnt_get();
-        if ((timestamp - ROTU_last_mainloop_timestamp) > ROTU_max_mainloop_duration)
-        {
-            ROTU_max_mainloop_duration = timestamp;
-        }
-        ROTU_last_mainloop_timestamp = app_timer_cnt_get();
     }
 }
 
@@ -125,7 +115,7 @@ static void log_init()
 static void idle_state_handle()
 {
     NRF_LOG_PROCESS();
-    feed_watchdog();
+    //feed_watchdog();
 }
 
 uint32_t get_timestamp_delta(uint32_t base)

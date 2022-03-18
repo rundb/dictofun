@@ -316,7 +316,7 @@ void BleServices::cyclic()
                 _is_file_transmission_done = true;
             }
             _files_count = filesystem::get_files_count();
-
+            NRF_LOG_INFO("files count: valid=%d, invalid=%d", _files_count.valid, _files_count.invalid);
             if (_files_count.valid == 0)
             {
                 _is_file_transmission_done = true;
@@ -340,9 +340,10 @@ void BleServices::cyclic()
             
             _ble_cmd = CMD_EMPTY;
         }
-        if(!_is_file_transmission_started) // TODO change to file start
+        else if(!_is_file_transmission_started) // TODO change to file start
         {
             drv_audio_wav_header_apply(readBuffer, _file_size);
+            NRF_LOG_DEBUG("Applying WAV header");
             _is_file_transmission_started = true;
         }
 
