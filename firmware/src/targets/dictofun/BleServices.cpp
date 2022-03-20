@@ -30,7 +30,6 @@
 
 NRF_BLE_QWR_DEF(m_qwr);
 BLE_LBS_DEF(m_lbs);
-BLE_FTS_DEF(m_fts, NRF_SDH_BLE_TOTAL_LINK_COUNT);
 
 #define APP_ADV_INTERVAL 300
 #define APP_ADV_DURATION 18000
@@ -86,36 +85,36 @@ void BleServices::handleFtsData(ble_fts_t* p_fts, uint8_t const* p_data, uint16_
 
 uint32_t BleServices::send_data(const uint8_t* data, uint32_t data_size)
 {
-    if(data_size > 0)
-    {
-        unsigned i = 0;
+    // if(data_size > 0)
+    // {
+    //     unsigned i = 0;
 
-        uint32_t size_left = data_size;
-        uint8_t* send_buffer = (uint8_t*)data;
+    //     uint32_t size_left = data_size;
+    //     uint8_t* send_buffer = (uint8_t*)data;
 
-        while(size_left)
-        {
-            uint8_t send_size = MIN(size_left, BLE_ITS_MAX_DATA_LEN);
-            size_left -= send_size;
+    //     while(size_left)
+    //     {
+    //         uint8_t send_size = MIN(size_left, BLE_ITS_MAX_DATA_LEN);
+    //         size_left -= send_size;
 
-            uint32_t err_code = NRF_SUCCESS;
-            while(true)
-            {
-                err_code = ble_fts_send_file_fragment(&m_fts, send_buffer, send_size);
-                if(err_code == NRF_SUCCESS)
-                {
-                    break;
-                }
-                else if(err_code != NRF_ERROR_RESOURCES)
-                {
-                    NRF_LOG_ERROR("Failed to send file, err = %d", err_code);
-                    return err_code;
-                }
-            }
+    //         uint32_t err_code = NRF_SUCCESS;
+    //         while(true)
+    //         {
+    //             // err_code = ble_fts_send_file_fragment(&m_fts, send_buffer, send_size);
+    //             if(err_code == NRF_SUCCESS)
+    //             {
+    //                 break;
+    //             }
+    //             else if(err_code != NRF_ERROR_RESOURCES)
+    //             {
+    //                 NRF_LOG_ERROR("Failed to send file, err = %d", err_code);
+    //                 return err_code;
+    //             }
+    //         }
 
-            send_buffer += send_size;
-        }
-    }
+    //         send_buffer += send_size;
+    //     }
+    // }
 
     return NRF_SUCCESS;
 }
@@ -239,7 +238,7 @@ void BleServices::init()
     // Initialize FTS.
     fts_init.data_handler = fts_data_handler;
 
-    err_code = ble_fts_init(&m_fts, &fts_init);
+    err_code = ble_fts_init(&ble::fts::get_fts_instance(), &fts_init);
     APP_ERROR_CHECK(err_code);
 
     // Initiaize DFU service

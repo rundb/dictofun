@@ -53,6 +53,6 @@ private:
 
 
     uint32_t send_data(const uint8_t *data, uint32_t data_size);
-    static const uint16_t BLE_ITS_MAX_DATA_LEN = BLE_GATT_ATT_MTU_DEFAULT - 3;
+    
 };
 }

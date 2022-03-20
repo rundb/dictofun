@@ -58,6 +58,7 @@ extern "C" {
 /* Forward declaration of the ble_fts_t type. */
 typedef struct ble_fts_s ble_fts_t;
 
+
 /**@brief Nordic UART Service event handler type. */
 typedef void (*ble_fts_data_handler_t) (ble_fts_t * p_fts, uint8_t const * p_data, uint16_t length);
 
