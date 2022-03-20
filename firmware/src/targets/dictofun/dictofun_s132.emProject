@@ -150,6 +150,8 @@
       <file file_name="../../lib/drv_pdm/drv_audio.h" />
       <file file_name="../../lib/ble_fts/ble_file_transfer_service.c" />
       <file file_name="../../lib/ble_fts/ble_file_transfer_service.h" />
+      <file file_name="../../lib/ble_fts/ble_fts_fsm.cpp" />
+      <file file_name="../../lib/ble_fts/ble_fts_fsm.h" />
       <file file_name="../../lib/spi_flash/block_device_api.cpp" />
       <file file_name="../../lib/simple_fs/simple_fs.cpp" />
       <file file_name="assert.c" />

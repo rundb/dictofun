@@ -64,17 +64,17 @@ void BleServices::handleFtsData(ble_fts_t* p_fts, uint8_t const* p_data, uint16_
     {
     case CMD_GET_FILE: {
         NRF_LOG_DEBUG("cmd: get_file");
-        _ble_cmd = (ble::BleCommands)p_data[0];
+        _ble_cmd = (BleCommands)p_data[0];
         break;
     }
     case CMD_GET_FILE_INFO: {
         NRF_LOG_DEBUG("cmd: file_info");
-        _ble_cmd = (ble::BleCommands)p_data[0];
+        _ble_cmd = (BleCommands)p_data[0];
         break;
     }
     case CMD_GET_VALID_FILES_COUNT: {
         NRF_LOG_DEBUG("cmd: files_count");
-        _ble_cmd = (ble::BleCommands)p_data[0];
+        _ble_cmd = (BleCommands)p_data[0];
         break;
     }
     default: {
@@ -267,6 +267,7 @@ void BleServices::start()
             filesystem::close(_file);
         }
     } while (_file_size == 0);
+    _fsm.start();
 }
 
 nrf_ble_qwr_t* BleServices::getQwrHandle()
@@ -295,90 +296,91 @@ static void led_write_handler(uint16_t conn_handle, ble_lbs_t* p_lbs, uint8_t le
  */
 void BleServices::cyclic()
 {
-    switch(_ble_cmd)
-    {
-    case CMD_GET_FILE: {
-        size_t read_size = 0;
-        const auto read_result = filesystem::read(_file, readBuffer, READ_BUFFER_SIZE, read_size);
-        if(read_result != result::Result::OK)
-        {
-            // ERROR!
-            NRF_LOG_ERROR("BleSystem::cyclic(): file reading failure!");
-            _is_file_transmission_done = true;
-        }
-        else 
-        if(read_size != READ_BUFFER_SIZE)
-        {
-            const auto close_res = filesystem::close(_file);
-            if (close_res != result::Result::OK)
-            {
-                NRF_LOG_ERROR("File closing failure! Might require an invalidation of FS");
-                _is_file_transmission_done = true;
-            }
-            _files_count = filesystem::get_files_count();
-            NRF_LOG_INFO("files count: valid=%d, invalid=%d", _files_count.valid, _files_count.invalid);
-            if (_files_count.valid == 0)
-            {
-                _is_file_transmission_done = true;
-                NRF_LOG_DEBUG("All files have been sent");
-            }
-            else
-            {
-                _is_file_transmission_started = false;
-                const auto open_result = filesystem::open(_file, filesystem::FileMode::RDONLY);
-                if(open_result != result::Result::OK)
-                {
-                    NRF_LOG_ERROR("File opening failure!");
-                    _is_file_transmission_done = true;
-                }
-                else
-                {
-                    _file_size = _file.rom.size;
-                    NRF_LOG_DEBUG("File has been sent, waiting for the next request");
-                }
-            }
+    _fsm.process_command(_ble_cmd);
+    // switch(_ble_cmd)
+    // {
+    // case CMD_GET_FILE: {
+    //     size_t read_size = 0;
+    //     const auto read_result = filesystem::read(_file, readBuffer, READ_BUFFER_SIZE, read_size);
+    //     if(read_result != result::Result::OK)
+    //     {
+    //         // ERROR!
+    //         NRF_LOG_ERROR("BleSystem::cyclic(): file reading failure!");
+    //         _is_file_transmission_done = true;
+    //     }
+    //     else 
+    //     if(read_size != READ_BUFFER_SIZE)
+    //     {
+    //         const auto close_res = filesystem::close(_file);
+    //         if (close_res != result::Result::OK)
+    //         {
+    //             NRF_LOG_ERROR("File closing failure! Might require an invalidation of FS");
+    //             _is_file_transmission_done = true;
+    //         }
+    //         _files_count = filesystem::get_files_count();
+    //         NRF_LOG_INFO("files count: valid=%d, invalid=%d", _files_count.valid, _files_count.invalid);
+    //         if (_files_count.valid == 0)
+    //         {
+    //             _is_file_transmission_done = true;
+    //             NRF_LOG_DEBUG("All files have been sent");
+    //         }
+    //         else
+    //         {
+    //             _is_file_transmission_started = false;
+    //             const auto open_result = filesystem::open(_file, filesystem::FileMode::RDONLY);
+    //             if(open_result != result::Result::OK)
+    //             {
+    //                 NRF_LOG_ERROR("File opening failure!");
+    //                 _is_file_transmission_done = true;
+    //             }
+    //             else
+    //             {
+    //                 _file_size = _file.rom.size;
+    //                 NRF_LOG_DEBUG("File has been sent, waiting for the next request");
+    //             }
+    //         }
             
-            _ble_cmd = CMD_EMPTY;
-        }
-        else if(!_is_file_transmission_started)
-        {
-            drv_audio_wav_header_apply(readBuffer, _file_size);
-            _is_file_transmission_started = true;
-        }
+    //         _ble_cmd = CMD_EMPTY;
+    //     }
+    //     else if(!_is_file_transmission_started)
+    //     {
+    //         drv_audio_wav_header_apply(readBuffer, _file_size);
+    //         _is_file_transmission_started = true;
+    //     }
 
-        send_data(readBuffer, read_size);
+    //     send_data(readBuffer, read_size);
 
-        break;
-    }
-    case CMD_GET_FILE_INFO: {
-        NRF_LOG_DEBUG("Sending file info, size %d", _file_size);
+    //     break;
+    // }
+    // case CMD_GET_FILE_INFO: {
+    //     NRF_LOG_DEBUG("Sending file info, size %d", _file_size);
 
-        ble_fts_file_info_t file_info;
-        file_info.file_size_bytes = _file_size;
+    //     ble_fts_file_info_t file_info;
+    //     file_info.file_size_bytes = _file_size;
 
-        ble_fts_file_info_send(&m_fts, &file_info);
-        _ble_cmd = CMD_EMPTY;
+    //     ble_fts_file_info_send(&m_fts, &file_info);
+    //     _ble_cmd = CMD_EMPTY;
 
-        break;
-    }
-    case CMD_GET_VALID_FILES_COUNT: {
-        _files_count = filesystem::get_files_count();
-        NRF_LOG_DEBUG("Sending files' count: %d", _files_count.valid);
+    //     break;
+    // }
+    // case CMD_GET_VALID_FILES_COUNT: {
+    //     _files_count = filesystem::get_files_count();
+    //     NRF_LOG_DEBUG("Sending files' count: %d", _files_count.valid);
 
-        ble_fts_filesystem_info_t fs_info;
-        fs_info.valid_files_count = _files_count.valid;
-        const auto res = ble_fts_filesystem_info_send(&m_fts, &fs_info);
-        if (res != 0)
-        {
-            NRF_LOG_ERROR("fts filesystem info send has failed, error code %d", res);
-        }
+    //     ble_fts_filesystem_info_t fs_info;
+    //     fs_info.valid_files_count = _files_count.valid;
+    //     const auto res = ble_fts_filesystem_info_send(&m_fts, &fs_info);
+    //     if (res != 0)
+    //     {
+    //         NRF_LOG_ERROR("fts filesystem info send has failed, error code %d", res);
+    //     }
 
-        _ble_cmd = CMD_EMPTY;
-        break;
-    }
-    default:
-        _ble_cmd = CMD_EMPTY;
-    }
+    //     _ble_cmd = CMD_EMPTY;
+    //     break;
+    // }
+    // default:
+    //     _ble_cmd = CMD_EMPTY;
+    // }
 }
 
 } // namespace ble

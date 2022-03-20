@@ -335,7 +335,7 @@ static uint32_t push_data_packets()
 
         if(packet_size > 0)
         {
-            return_code = ble_fts_string_send(m_fts, &file_data[file_pos], packet_size);
+            return_code = ble_fts_send_array(m_fts, &file_data[file_pos], packet_size);
             if(return_code == NRF_SUCCESS)
             {
                 file_pos += packet_size;
@@ -440,7 +440,7 @@ uint32_t ble_fts_init(ble_fts_t* p_fts, const ble_fts_init_t* p_fts_init)
     return NRF_SUCCESS;
 }
 
-uint32_t ble_fts_string_send(ble_fts_t* p_fts, uint8_t* p_string, uint16_t length)
+uint32_t ble_fts_send_array(ble_fts_t * p_fts, uint8_t * p_data, uint16_t length)
 {
     ble_gatts_hvx_params_t hvx_params;
     uint32_t err_code;
@@ -464,7 +464,7 @@ uint32_t ble_fts_string_send(ble_fts_t* p_fts, uint8_t* p_string, uint16_t lengt
 
     memset(&hvx_params, 0, sizeof(hvx_params));
     hvx_params.handle = p_fts->tx_handles.value_handle;
-    hvx_params.p_data = p_string;
+    hvx_params.p_data = p_data;
     hvx_params.p_len = &length;
     hvx_params.type = BLE_GATT_HVX_NOTIFICATION;
 
@@ -551,7 +551,7 @@ uint32_t ble_fts_send_file_fragment(ble_fts_t* p_fts, uint8_t* p_data, uint32_t 
         return NRF_ERROR_BUSY;
     }
 
-    err_code = ble_fts_string_send(p_fts, p_data, data_length);
+    err_code = ble_fts_send_array(p_fts, p_data, data_length);
     return err_code;
 }
 
