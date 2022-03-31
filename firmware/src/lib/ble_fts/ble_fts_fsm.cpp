@@ -3,6 +3,17 @@
 #include "simple_fs.h"
 #include "drv_audio.h"
 
+const char* stateNames[] = {
+        "INVALID",
+        "IDLE",
+        "FS_INFO_TRANSMISSION",
+        "NEXT_FILE_INFO_TRANSMISSION",
+        "FILE_TRANSMISSION_START",
+        "FILE_TRANSMISSION_RUNNING",
+        "FILE_TRANSMISSION_END",
+        "DONE",
+    };
+
 /// Glue code elements, connecting standard Nordic C API and CPP code of this repo
 BLE_FTS_DEF(m_fts, NRF_SDH_BLE_TOTAL_LINK_COUNT);
 namespace ble
@@ -26,6 +37,7 @@ void FtsStateMachine::stop()
 
 void FtsStateMachine::process_command(const BleCommands command) 
 { 
+    const State prev_state{_state};
     switch (_state)
     {
         case State::INVALID:
@@ -126,15 +138,46 @@ void FtsStateMachine::process_command(const BleCommands command)
         case State::FILE_TRANSMISSION_RUNNING:
         {
             // TODO: add file readout and transaction logic
+            size_t read_size{0U};
+            const auto read_result = filesystem::read(_context.file, _context.read_buffer, Context::READ_BUFFER_SIZE, read_size);
+            if (result::Result::OK != read_result)
+            {
+                NRF_LOG_ERROR("Failed to read data, file transmission can't be completed.");
+                _state = State::INVALID;
+                break;
+            }
+            send_data(_context, read_size);
+            // TODO: add progress bar 
+            if (read_size != Context::READ_BUFFER_SIZE)
+            {
+                _state = State::FILE_TRANSMISSION_END;
+
+            }
             break;
         }
         case State::FILE_TRANSMISSION_END:
         {
-            // TODO: add closing operation
-            _state = State::IDLE;
+            // close the file
+            const auto close_res = filesystem::close(_context.file);
+            if (close_res != result::Result::OK)
+            {
+                NRF_LOG_ERROR("Failed to close the file. FS invalidation might be required.");
+                _state = State::INVALID;
+                break;
+            }
+            // send the last chunk of data
+            
+            _context.files_count = filesystem::get_files_count();
+            NRF_LOG_INFO("files count: valid=%d, invalid=%d", _context.files_count.valid, _context.files_count.invalid);
+
+            _state = (_context.files_count.valid > 0) ? State::IDLE : State::DONE;
             break;
         }
         break;
+    }
+    if (_state != prev_state)
+    {
+        NRF_LOG_INFO("%s->%s(%d)", stateNames[(int)prev_state], stateNames[(int)_state], command);
     }
 }
 
@@ -155,7 +198,7 @@ result::Result FtsStateMachine::send_data(Context& context, const size_t size)
             uint32_t err_code = NRF_SUCCESS;
             while(true)
             {
-                // err_code = ble_fts_send_file_fragment(&m_fts, send_buffer, send_size);
+                err_code = ble_fts_send_file_fragment(&m_fts, send_buffer, send_size);
                 if(err_code == NRF_SUCCESS)
                 {
                     break;
