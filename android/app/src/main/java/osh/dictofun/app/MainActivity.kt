@@ -178,6 +178,9 @@ class MainActivity : AppCompatActivity() {
                         Log.e(TAG, "Received file size equal 0, likely an error in FileInfo request")
                     }
                 }
+                else {
+                    Log.w(TAG, "Tx value of ACTION_FILE_INFO_AVAILABLE has a null value");
+                }
 
                 Log.i(TAG, "File info data: ${txValue.contentToString()}")
             }

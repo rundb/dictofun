@@ -31,7 +31,8 @@ public:
     void start();
     void stop();
 
-    void process_command(BleCommands command);
+    // return true, if command has actually been used inside the FSM
+    bool process_command(BleCommands command);
 
     inline bool is_transmission_complete()
     {

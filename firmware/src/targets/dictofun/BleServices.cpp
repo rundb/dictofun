@@ -253,8 +253,11 @@ static void led_write_handler(uint16_t conn_handle, ble_lbs_t* p_lbs, uint8_t le
 
 void BleServices::cyclic()
 {
-    _fsm.process_command(_ble_cmd);
-    _ble_cmd = CMD_EMPTY;
+    const auto fsm_res = _fsm.process_command(_ble_cmd);
+    if (fsm_res)
+    {
+      _ble_cmd = CMD_EMPTY;
+    }
 }
 
 } // namespace ble

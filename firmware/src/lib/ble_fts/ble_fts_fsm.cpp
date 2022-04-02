@@ -36,8 +36,9 @@ void FtsStateMachine::stop()
     _state = State::INVALID;
 }
 
-void FtsStateMachine::process_command(const BleCommands command) 
+bool FtsStateMachine::process_command(const BleCommands command) 
 { 
+    auto return_value{false};
     const State prev_state{_state};
     switch (_state)
     {
@@ -48,6 +49,7 @@ void FtsStateMachine::process_command(const BleCommands command)
         };
         case State::IDLE:
         {
+            return_value = true;
             switch (command)
             {
                 case CMD_GET_FILE:
@@ -81,8 +83,14 @@ void FtsStateMachine::process_command(const BleCommands command)
             {
                 NRF_LOG_ERROR("fts filesystem info send has failed, error code %d", res);
             }
-
-            _state = State::IDLE;
+            if (fs_info.valid_files_count != 0)
+            {
+                _state = State::IDLE;
+            }
+            else
+            {
+                _state = State::DONE;
+            }
             break;
         }
         case State::NEXT_FILE_INFO_TRANSMISSION:
@@ -96,7 +104,7 @@ void FtsStateMachine::process_command(const BleCommands command)
                 // TODO:
                 _state = State::INVALID;
                 NRF_LOG_ERROR("Failed to open next file for reading");
-                return;
+                return return_value;
             }
             // Handle special corner case when empty record has been saved.
             if (_context.file.rom.size == 0)
@@ -107,10 +115,10 @@ void FtsStateMachine::process_command(const BleCommands command)
                 {
                     NRF_LOG_ERROR("Failed to close file.");
                     _state = State::INVALID;
-                    return;
+                    return return_value;
                 }
                 // do not change the state here, just pass to the next iteration of SM step.
-                return;
+                return return_value;
             }
             _context.current_file_size = _context.file.rom.size;
             NRF_LOG_DEBUG("Sending file info, size %d", _context.current_file_size);
@@ -207,6 +215,7 @@ void FtsStateMachine::process_command(const BleCommands command)
     {
         NRF_LOG_INFO("%s->%s(%d)", stateNames[(int)prev_state], stateNames[(int)_state], command);
     }
+    return return_value;
 }
 
 result::Result FtsStateMachine::send_data(Context& context, const size_t size)
