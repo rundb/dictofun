@@ -2,6 +2,7 @@
 #include <nrf_log.h>
 #include "simple_fs.h"
 #include "drv_audio.h"
+#include <app_timer.h>
 
 const char* stateNames[] = {
         "INVALID",
@@ -97,6 +98,20 @@ void FtsStateMachine::process_command(const BleCommands command)
                 NRF_LOG_ERROR("Failed to open next file for reading");
                 return;
             }
+            // Handle special corner case when empty record has been saved.
+            if (_context.file.rom.size == 0)
+            {
+                NRF_LOG_WARNING("Empty file has been discovered. Open the next file");
+                const auto close_res = filesystem::close(_context.file);
+                if (result::Result::OK != close_res)
+                {
+                    NRF_LOG_ERROR("Failed to close file.");
+                    _state = State::INVALID;
+                    return;
+                }
+                // do not change the state here, just pass to the next iteration of SM step.
+                return;
+            }
             _context.current_file_size = _context.file.rom.size;
             NRF_LOG_DEBUG("Sending file info, size %d", _context.current_file_size);
 
@@ -127,6 +142,10 @@ void FtsStateMachine::process_command(const BleCommands command)
                 _state = State::INVALID;
                 break;
             }
+            _context.transmitted_size = read_size;
+
+            // fix the start time in the timestamp
+            _context.last_timestamp = app_timer_cnt_get();
 
             // exceptional case when read_size at first run is less than WAV header is not considerd.
             drv_audio_wav_header_apply(_context.read_buffer, _context.current_file_size);
@@ -147,11 +166,20 @@ void FtsStateMachine::process_command(const BleCommands command)
                 break;
             }
             send_data(_context, read_size);
-            // TODO: add progress bar 
+            _context.transmitted_size += read_size;
+
             if (read_size != Context::READ_BUFFER_SIZE)
             {
                 _state = State::FILE_TRANSMISSION_END;
-
+            }
+            // report transaction progress every 3 seconds
+            const auto timestamp = app_timer_cnt_get();
+            constexpr uint32_t progress_period{3000UL};
+            if ((timestamp - _context.last_timestamp) > progress_period)
+            {
+                _context.last_timestamp = timestamp;
+                const uint32_t progress =  _context.transmitted_size * 100 / _context.current_file_size;
+                NRF_LOG_INFO("send progress: %d", progress);
             }
             break;
         }

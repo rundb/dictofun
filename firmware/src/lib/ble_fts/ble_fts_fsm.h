@@ -35,7 +35,7 @@ public:
 
     inline bool is_transmission_complete()
     {
-        return _state == State::DONE;
+        return _state == State::DONE || _state == State::INVALID;
     }
 
 private:
@@ -45,8 +45,10 @@ private:
         filesystem::FilesCount files_count;
         filesystem::File file;
         size_t current_file_size;
+        size_t transmitted_size;
         static const size_t READ_BUFFER_SIZE = 256;
         uint8_t read_buffer[READ_BUFFER_SIZE];
+        uint32_t last_timestamp;
     };
 
     Context _context;
