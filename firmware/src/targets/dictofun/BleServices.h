@@ -8,17 +8,11 @@
 #include <stdint.h>
 #include <ble/nrf_ble_qwr/nrf_ble_qwr.h>
 #include "ble_file_transfer_service.h"
+#include "ble_fts_fsm.h"
 #include "simple_fs.h"
 
 namespace ble
 {
-enum BleCommands
-{
-    CMD_EMPTY = 0,
-    CMD_GET_FILE = 1,
-    CMD_GET_FILE_INFO = 2,
-    CMD_GET_VALID_FILES_COUNT = 3,
-};
 
 /**
  * This class contains instances of BLE services used by app
@@ -41,7 +35,7 @@ public:
 
     void setFileSizeForTransfer(const size_t size) { _file_size = size; }
 
-    bool isFileTransmissionComplete() { return _is_file_transmission_done; }
+    bool isFileTransmissionComplete() { return _fsm.is_transmission_complete(); }
     
     static void disconnect(uint16_t conn_handle, void* p_context);
 private:
@@ -55,7 +49,10 @@ private:
     bool _is_file_transmission_started{false};
     bool _is_file_transmission_done{false};
 
+    ble::fts::FtsStateMachine _fsm;
+
+
     uint32_t send_data(const uint8_t *data, uint32_t data_size);
-    static const uint16_t BLE_ITS_MAX_DATA_LEN = BLE_GATT_ATT_MTU_DEFAULT - 3;
+    
 };
 }

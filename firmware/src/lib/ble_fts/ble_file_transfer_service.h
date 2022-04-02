@@ -55,43 +55,23 @@ extern "C" {
     #warning NRF_BLE_GATT_MAX_MTU_SIZE is not defined.
 #endif
 
-#define DBG_PIN_0 14
-#define DBG_PIN_1 15
-#define DBG_PIN_2 16
-#define DBG_PIN_3 3
-#define DBG_PIN_4 4
-
-
 /* Forward declaration of the ble_fts_t type. */
 typedef struct ble_fts_s ble_fts_t;
+
 
 /**@brief Nordic UART Service event handler type. */
 typedef void (*ble_fts_data_handler_t) (ble_fts_t * p_fts, uint8_t const * p_data, uint16_t length);
 
-/**@brief Nordic UART Service client context structure.
- *
- * @details This structure contains state context related to hosts.
- */
 typedef struct
 {
     bool is_notification_enabled; /**< Variable to indicate if the peer has enabled notification of the RX characteristic.*/
 } ble_fts_client_context_t;
 
-/**@brief Nordic UART Service initialization structure.
- *
- * @details This structure contains the initialization information for the service. The application
- * must fill this structure and pass it to the service using the @ref ble_fts_init
- *          function.
- */
 typedef struct
 {
-    ble_fts_data_handler_t data_handler; /**< Event handler to be called for handling received data. */
+    ble_fts_data_handler_t data_handler;
 } ble_fts_init_t;
 
-/**@brief Nordic UART Service structure.
- *
- * @details This structure contains status information related to the service.
- */
 struct ble_fts_s
 {
     uint8_t                  uuid_type;               /**< UUID type for Nordic UART Service Base UUID. */
@@ -117,7 +97,6 @@ typedef struct
 typedef struct
 {
     uint32_t valid_files_count;
-    
 }ble_fts_filesystem_info_t;
 
 typedef PACKED_STRUCT
@@ -128,42 +107,19 @@ typedef PACKED_STRUCT
     uint8_t  rx_phy;
 }ble_fts_ble_params_info_t;
 
-/**@brief Function for initializing the Nordic UART Service.
- *
- * @param[out] p_fts      Nordic UART Service structure. This structure must be supplied
- *                        by the application. It is initialized by this function and will
- *                        later be used to identify this particular service instance.
- * @param[in] p_fts_init  Information needed to initialize the service.
- *
- * @retval NRF_SUCCESS If the service was successfully initialized. Otherwise, an error code is returned.
- * @retval NRF_ERROR_NULL If either of the pointers p_fts or p_fts_init is NULL.
- */
+enum BleCommands
+{
+    CMD_EMPTY = 0,
+    CMD_GET_FILE = 1,
+    CMD_GET_FILE_INFO = 2,
+    CMD_GET_VALID_FILES_COUNT = 3,
+};
+
 uint32_t ble_fts_init(ble_fts_t * p_fts, const ble_fts_init_t * p_fts_init);
 
-/**@brief Function for handling the Nordic UART Service's BLE events.
- *
- * @details The Nordic UART Service expects the application to call this function each time an
- * event is received from the SoftDevice. This function processes the event if it
- * is relevant and calls the Nordic UART Service event handler of the
- * application if necessary.
- *
- * @param[in] p_fts       Nordic UART Service structure.
- * @param[in] p_ble_evt   Event received from the SoftDevice.
- */
 void ble_fts_on_ble_evt(ble_evt_t const * p_ble_evt, void * p_context);
 
-/**@brief Function for sending a string to the peer.
- *
- * @details This function sends the input string as an RX characteristic notification to the
- *          peer.
- *
- * @param[in] p_fts       Pointer to the Nordic UART Service structure.
- * @param[in] p_string    String to be sent.
- * @param[in] length      Length of the string.
- *
- * @retval NRF_SUCCESS If the string was sent successfully. Otherwise, an error code is returned.
- */
-uint32_t ble_fts_string_send(ble_fts_t * p_fts, uint8_t * p_string, uint16_t length);
+uint32_t ble_fts_send_array(ble_fts_t * p_fts, uint8_t * p_data, uint16_t length);
 
 uint32_t ble_fts_file_info_send(ble_fts_t * p_fts, ble_fts_file_info_t * file_info);
 

@@ -152,4 +152,6 @@ FilesCount get_files_count();
  */
 size_t get_occupied_memory_size();
 
+bool is_file_open(File& file);
+
 } // namespace filesystem

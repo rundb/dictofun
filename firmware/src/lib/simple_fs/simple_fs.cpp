@@ -69,7 +69,7 @@ uint16_t get_file_checksum(File& file)
     return w0 ^ w1 ^ w2 ^ w3 ^ w4 ^ w5;
 }
 
-inline bool is_file_open(File& file)
+bool is_file_open(File& file)
 {
     return file.ram.runtime_magic == MAGIC_FILE_OPEN;
 }
