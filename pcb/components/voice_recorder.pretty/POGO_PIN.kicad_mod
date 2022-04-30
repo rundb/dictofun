@@ -1,0 +1,14 @@
+(footprint "POGO_PIN" (version 20211014) (generator pcbnew)
+  (layer "F.Cu")
+  (tedit 0)
+  (attr through_hole)
+  (fp_text reference "REF**" (at 0 -2.54 unlocked) (layer "F.SilkS") hide
+    (effects (font (size 1 1) (thickness 0.15)))
+    (tstamp 3250bb62-194c-4763-ad35-b2f0ad1e7aa6)
+  )
+  (fp_text value "POGO_PIN" (at 0 2.54 unlocked) (layer "F.Fab") hide
+    (effects (font (size 1 1) (thickness 0.15)))
+    (tstamp 66ba2ffc-e4d0-421e-a9e6-d05e859adf2c)
+  )
+  (pad "1" thru_hole circle (at 0 0) (size 1.27 1.27) (drill 0.4826) (layers *.Cu *.Mask) (tstamp 08fe82a1-1dc6-40a5-87b0-02baf4392d3d))
+)

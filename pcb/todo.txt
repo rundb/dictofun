@@ -9,3 +9,34 @@ For newer versionss
 * use teardrops for the pins
 * enforce the testpoints and b- / b+ points (with vias and/or with thicker lines/more vias)
 * consider a debug plug that wouldn't require soldering a 10-pin JTAG connector for flashing.
+
+
+Requirements for v1.2
+
+* fix known issues of v1.1
+* move button closer to the center of the PCB
+* strict size constraints are not a prio anymore (width can be increased to 1-2 mm, length as well)
+* develop a sufficient set of testpoints for bring-up checks and tests
+* provide bottom testpoints for development purposes
+* provide top testpoints for power, battery and charging-related tests + JTAG + console
+* develop a test fixture with pogo-pins for development
+
+Development testpoints (bottom)
+* all JTAG pins
+* UART
+* power input
+* charger output
+* LDO en
+* 3.3V
+* one of DEC caps
+* PDM clock and data
+* SPI bus
+* 1-3 GPIOs
+
+Production testpoints (top)
+* JTAG
+* UART
+* power in
+* LDO in
+* LDO out
+* charger in

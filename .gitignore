@@ -18,3 +18,4 @@ keys
 *.hex
 *.zip
 *.o
+*.kicad_prl
