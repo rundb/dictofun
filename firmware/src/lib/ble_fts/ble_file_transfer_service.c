@@ -9,6 +9,7 @@
 #define BLE_UUID_FTS_RX_CHARACTERISTIC              0x0002 /**< The UUID of the RX Characteristic. */
 #define BLE_UUID_FTS_FILE_INFO_CHARACTERISTIC       0x0004
 #define BLE_UUID_FTS_FILESYSTEM_INFO_CHARACTERISTIC 0x0005
+#define BLE_UUID_FTS_READ_TO_PAIR_CHARACTERISTIC    0x0006
 
 #define BLE_FTS_MAX_RX_CHAR_LEN                                                                    \
     BLE_FTS_MAX_DATA_LEN /**< Maximum length of the RX Characteristic (in bytes). */
@@ -170,6 +171,56 @@ static uint32_t tx_char_add(ble_fts_t* p_fts, const ble_fts_init_t* p_fts_init)
         p_fts->service_handle, &char_md, &attr_char_value, &p_fts->tx_handles);
 }
 
+static uint32_t read_to_pair_char_add(ble_fts_t* p_fts, const ble_fts_init_t* p_fts_init)
+{
+    ble_gatts_char_md_t char_md;
+    ble_gatts_attr_md_t cccd_md;
+    ble_gatts_attr_t attr_char_value;
+    ble_uuid_t ble_uuid;
+    ble_gatts_attr_md_t attr_md;
+
+    memset(&cccd_md, 0, sizeof(cccd_md));
+
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&cccd_md.read_perm);
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&cccd_md.write_perm);
+
+    cccd_md.vloc = BLE_GATTS_VLOC_STACK;
+
+    memset(&char_md, 0, sizeof(char_md));
+
+    char_md.char_props.notify = 0;
+    char_md.char_props.read = 1;
+    char_md.p_char_user_desc = NULL;
+    char_md.p_char_pf = NULL;
+    char_md.p_user_desc_md = NULL;
+    char_md.p_cccd_md = &cccd_md;
+    char_md.p_sccd_md = NULL;
+
+    ble_uuid.type = p_fts->uuid_type;
+    ble_uuid.uuid = BLE_UUID_FTS_READ_TO_PAIR_CHARACTERISTIC;
+
+    memset(&attr_md, 0, sizeof(attr_md));
+
+    BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&attr_md.read_perm);
+    BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&attr_md.write_perm);
+
+    attr_md.vloc = BLE_GATTS_VLOC_STACK;
+    attr_md.rd_auth = 0;
+    attr_md.wr_auth = 0;
+    attr_md.vlen = 1;
+
+    memset(&attr_char_value, 0, sizeof(attr_char_value));
+
+    attr_char_value.p_uuid = &ble_uuid;
+    attr_char_value.p_attr_md = &attr_md;
+    attr_char_value.init_len = 1 + sizeof(ble_fts_file_info_t);
+    attr_char_value.init_offs = 0;
+    attr_char_value.max_len = 16;
+
+    return sd_ble_gatts_characteristic_add(
+        p_fts->service_handle, &char_md, &attr_char_value, &p_fts->file_info_handles);
+}
+
 static uint32_t file_info_char_add(ble_fts_t* p_fts, const ble_fts_init_t* p_fts_init)
 {
     ble_gatts_char_md_t char_md;
@@ -188,6 +239,7 @@ static uint32_t file_info_char_add(ble_fts_t* p_fts, const ble_fts_init_t* p_fts
     memset(&char_md, 0, sizeof(char_md));
 
     char_md.char_props.notify = 1;
+    char_md.char_props.read = 0;
     char_md.p_char_user_desc = NULL;
     char_md.p_char_pf = NULL;
     char_md.p_user_desc_md = NULL;
@@ -435,6 +487,9 @@ uint32_t ble_fts_init(ble_fts_t* p_fts, const ble_fts_init_t* p_fts_init)
     VERIFY_SUCCESS(err_code);
 
     err_code = filesystem_info_char_add(p_fts, p_fts_init);
+    VERIFY_SUCCESS(err_code);
+
+    err_code = read_to_pair_char_add(p_fts, p_fts_init);
     VERIFY_SUCCESS(err_code);
 
     return NRF_SUCCESS;

@@ -272,7 +272,7 @@
 // <i>  This might be necessary for interoperability reasons, especially as peripheral.
 
 #ifndef PM_HANDLER_SEC_DELAY_MS
-#define PM_HANDLER_SEC_DELAY_MS 0
+#define PM_HANDLER_SEC_DELAY_MS 1000
 #endif
 
 // </e>
@@ -11029,6 +11029,7 @@
 #define NFC_NDEF_RECORD_PARSER_LOG_ENABLED 0
 #endif
 // <o> NFC_NDEF_RECORD_PARSER_LOG_LEVEL  - Default Severity level
+ 
  
 // <0=> Off 
 // <1=> Error 
