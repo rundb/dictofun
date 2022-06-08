@@ -131,7 +131,6 @@
       <file file_name="../../../sdk/nRF5_SDK_17.1.0_ddde560/modules/nrfx/drivers/src/nrfx_pdm.c" />
       <file file_name="../../../sdk/nRF5_SDK_17.1.0_ddde560/modules/nrfx/hal/nrf_nvmc.c" />
       <file file_name="../../../sdk/nRF5_SDK_17.1.0_ddde560/modules/nrfx/drivers/src/nrfx_wdt.c" />
-      
     </folder>
     <folder Name="Application">
       <file file_name="./main.cpp" />
@@ -158,7 +157,6 @@
     </folder>
     <folder Name="nRF_Segger_RTT">
       <file file_name="../../../sdk/nRF5_SDK_17.1.0_ddde560/external/segger_rtt/SEGGER_RTT.c" />
-      <file file_name="../../../sdk/nRF5_SDK_17.1.0_ddde560/external/segger_rtt/SEGGER_RTT_Syscalls_SES.c" />
       <file file_name="../../../sdk/nRF5_SDK_17.1.0_ddde560/external/segger_rtt/SEGGER_RTT_printf.c" />
     </folder>
     <folder Name="nRF_BLE">
