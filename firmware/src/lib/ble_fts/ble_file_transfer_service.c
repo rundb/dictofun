@@ -67,7 +67,6 @@ static void on_disconnect(ble_fts_t* p_fts, ble_evt_t const* p_ble_evt)
 static void on_write(ble_fts_t* p_fts, ble_evt_t const* p_ble_evt)
 {
     ble_gatts_evt_write_t const* p_evt_write = &p_ble_evt->evt.gatts_evt.params.write;
-
     if((p_evt_write->handle == p_fts->tx_handles.cccd_handle) && (p_evt_write->len == 2))
     {
         if(ble_srv_is_notification_enabled(p_evt_write->data))
@@ -79,8 +78,8 @@ static void on_write(ble_fts_t* p_fts, ble_evt_t const* p_ble_evt)
             p_fts->is_notification_enabled = false;
         }
     }
-    else if((p_evt_write->handle == p_fts->file_info_handles.cccd_handle) &&
-            (p_evt_write->len == 2))
+    if((p_evt_write->handle == p_fts->file_info_handles.cccd_handle) /* &&
+            (p_evt_write->len == 2)*/)
     {
         if(ble_srv_is_notification_enabled(p_evt_write->data))
         {
@@ -103,7 +102,7 @@ static void on_write(ble_fts_t* p_fts, ble_evt_t const* p_ble_evt)
             p_fts->is_fsinfo_char_notification_enabled = false;
         }
     }
-    else if((p_evt_write->handle == p_fts->rx_handles.value_handle) &&
+    if((p_evt_write->handle == p_fts->rx_handles.value_handle) &&
             (p_fts->data_handler != NULL))
     {
         p_fts->data_handler(p_fts, p_evt_write->data, p_evt_write->len);
@@ -213,12 +212,12 @@ static uint32_t read_to_pair_char_add(ble_fts_t* p_fts, const ble_fts_init_t* p_
 
     attr_char_value.p_uuid = &ble_uuid;
     attr_char_value.p_attr_md = &attr_md;
-    attr_char_value.init_len = 1 + sizeof(ble_fts_file_info_t);
+    attr_char_value.init_len = 1;
     attr_char_value.init_offs = 0;
     attr_char_value.max_len = 16;
 
     return sd_ble_gatts_characteristic_add(
-        p_fts->service_handle, &char_md, &attr_char_value, &p_fts->file_info_handles);
+        p_fts->service_handle, &char_md, &attr_char_value, &p_fts->pairing_char_handles);
 }
 
 static uint32_t file_info_char_add(ble_fts_t* p_fts, const ble_fts_init_t* p_fts_init)
@@ -239,7 +238,6 @@ static uint32_t file_info_char_add(ble_fts_t* p_fts, const ble_fts_init_t* p_fts
     memset(&char_md, 0, sizeof(char_md));
 
     char_md.char_props.notify = 1;
-    char_md.char_props.read = 0;
     char_md.p_char_user_desc = NULL;
     char_md.p_char_pf = NULL;
     char_md.p_user_desc_md = NULL;

@@ -80,8 +80,12 @@ void FtsStateMachine::process_command(const BleCommands command)
             {
                 NRF_LOG_ERROR("fts filesystem info send has failed, error code %d", res);
             }
+            else 
+            {
+              _state = State::IDLE;
+            }
 
-            _state = State::IDLE;
+          
             break;
         }
         case State::NEXT_FILE_INFO_TRANSMISSION:
@@ -98,12 +102,12 @@ void FtsStateMachine::process_command(const BleCommands command)
                 return;
             }
             _context.current_file_size = _context.file.rom.size;
-            NRF_LOG_DEBUG("Sending file info, size %d", _context.current_file_size);
 
             ble_fts_file_info_t file_info;
             file_info.file_size_bytes = _context.current_file_size;
 
-            ble_fts_file_info_send(&m_fts, &file_info);
+            const auto result = ble_fts_file_info_send(&m_fts, &file_info);
+            NRF_LOG_DEBUG("Sending file info, size %d, result(%d)", _context.current_file_size, result);
 
             _state = State::IDLE;
             break;
