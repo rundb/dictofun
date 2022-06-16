@@ -80,8 +80,12 @@ void FtsStateMachine::process_command(const BleCommands command)
             {
                 NRF_LOG_ERROR("fts filesystem info send has failed, error code %d", res);
             }
+            else 
+            {
+              _state = State::IDLE;
+            }
 
-            _state = State::IDLE;
+          
             break;
         }
         case State::NEXT_FILE_INFO_TRANSMISSION:
