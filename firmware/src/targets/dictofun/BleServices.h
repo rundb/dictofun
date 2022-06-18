@@ -42,7 +42,7 @@ private:
     static BleServices * _instance;
     filesystem::File _file;
     filesystem::FilesCount _files_count{0,0};
-    BleCommands _ble_cmd;
+    volatile BleCommands _ble_cmd{CMD_EMPTY};
     uint32_t _read_pointer{0};
 
     size_t _file_size{0UL};

@@ -37,6 +37,14 @@ volatile uint32_t file_size = 0, file_pos = 0, m_max_data_length = 20;
 uint8_t* file_data;
 ble_fts_t* m_fts;
 
+extern ble_fts_t * get_fts_instance_c();
+uint8_t fts_get_uuid_type() {
+  if (get_fts_instance_c() == NULL) 
+  {
+    return 0xFF;
+  }
+  return get_fts_instance_c()->uuid_type;
+}
 
 /**@brief Function for handling the @ref BLE_GAP_EVT_CONNECTED event from the S110 SoftDevice.
  *

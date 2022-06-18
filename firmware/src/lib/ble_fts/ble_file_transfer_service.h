@@ -132,6 +132,8 @@ uint32_t ble_fts_send_file_fragment(ble_fts_t * p_fts, uint8_t * p_data, uint32_
 
 bool ble_fts_file_transfer_busy(void);
 
+uint8_t fts_get_uuid_type();
+
 #ifdef __cplusplus
 }
 #endif

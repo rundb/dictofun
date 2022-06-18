@@ -75,8 +75,8 @@ struct FsmContext
 // connection timeout in milliseconds (60 seconds)
 static const uint32_t CONNECT_STATE_TIMEOUT = 60000;
 
-// transfer timeout in milliseconds (120 seconds)
-static const uint32_t TRANSFER_STATE_TIMEOUT = 120000;
+// transfer timeout in milliseconds (240 seconds)
+static const uint32_t TRANSFER_STATE_TIMEOUT = 240000;
 /**
  * This context is used inside each of the do_<> functions in order to distinguish
  * first, last and other executions.

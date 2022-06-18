@@ -22,6 +22,7 @@ namespace fts
 {
     
 ble_fts_t& get_fts_instance() { return m_fts; }
+extern "C" ble_fts_t * get_fts_instance_c() { return &m_fts; }
 
 FtsStateMachine::FtsStateMachine() { }
 
@@ -36,13 +37,14 @@ void FtsStateMachine::stop()
 }
 
 void FtsStateMachine::process_command(const BleCommands command) 
-{ 
+{
     const State prev_state{_state};
     switch (_state)
     {
         case State::INVALID:
         {
             // TODO: consider assertion here
+            NRF_LOG_ERROR("fts fsm: invalid state");
             break;
         };
         case State::IDLE:
@@ -93,19 +95,36 @@ void FtsStateMachine::process_command(const BleCommands command)
             // This particular part of the logic is not elegant. I assume here that if 
             // the communication partner asks for next file size, it implies that we start 
             // the file transfer in the next communication iteration.
-            const auto open_result = filesystem::open(_context.file, filesystem::FileMode::RDONLY);
-            if (result::Result::OK != open_result)
+            bool is_next_file_found{false};
+            while (!is_next_file_found)
             {
-                // TODO:
-                _state = State::INVALID;
-                NRF_LOG_ERROR("Failed to open next file for reading");
-                return;
+                const auto open_result = filesystem::open(_context.file, filesystem::FileMode::RDONLY);
+                if (result::Result::OK != open_result)
+                {
+                    // TODO:
+                    _state = State::INVALID;
+                    NRF_LOG_ERROR("Failed to open next file for reading");
+                    return;
+                }
+                if (_context.file.rom.size == 0)
+                {
+                    NRF_LOG_INFO("Empty file has been discovered, continue");
+                    // We are not transferring empty files, it breaks the state machine. Close the file
+                    const auto close_res = filesystem::close(_context.file);
+                    if (close_res != result::Result::OK)
+                    {
+                        NRF_LOG_ERROR("Failed to close the file. FS invalidation might be required.");
+                        _state = State::INVALID;
+                        return;
+                    }
+                    continue;
+                }
+                _context.current_file_size = _context.file.rom.size;
+                is_next_file_found = true;
             }
-            _context.current_file_size = _context.file.rom.size;
 
             ble_fts_file_info_t file_info;
             file_info.file_size_bytes = _context.current_file_size;
-
             const auto result = ble_fts_file_info_send(&m_fts, &file_info);
             NRF_LOG_DEBUG("Sending file info, size %d, result(%d)", _context.current_file_size, result);
 

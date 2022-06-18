@@ -61,25 +61,25 @@ void BleServices::handleFtsData(ble_fts_t* p_fts, uint8_t const* p_data, uint16_
 {
     switch(p_data[0])
     {
-    case CMD_GET_FILE: {
-        NRF_LOG_DEBUG("cmd: get_file");
-        _ble_cmd = (BleCommands)p_data[0];
-        break;
-    }
-    case CMD_GET_FILE_INFO: {
-        NRF_LOG_DEBUG("cmd: file_info");
-        _ble_cmd = (BleCommands)p_data[0];
-        break;
-    }
-    case CMD_GET_VALID_FILES_COUNT: {
-        NRF_LOG_DEBUG("cmd: files_count");
-        _ble_cmd = (BleCommands)p_data[0];
-        break;
-    }
-    default: {
-        NRF_LOG_ERROR("Unknown command: %02x", p_data[0]);
-        break;
-    }
+      case CMD_GET_FILE: {
+          NRF_LOG_DEBUG("cmd: get_file");
+          _ble_cmd = (BleCommands)p_data[0];
+          break;
+      }
+      case CMD_GET_FILE_INFO: {
+          NRF_LOG_DEBUG("cmd: file_info");
+          _ble_cmd = (BleCommands)p_data[0];
+          break;
+      }
+      case CMD_GET_VALID_FILES_COUNT: {
+          NRF_LOG_DEBUG("cmd: files_count");
+          _ble_cmd = (BleCommands)p_data[0];
+          break;
+      }
+      default: {
+          NRF_LOG_ERROR("Unknown command: %02x", p_data[0]);
+          break;
+      }
     }
 }
 
@@ -242,7 +242,8 @@ nrf_ble_qwr_t* BleServices::getQwrHandle()
 // TODO: assert nullptr on uuids, assert when max_uuids is not enough
 size_t BleServices::setAdvUuids(ble_uuid_t* uuids, size_t max_uuids)
 {
-    uuids[0] = {LBS_UUID_SERVICE, m_lbs.uuid_type};
+    //uuids[0] = {LBS_UUID_SERVICE, m_lbs.uuid_type};
+    uuids[0] = {BLE_UUID_FTS_SERVICE, fts_get_uuid_type()};
     return 1U;
 }
 
@@ -253,6 +254,10 @@ static void led_write_handler(uint16_t conn_handle, ble_lbs_t* p_lbs, uint8_t le
 
 void BleServices::cyclic()
 {
+    if (_ble_cmd != CMD_EMPTY)
+    {
+        NRF_LOG_INFO("cmd: %d", _ble_cmd);
+    }
     _fsm.process_command(_ble_cmd);
     _ble_cmd = CMD_EMPTY;
 }
