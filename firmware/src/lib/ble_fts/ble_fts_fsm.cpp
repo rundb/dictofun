@@ -85,6 +85,7 @@ void FtsStateMachine::process_command(const BleCommands command)
             else 
             {
               _state = State::IDLE;
+              save_activity_timestamp();
             }
 
           
@@ -128,6 +129,7 @@ void FtsStateMachine::process_command(const BleCommands command)
             const auto result = ble_fts_file_info_send(&m_fts, &file_info);
             NRF_LOG_DEBUG("Sending file info, size %d, result(%d)", _context.current_file_size, result);
 
+            save_activity_timestamp();
             _state = State::IDLE;
             break;
         }
@@ -154,7 +156,9 @@ void FtsStateMachine::process_command(const BleCommands command)
             // exceptional case when read_size at first run is less than WAV header is not considerd.
             drv_audio_wav_header_apply(_context.read_buffer, _context.current_file_size);
             send_data(_context, read_size);
+            _context.transferred_data_size = read_size;
             
+            save_activity_timestamp();
             _state = State::FILE_TRANSMISSION_RUNNING;
             break;
         }
@@ -170,12 +174,13 @@ void FtsStateMachine::process_command(const BleCommands command)
                 break;
             }
             send_data(_context, read_size);
+            _context.transferred_data_size += read_size; 
             // TODO: add progress bar 
             if (read_size != Context::READ_BUFFER_SIZE)
             {
                 _state = State::FILE_TRANSMISSION_END;
-
             }
+            save_activity_timestamp();
             break;
         }
         case State::FILE_TRANSMISSION_END:
@@ -194,6 +199,7 @@ void FtsStateMachine::process_command(const BleCommands command)
             NRF_LOG_INFO("files count: valid=%d, invalid=%d", _context.files_count.valid, _context.files_count.invalid);
 
             _state = (_context.files_count.valid > 0) ? State::IDLE : State::DONE;
+            save_activity_timestamp();
             break;
         }
         break;

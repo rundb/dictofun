@@ -36,6 +36,15 @@ public:
     void setFileSizeForTransfer(const size_t size) { _file_size = size; }
 
     bool isFileTransmissionComplete() { return _fsm.is_transmission_complete(); }
+
+    uint32_t getTimeSinceLastFtsActivity() { return _fsm.get_time_since_last_activity(); }
+
+    void setFtsTimestampFunction(ble::fts::FtsStateMachine::TimestampFunction timestampFunction) 
+    {
+      _fsm.set_timestamp_function(timestampFunction);
+    }
+
+    ble::fts::FtsStateMachine::ProgressReportData getProgressReportData() { return _fsm.get_progress_report_data(); }
     
     static void disconnect(uint16_t conn_handle, void* p_context);
 private:

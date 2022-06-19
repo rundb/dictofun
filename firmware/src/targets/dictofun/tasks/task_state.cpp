@@ -70,18 +70,24 @@ struct FsmContext
     bool is_unrecoverable_error_detected;
     int counter;
     uint32_t start_timestamp;
+    uint32_t last_file_transmission_report_timestamp;
 };
 
 // connection timeout in milliseconds (60 seconds)
 static const uint32_t CONNECT_STATE_TIMEOUT = 60000;
 
-// transfer timeout in milliseconds (240 seconds)
-static const uint32_t TRANSFER_STATE_TIMEOUT = 240000;
+// transfer timeout in milliseconds (600 seconds)
+static const uint32_t TRANSFER_STATE_TIMEOUT = 600000;
+
+static const uint32_t REPORT_TRANSMISSION_PROGRESS_TIMEOUT = 15000;
+
+// activity timeout in milliseconds (120 seconds)
+static const uint32_t TRANSFER_STATE_INACTIVITY_TIMEOUT = 120000;
 /**
  * This context is used inside each of the do_<> functions in order to distinguish
  * first, last and other executions.
  */
-FsmContext _context{InternalFsmState::DONE, false, 0, 0};
+FsmContext _context{InternalFsmState::DONE, false, 0, 0, 0};
 
 /**
  * FSM action steps. 
@@ -420,6 +426,7 @@ CompletionStatus do_connect()
 
     if(ble::BleSystem::getInstance().getConnectionHandle() != BLE_CONN_HANDLE_INVALID)
     {
+        ble::BleSystem::getInstance().getServices().setFtsTimestampFunction(app_timer_cnt_get);
         return CompletionStatus::DONE;
     }
 
@@ -447,9 +454,18 @@ CompletionStatus do_transfer()
     // TODO: add restart detection
     // TODO: add transmission error detection (or incapsulate it in FTS)
     const auto timestamp = app_timer_cnt_get();
-    if (timestamp - _context.start_timestamp > TRANSFER_STATE_TIMEOUT)
+    if ((timestamp - _context.start_timestamp > TRANSFER_STATE_TIMEOUT) || 
+        (ble::BleSystem::getInstance().getServices().getTimeSinceLastFtsActivity() > TRANSFER_STATE_INACTIVITY_TIMEOUT))
     {
         return CompletionStatus::TIMEOUT;
+    }
+
+    if (timestamp - _context.last_file_transmission_report_timestamp > REPORT_TRANSMISSION_PROGRESS_TIMEOUT)
+    {
+        _context.last_file_transmission_report_timestamp = timestamp;
+        const auto report = ble::BleSystem::getInstance().getServices().getProgressReportData();
+
+        NRF_LOG_INFO("progress: %d, %d %", report.files_left_count, (report.transferred_data_size * 100)/(report.current_file_size+1));
     }
 
     return CompletionStatus::PENDING;
