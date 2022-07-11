@@ -297,12 +297,12 @@ void application_cyclic()
         const auto res = do_restart();
         if(CompletionStatus::DONE == res)
         {
-            _applicationState = AppSmState::RECORD_START;
+            _applicationState = AppSmState::PREPARE;
         }
         else
         {
             // by default restart is not supported, proceed directly to finalize
-            _applicationState = AppSmState::FINALIZE;
+            //_applicationState = AppSmState::FINALIZE;
         }
     }
     break;
@@ -418,6 +418,14 @@ CompletionStatus do_connect()
     // start advertising, establish connection to the phone
     if(!ble::BleSystem::getInstance().isActive())
     {
+        // FIXME: here we check file system state for the case when FS is corrupt and we still haven't detected it.
+        filesystem::FilesCount fs_stat;
+        const auto result = filesystem::get_files_count(fs_stat);
+        if (result != result::Result::OK)
+        {
+          _context.is_unrecoverable_error_detected = true;
+          return CompletionStatus::INVALID;
+        }
         ble::BleSystem::getInstance().start();
 
         led::task_led_set_indication_state(led::CONNECTING);
@@ -430,7 +438,12 @@ CompletionStatus do_connect()
         return CompletionStatus::DONE;
     }
 
-    // TODO: add restart detection
+    const auto isButtonPressed = isRecordButtonPressed();
+    if (isButtonPressed)
+    {
+        ble::BleSystem::getInstance().stop();
+        return CompletionStatus::RESTART_DETECTED;
+    }
     
     const auto timestamp = app_timer_cnt_get();
     if (timestamp - _context.start_timestamp > CONNECT_STATE_TIMEOUT)
@@ -452,6 +465,13 @@ CompletionStatus do_transfer()
     }
 
     // TODO: add restart detection
+    const auto isButtonPressed = isRecordButtonPressed();
+    if (isButtonPressed)
+    {
+        ble::BleSystem::getInstance().stop();
+        return CompletionStatus::RESTART_DETECTED;
+    }
+
     // TODO: add transmission error detection (or incapsulate it in FTS)
     const auto timestamp = app_timer_cnt_get();
     if ((timestamp - _context.start_timestamp > TRANSFER_STATE_TIMEOUT) || 
@@ -492,7 +512,8 @@ CompletionStatus do_finalize()
         {
             led::task_led_set_indication_state(led::SHUTTING_DOWN);
             NRF_LOG_INFO("Finalize: unmounting the FS");
-            const auto files_stats = filesystem::get_files_count();
+            filesystem::FilesCount files_stats;
+            const auto result = filesystem::get_files_count(files_stats);
             const auto occupied_mem_size = filesystem::get_occupied_memory_size();
             const auto total_size = integration::MEMORY_VOLUME;
             NRF_LOG_INFO("File stats: valid files: %d, invalid files: %d, memory occupied: %d/%d",
@@ -535,7 +556,8 @@ CompletionStatus do_restart()
 {
     // handle the previous state of the operation, assure consistency of FS and
     // trigger rec_start ASAP
-    return CompletionStatus::INVALID;
+    filesystem::deinit();
+    return CompletionStatus::DONE;
 }
 
 CompletionStatus do_shutdown()

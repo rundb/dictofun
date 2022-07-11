@@ -34,6 +34,7 @@ void FtsStateMachine::start()
 void FtsStateMachine::stop()
 {
     _state = State::INVALID;
+    filesystem::close(_context.file, false);
 }
 
 void FtsStateMachine::process_command(const BleCommands command) 
@@ -72,7 +73,7 @@ void FtsStateMachine::process_command(const BleCommands command)
         };
         case State::FS_INFO_TRANSMISSION:
         {
-            _context.files_count = filesystem::get_files_count();
+            filesystem::get_files_count(_context.files_count);
             NRF_LOG_DEBUG("Sending files' count: %d", _context.files_count.valid);
 
             ble_fts_filesystem_info_t fs_info;
@@ -195,7 +196,7 @@ void FtsStateMachine::process_command(const BleCommands command)
             }
             // send the last chunk of data
             
-            _context.files_count = filesystem::get_files_count();
+            filesystem::get_files_count(_context.files_count);
             NRF_LOG_INFO("files count: valid=%d, invalid=%d", _context.files_count.valid, _context.files_count.invalid);
 
             _state = (_context.files_count.valid > 0) ? State::IDLE : State::DONE;

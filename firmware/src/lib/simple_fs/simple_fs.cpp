@@ -42,19 +42,22 @@ result::Result init(const SpiFlashConfiguration& spi_flash_configuration)
     return result::Result::OK;
 }
 
+result::Result deinit()
+{
+    _state.is_initialized = false;
+    return result::Result::OK;
+}
+
 static const size_t HEADER_SIZE = 4U;
 static const size_t NEXT_FILE_POINTER_OFFSET = 0;
 static const size_t FILE_SIZE_POINTER_OFFSET = 1;
 static const size_t FILE_STATE_FLAGS_OFFSET = 3;
-void read_next_file_header(const uint32_t address, uint32_t* header)
+result::Result read_next_file_header(const uint32_t address, uint32_t* header)
 {
     auto& config = _spi_flash_configuration;
     result::Result res;
-    do
-    {
-        res = config.read(
-            address, reinterpret_cast<uint8_t*>(header), HEADER_SIZE * sizeof(uint32_t));
-    } while(res != result::Result::OK);
+    res = config.read(address, reinterpret_cast<uint8_t*>(header), HEADER_SIZE * sizeof(uint32_t));
+    return res;
 }
 
 // make sure to fill in corresponding fields in file.rom before calling this checksum
@@ -89,9 +92,14 @@ result::Result open(File& file, FileMode mode)
         uint32_t header[HEADER_SIZE]{0, 0, 0, 0};
         while(!is_last_file_found)
         {
-            read_next_file_header(current_file_address, header);
+            const auto result = read_next_file_header(current_file_address, header);
+            if (result::Result::OK != result)
+            {
+                return result;
+            }
             const auto next_address = header[NEXT_FILE_POINTER_OFFSET];
-            if(next_address < 0x01000000)
+
+            if(next_address < 0x01000000 && next_address != current_file_address)
             {
                 current_file_address = next_address;
                 continue;
@@ -114,7 +122,11 @@ result::Result open(File& file, FileMode mode)
 
         while(!is_first_valid_file_found)
         {
-            read_next_file_header(current_file_address, header);
+            const auto result = read_next_file_header(current_file_address, header);
+            if (result::Result::OK != result)
+            {
+                return result;
+            }
             const auto next_address = header[NEXT_FILE_POINTER_OFFSET];
             const auto file_state_flags = header[FILE_STATE_FLAGS_OFFSET];
             // in this case first file valid for read is found
@@ -151,18 +163,24 @@ result::Result open(File& file, FileMode mode)
     return result::Result::ERROR_NOT_IMPLEMENTED;
 }
 
-FilesCount get_files_count()
+result::Result get_files_count(FilesCount& files_count)
 {
     FilesCount result{0, 0};
     bool is_last_file_found{false};
     uint32_t current_file_address{0x00};
     uint32_t header[HEADER_SIZE]{0, 0, 0, 0};
+    constexpr size_t MAX_FILES_COUNT{1000};
     while(!is_last_file_found)
     {
         if(current_file_address > 0x00100000)
         {
             is_last_file_found = true;
             continue;
+        }
+
+        if (result.invalid > MAX_FILES_COUNT || result.valid > MAX_FILES_COUNT)
+        {
+            return result::Result::ERROR_GENERAL;
         }
 
         read_next_file_header(current_file_address, header);
@@ -189,11 +207,12 @@ FilesCount get_files_count()
         }
         else
         {
-            return result;
+            files_count = result;
+            return result::Result::ERROR_GENERAL;
         }
     }
-
-    return result;
+    files_count = result;
+    return result::Result::OK;
 }
 
 size_t get_occupied_memory_size()
@@ -287,7 +306,7 @@ result::Result read(File& file, uint8_t* data, const size_t size, size_t& read_s
     return result::Result::OK;
 }
 
-result::Result close(File& file)
+result::Result close(File& file, bool should_invalidate_file)
 {
     if(!is_file_open(file))
     {
@@ -325,7 +344,7 @@ result::Result close(File& file)
         file.ram.runtime_magic = 0;
         return result::Result::OK;
     }
-    else
+    else if (should_invalidate_file)
     {
         // finalize file read
         file.rom.file_state_flags &= ~(MAGIC_FILE_WRITTEN_VALID_MASK);
@@ -342,6 +361,12 @@ result::Result close(File& file)
         {
             return res;
         }
+        file.ram.runtime_magic = 0;
+        return result::Result::OK;
+    }
+    else
+    {
+        file.rom.file_state_flags = 0;
         file.ram.runtime_magic = 0;
         return result::Result::OK;
     }

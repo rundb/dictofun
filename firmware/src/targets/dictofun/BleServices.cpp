@@ -215,7 +215,7 @@ void BleServices::init()
 void BleServices::start()
 {
     // Figure out how many files we have to be transmitted
-    _files_count = filesystem::get_files_count();
+    filesystem::get_files_count(_files_count );
 
     int size = 0;
     do {
@@ -232,6 +232,12 @@ void BleServices::start()
         }
     } while (_file_size == 0);
     _fsm.start();
+}
+
+void BleServices::stop()
+{
+    _fsm.stop();
+    filesystem::close(_file, false);
 }
 
 nrf_ble_qwr_t* BleServices::getQwrHandle()
@@ -260,6 +266,11 @@ void BleServices::cyclic()
     }
     _fsm.process_command(_ble_cmd);
     _ble_cmd = CMD_EMPTY;
+}
+
+void BleServices::abortFileTransmission()
+{
+    _fsm.stop();
 }
 
 } // namespace ble

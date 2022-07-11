@@ -116,6 +116,8 @@ struct SpiFlashConfiguration
  */
 result::Result init(const SpiFlashConfiguration& spiFlashConfiguration);
 
+result::Result deinit();
+
 /**
  * \param flags - flags from POSIX FS (basically read and write)
  */
@@ -124,7 +126,7 @@ result::Result open(File& file, FileMode mode);
 /**
  * 
  */
-result::Result close(File& file);
+result::Result close(File& file, bool should_invalidate_file = true);
 
 /**
  * Write <size> bytes to the end of the file <file> open for write
@@ -145,7 +147,7 @@ struct FilesCount
 /**
  * Iterate through the file system and count valid and invalid files
  */
-FilesCount get_files_count();
+result::Result get_files_count(FilesCount& files_count);
 
 /**
  * Calculate how much memory is taken
