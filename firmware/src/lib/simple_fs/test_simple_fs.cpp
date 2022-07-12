@@ -32,7 +32,7 @@ void test_single_write_single_read_within_one_sector()
     (void)filesystem::init(test::test_spi_flash_config);
 
     filesystem::File file;
-    const auto open_write_res = filesystem::open(file, filesystem::FileMode::WRONLY);
+    const auto open_write_res = filesystem::create(file);
     ASSERT(open_write_res == result::Result::OK);
 
     static const size_t TEST_PAGE_DATA_SIZE = 256;
@@ -52,11 +52,13 @@ void test_single_write_single_read_within_one_sector()
     const auto close_res = filesystem::close(file);
     ASSERT(close_res == result::Result::OK);
 
-    auto file_count = filesystem::get_files_count();
+    filesystem::FilesCount file_count;
+    const auto files_count_res = filesystem::get_files_count(file_count);
+    ASSERT(files_count_res == result::Result::OK);
     ASSERT(file_count.invalid == 0);
     ASSERT(file_count.valid == 1);
 
-    const auto open_read_res = filesystem::open(file, filesystem::FileMode::RDONLY);
+    const auto open_read_res = filesystem::open(file);
     ASSERT(open_read_res == result::Result::OK);
 
     ASSERT(file.rom.size == TEST_PAGES_COUNT * TEST_PAGE_DATA_SIZE);
@@ -77,9 +79,11 @@ void test_single_write_single_read_within_one_sector()
         actual_total_read_size += actual_read_size;
     } while(actual_read_size != 0);
     ASSERT(actual_total_read_size == file.rom.size);
-    const auto close_after_read_res = filesystem::close(file);
+    const auto close_after_read_res = filesystem::invalidate(file);
     ASSERT(close_after_read_res == result::Result::OK);
-    file_count = filesystem::get_files_count();
+    file_count.invalid = 1000;
+    file_count.valid = 1000;
+    filesystem::get_files_count(file_count);
     ASSERT(file_count.invalid == 1);
     ASSERT(file_count.valid == 0);
 }
@@ -106,7 +110,7 @@ void test_several_writes_before_several_reads()
 
     { // file 1
         filesystem::File file1;
-        auto open_result = filesystem::open(file1, filesystem::FileMode::WRONLY);
+        auto open_result = filesystem::create(file1);
         ASSERT(open_result == result::Result::OK);
         for(int i = 0; i < 8; ++i)
         {
@@ -121,7 +125,7 @@ void test_several_writes_before_several_reads()
     }
     { // file 2
         filesystem::File file2;
-        auto open_result = filesystem::open(file2, filesystem::FileMode::WRONLY);
+        auto open_result = filesystem::create(file2);
         ASSERT(open_result == result::Result::OK);
         for(int i = 0; i < 16; ++i)
         {
@@ -137,7 +141,7 @@ void test_several_writes_before_several_reads()
 
     { // file 3
         filesystem::File file3;
-        auto open_result = filesystem::open(file3, filesystem::FileMode::WRONLY);
+        auto open_result = filesystem::create(file3);
         ASSERT(open_result == result::Result::OK);
         for(int i = 0; i < 32; ++i)
         {
@@ -153,7 +157,7 @@ void test_several_writes_before_several_reads()
 
     { // file 4
         filesystem::File file4;
-        auto open_result = filesystem::open(file4, filesystem::FileMode::WRONLY);
+        auto open_result = filesystem::create(file4);
         ASSERT(open_result == result::Result::OK);
         for(int i = 0; i < 64; ++i)
         {
@@ -171,7 +175,7 @@ void test_several_writes_before_several_reads()
     {
         // read file 1, verify that first 3 bytes correspond to page id for every page
         filesystem::File file1;
-        const auto open_result = filesystem::open(file1, filesystem::FileMode::RDONLY);
+        const auto open_result = filesystem::open(file1);
         uint8_t read_data[SAMPLE_DATA_SIZE]{0};
         ASSERT(open_result == result::Result::OK);
 
@@ -187,12 +191,13 @@ void test_several_writes_before_several_reads()
                 read_page_id++;
             }
         } while(read_size > 0);
-        filesystem::close(file1);
+        const auto invalidation_result = filesystem::invalidate(file1);
+        ASSERT(invalidation_result == result::Result::OK);
     }
     {
         // read file 2, verify that first 3 bytes correspond to page id for every page
         filesystem::File file2;
-        const auto open_result = filesystem::open(file2, filesystem::FileMode::RDONLY);
+        const auto open_result = filesystem::open(file2);
         uint8_t read_data[SAMPLE_DATA_SIZE]{0};
         ASSERT(open_result == result::Result::OK);
 
@@ -208,12 +213,80 @@ void test_several_writes_before_several_reads()
                 read_page_id++;
             }
         } while(read_size > 0);
-        filesystem::close(file2);
+        const auto invalidation_result = filesystem::invalidate(file2);
+        ASSERT(invalidation_result == result::Result::OK);
     }
-    const auto count = filesystem::get_files_count();
-    ASSERT(count.invalid == 2);
-    ASSERT(count.valid == 2);
+    filesystem::FilesCount files_count;
+    const auto result = filesystem::get_files_count(files_count);
+    ASSERT(result == result::Result::OK);
+    ASSERT(files_count.invalid == 2);
+    ASSERT(files_count.valid == 2);
     const auto occupied_size = filesystem::get_occupied_memory_size();
+}
+
+void test_closing_file_during_read_without_invalidation()
+{
+    test::initFsMock();
+    filesystem::init(test::test_spi_flash_config);
+
+    filesystem::File file;
+    const auto create_res = filesystem::create(file);
+    ASSERT(create_res == result::Result::OK);
+
+    static const size_t TEST_PAGE_DATA_SIZE = 256;
+    static const size_t TEST_PAGES_COUNT = 4;
+    uint8_t sample_data_page[TEST_PAGE_DATA_SIZE];
+    uint8_t sample_data_counter = 1;
+    for(auto& c : sample_data_page)
+    {
+        c = sample_data_counter++;
+    }
+
+    for(size_t i = 0U; i < TEST_PAGES_COUNT; ++i)
+    {
+        const auto write_res = filesystem::write(file, sample_data_page, TEST_PAGE_DATA_SIZE);
+        ASSERT(write_res == result::Result::OK);
+    }
+    const auto close_res = filesystem::close(file);
+    ASSERT(close_res == result::Result::OK);
+
+    filesystem::FilesCount file_count;
+    const auto files_count_res = filesystem::get_files_count(file_count);
+    ASSERT(files_count_res == result::Result::OK);
+    ASSERT(file_count.invalid == 0);
+    ASSERT(file_count.valid == 1);
+
+    const auto open_read_res = filesystem::open(file);
+    ASSERT(open_read_res == result::Result::OK);
+
+    ASSERT(file.rom.size == TEST_PAGES_COUNT * TEST_PAGE_DATA_SIZE);
+    ASSERT(file.ram.size == TEST_PAGES_COUNT * TEST_PAGE_DATA_SIZE);
+    ASSERT(file.rom.magic == 0x92F61455UL);
+    ASSERT(file.rom.next_file_start == 0x1000);
+    for(auto& c : sample_data_page)
+    {
+        c = 0xEF;
+    }
+    size_t actual_read_size = 0;
+    size_t actual_total_read_size = 0;
+    do
+    {
+        const auto read_res =
+            filesystem::read(file, sample_data_page, TEST_PAGE_DATA_SIZE, actual_read_size);
+        ASSERT(read_res == result::Result::OK);
+        actual_total_read_size += actual_read_size;
+    } while(actual_read_size != 0);
+
+    ASSERT(actual_total_read_size == file.rom.size);
+
+    // closing file without invalidation
+    const auto close_after_read_res = filesystem::close(file);
+    ASSERT(close_after_read_res == result::Result::OK);
+    file_count.invalid = 1000;
+    file_count.valid = 1000;
+    filesystem::get_files_count(file_count);
+    ASSERT(file_count.invalid == 0);
+    ASSERT(file_count.valid == 1);
 }
 
 void run_tests()
@@ -222,6 +295,7 @@ void run_tests()
     RUN_TEST(tr, test_init);
     RUN_TEST(tr, test_single_write_single_read_within_one_sector);
     RUN_TEST(tr, test_several_writes_before_several_reads);
+    RUN_TEST(tr, test_closing_file_during_read_without_invalidation);
 }
 
 int main()

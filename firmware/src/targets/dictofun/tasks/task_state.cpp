@@ -329,7 +329,6 @@ CompletionStatus do_init()
 
 CompletionStatus do_prepare()
 {
-    // TODO: check if SPI flash is operational
     // TODO: check if microphone is present
 
     if(_context.state == InternalFsmState::DONE)
@@ -343,7 +342,7 @@ CompletionStatus do_prepare()
             _context.is_unrecoverable_error_detected = true;
             return CompletionStatus::ERROR;
         }
-        const auto file_open_res = filesystem::open(_currentFile, filesystem::FileMode::WRONLY);
+        const auto file_open_res = filesystem::create(_currentFile);
         if(file_open_res != result::Result::OK)
         {
             _context.state = InternalFsmState::DONE;
@@ -415,6 +414,39 @@ CompletionStatus do_record_finalize()
 
 CompletionStatus do_connect()
 {
+    // Before connecting, perform integrity check for the filesystem
+    // Figure out how many files we have to be transmitted
+    filesystem::FilesCount files_count;
+    const auto count_result = filesystem::get_files_count(files_count);
+
+    if (result::Result::OK != count_result)
+    {
+        _context.is_unrecoverable_error_detected = true;
+        return CompletionStatus::ERROR;
+    }
+
+    // Find first file bigger than 0 bytes and invalidate all empty files before it.
+    int file_size = 0;
+    do 
+    {
+        const auto open_result = filesystem::open(_currentFile);
+        if(open_result != result::Result::OK)
+        {
+            NRF_LOG_ERROR("task_state: file opening failure!");
+            return CompletionStatus::ERROR;
+        }
+        file_size = _currentFile.rom.size;
+        if (file_size == 0)
+        {
+            filesystem::invalidate(_currentFile);
+        }
+        else
+        {
+            // close first not-empty file without an invalidation. 
+            filesystem::close(_currentFile);
+        }
+    } while (file_size == 0);
+
     // start advertising, establish connection to the phone
     if(!ble::BleSystem::getInstance().isActive())
     {
@@ -492,7 +524,8 @@ CompletionStatus do_finalize()
         {
             led::task_led_set_indication_state(led::SHUTTING_DOWN);
             NRF_LOG_INFO("Finalize: unmounting the FS");
-            const auto files_stats = filesystem::get_files_count();
+            filesystem::FilesCount files_stats;
+            const auto files_stats_result = filesystem::get_files_count(files_stats);
             const auto occupied_mem_size = filesystem::get_occupied_memory_size();
             const auto total_size = integration::MEMORY_VOLUME;
             NRF_LOG_INFO("File stats: valid files: %d, invalid files: %d, memory occupied: %d/%d",

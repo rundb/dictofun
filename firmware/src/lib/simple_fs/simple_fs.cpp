@@ -30,21 +30,29 @@ static const uint32_t MAGIC_FILE_WRITTEN_INVALID_VALUE = 0xDEADFFFF;
 
 static const uint32_t CHECKSUM_MASK = 0x0000FFFF;
 
+static File * current_file{nullptr};
+
 SpiFlashConfiguration _spi_flash_configuration;
 
 result::Result init(const SpiFlashConfiguration& spi_flash_configuration)
 {
+
     _state.is_initialized = true;
     // todo: check how copy constructor would work here
     _spi_flash_configuration = spi_flash_configuration;
     // currently sizes != 256 are not implemented
 
+    current_file = nullptr;
+
     return result::Result::OK;
 }
+
+constexpr size_t MAX_FILES_COUNT{50U};
 
 static const size_t HEADER_SIZE = 4U;
 static const size_t NEXT_FILE_POINTER_OFFSET = 0;
 static const size_t FILE_SIZE_POINTER_OFFSET = 1;
+static const size_t FILE_MAGIC_OFFSET = 2;
 static const size_t FILE_STATE_FLAGS_OFFSET = 3;
 void read_next_file_header(const uint32_t address, uint32_t* header)
 {
@@ -69,73 +77,102 @@ uint16_t get_file_checksum(File& file)
     return w0 ^ w1 ^ w2 ^ w3 ^ w4 ^ w5;
 }
 
-bool is_file_open(File& file)
+FileState get_file_state(const uint32_t state_flags)
 {
-    return file.ram.runtime_magic == MAGIC_FILE_OPEN;
+    if (state_flags == FILE_OPEN_FOR_WRITE) return FILE_OPEN_FOR_WRITE;
+    if (state_flags == FILE_CLOSED_AFTER_WRITE) return FILE_CLOSED_AFTER_WRITE;
+    if (state_flags == FILE_INVALIDATED) return FILE_INVALIDATED;
+    return FILE_ERROR_STATE;
 }
 
-result::Result open(File& file, FileMode mode)
+bool is_file_open()
 {
-    if(is_file_open(file))
+    return nullptr != current_file;
+}
+
+result::Result create(File& file)
+{
+    if (is_file_open())
     {
-        // file is already open
+        return result::Result::ERROR_BUSY;
+    }
+    // Iterate through the files and find either first empty header or first 
+    // file that has been open for write and not closed.
+    bool is_last_file_found{false};
+    uint32_t current_file_address{0x00};
+    uint32_t header[HEADER_SIZE]{0, 0, 0, 0};
+
+    uint32_t iterations_counter{0UL};
+    
+    while (!is_last_file_found && iterations_counter < MAX_FILES_COUNT)
+    {
+        ++iterations_counter;
+        read_next_file_header(current_file_address, header);
+        const auto next_address = header[NEXT_FILE_POINTER_OFFSET];
+        const auto magic = header[FILE_MAGIC_OFFSET];
+        const auto file_status = header[FILE_STATE_FLAGS_OFFSET];
+        if (magic == FILE_VALID_MAGIC)
+        {
+            // At this point we are confident that discovered header is valid
+            // and previous file has been completely written. 
+            current_file_address = next_address;
+            continue;
+        }
+        const auto file_state = get_file_state(file_status);
+        if (file_state == FILE_OPEN_FOR_WRITE)
+        {
+            return result::Result::ERROR_GENERAL;
+        }
+        // At this point magic is not present and we are sure that previously
+        // open file has been properly written. So here should be the empty area.
+        is_last_file_found = true;
+
+        file.ram.current_file_start_address = current_file_address;
+        file.ram.current_operation_address =
+            current_file_address + _spi_flash_configuration.page_size;
+        file.ram.size = 0;
+        file.ram.is_write = true;
+    }
+    if (iterations_counter == MAX_FILES_COUNT)
+    {
         return result::Result::ERROR_GENERAL;
     }
-    if(mode == FileMode::WRONLY)
-    {
-        file.ram.runtime_magic = MAGIC_FILE_OPEN;
-        bool is_last_file_found{false};
-        uint32_t current_file_address{0x00};
-        uint32_t header[HEADER_SIZE]{0, 0, 0, 0};
-        while(!is_last_file_found)
-        {
-            read_next_file_header(current_file_address, header);
-            const auto next_address = header[NEXT_FILE_POINTER_OFFSET];
-            if(next_address < 0x01000000)
-            {
-                current_file_address = next_address;
-                continue;
-            }
-            is_last_file_found = true;
-            file.ram.current_file_start_address = current_file_address;
-            file.ram.current_operation_address =
-                current_file_address + _spi_flash_configuration.page_size;
-            file.ram.size = 0;
-            file.ram.is_write = true;
-        }
-        return result::Result::OK;
-    }
-    else if(mode == FileMode::RDONLY)
-    {
-        file.ram.runtime_magic = MAGIC_FILE_OPEN;
-        bool is_first_valid_file_found{false};
-        uint32_t current_file_address{0x00};
-        uint32_t header[HEADER_SIZE]{0, 0, 0, 0};
+    current_file = &file;
+    // TODO: mark file as open for write. 
+    return result::Result::OK;
+}
 
-        while(!is_first_valid_file_found)
+result::Result open(File& file)
+{
+    if (is_file_open())
+    {
+        return result::Result::ERROR_BUSY;
+    }
+
+    bool is_first_valid_file_found{false};
+    uint32_t current_file_address{0x00};
+    uint32_t header[HEADER_SIZE]{0, 0, 0, 0};
+    uint32_t iterations_counter{0UL};
+
+    while(!is_first_valid_file_found && iterations_counter < MAX_FILES_COUNT)
+    {
+        ++iterations_counter;
+        read_next_file_header(current_file_address, header);
+        const auto next_address = header[NEXT_FILE_POINTER_OFFSET];
+        const auto magic = header[FILE_MAGIC_OFFSET];
+        const auto file_state_flags = header[FILE_STATE_FLAGS_OFFSET];
+
+        if (magic != FILE_VALID_MAGIC)
         {
-            read_next_file_header(current_file_address, header);
-            const auto next_address = header[NEXT_FILE_POINTER_OFFSET];
-            const auto file_state_flags = header[FILE_STATE_FLAGS_OFFSET];
-            // in this case first file valid for read is found
-            if((file_state_flags & MAGIC_FILE_WRITTEN_VALID_MASK) ==
-               (MAGIC_FILE_WRITTEN_VALID_VALUE & MAGIC_FILE_WRITTEN_VALID_MASK))
-            {
-                //TODO: clarify action
-            }
-            else if((file_state_flags & MAGIC_FILE_WRITTEN_VALID_MASK) ==
-                    (MAGIC_FILE_WRITTEN_INVALID_VALUE & MAGIC_FILE_WRITTEN_VALID_MASK))
-            {
-                current_file_address = next_address;
-                continue;
-            }
-            else
-            {
-                // some malfunction, or reached end of files
-                return result::Result::ERROR_GENERAL;
-            }
+            // At this point magic should have been written, so something is wrong
+            return result::Result::ERROR_GENERAL;
+        }
+        const auto file_state = get_file_state(file_state_flags);
+        if (file_state == FILE_CLOSED_AFTER_WRITE)
+        {
+            // Find has been found. 
             is_first_valid_file_found = true;
-            // TODO: add validity check for the header
+
             file.ram.current_file_start_address = current_file_address;
             file.ram.current_operation_address =
                 current_file_address + _spi_flash_configuration.page_size;
@@ -144,21 +181,38 @@ result::Result open(File& file, FileMode mode)
             file.rom.size = file.ram.size;
             file.rom.next_file_start = header[NEXT_FILE_POINTER_OFFSET];
         }
-
-        return result::Result::OK;
+        else if (file_state != FILE_INVALIDATED)
+        {
+            // This can happen if a) file was not properly closed b) file was not properly invalidated.
+            // Both cases are nothing good.
+            return result::Result::ERROR_GENERAL;
+        }
+        current_file_address = next_address;
+    }
+    if (iterations_counter == MAX_FILES_COUNT)
+    {
+        return result::Result::ERROR_GENERAL;
     }
 
-    return result::Result::ERROR_NOT_IMPLEMENTED;
+    file.ram.runtime_magic = MAGIC_FILE_OPEN;
+    current_file = &file;
+
+    return result::Result::OK;
 }
 
-FilesCount get_files_count()
+result::Result get_files_count(FilesCount& files_count)
 {
-    FilesCount result{0, 0};
+    files_count.invalid = 0;
+    files_count.valid = 0;
+
     bool is_last_file_found{false};
     uint32_t current_file_address{0x00};
     uint32_t header[HEADER_SIZE]{0, 0, 0, 0};
-    while(!is_last_file_found)
+    uint32_t iterations_counter{0UL};
+    
+    while(!is_last_file_found && iterations_counter < MAX_FILES_COUNT)
     {
+        ++iterations_counter;
         if(current_file_address > 0x00100000)
         {
             is_last_file_found = true;
@@ -167,33 +221,37 @@ FilesCount get_files_count()
 
         read_next_file_header(current_file_address, header);
         const auto next_address = header[NEXT_FILE_POINTER_OFFSET];
+        const auto magic = header[FILE_MAGIC_OFFSET];
         const auto file_state_flags = header[FILE_STATE_FLAGS_OFFSET];
         current_file_address = next_address;
 
-        // 0xDEFF0000
-        constexpr auto FILE_VALID_MASK_VALUE =
-            MAGIC_FILE_WRITTEN_VALID_VALUE & MAGIC_FILE_WRITTEN_VALID_MASK;
-
-        // 0xDEAD0000
-        constexpr auto FILE_INVALID_MASK_VALUE =
-            MAGIC_FILE_WRITTEN_INVALID_VALUE & MAGIC_FILE_WRITTEN_VALID_MASK;
-
-        const auto file_state_masked_value = file_state_flags & MAGIC_FILE_WRITTEN_VALID_MASK;
-        if(file_state_masked_value == FILE_VALID_MASK_VALUE)
+        if (magic != FILE_VALID_MAGIC)
         {
-            result.valid++;
+            is_last_file_found = true;
+            continue;
         }
-        else if(file_state_masked_value == FILE_INVALID_MASK_VALUE)
+
+        const auto file_state = get_file_state(file_state_flags);
+        
+        if(file_state == FILE_CLOSED_AFTER_WRITE)
         {
-            result.invalid++;
+            files_count.valid++;
+        }
+        else if(FILE_INVALIDATED == file_state)
+        {
+            files_count.invalid++;
         }
         else
         {
-            return result;
+            return result::Result::ERROR_GENERAL;
         }
     }
+    if (iterations_counter == MAX_FILES_COUNT)
+    {
+        return result::Result::ERROR_GENERAL;
+    }
 
-    return result;
+    return result::Result::OK;
 }
 
 size_t get_occupied_memory_size()
@@ -202,7 +260,8 @@ size_t get_occupied_memory_size()
     bool is_last_file_found{false};
     uint32_t current_file_address{0x00};
     uint32_t header[HEADER_SIZE]{0, 0, 0, 0};
-    while(!is_last_file_found)
+    uint32_t iterations_counter{0UL};
+    while(!is_last_file_found && iterations_counter < MAX_FILES_COUNT)
     {
         if(current_file_address > 0x00100000)
         {
@@ -214,18 +273,11 @@ size_t get_occupied_memory_size()
         const auto next_address = header[NEXT_FILE_POINTER_OFFSET];
         const auto file_state_flags = header[FILE_STATE_FLAGS_OFFSET];
         const auto file_size = header[FILE_SIZE_POINTER_OFFSET];
+        const auto magic = header[FILE_MAGIC_OFFSET];
 
-        // 0xDEFF0000
-        constexpr auto FILE_VALID_MASK_VALUE =
-            MAGIC_FILE_WRITTEN_VALID_VALUE & MAGIC_FILE_WRITTEN_VALID_MASK;
+        const auto file_state = get_file_state(file_state_flags);
 
-        // 0xDEAD0000
-        constexpr auto FILE_INVALID_MASK_VALUE =
-            MAGIC_FILE_WRITTEN_INVALID_VALUE & MAGIC_FILE_WRITTEN_VALID_MASK;
-
-        const auto file_state_masked_value = file_state_flags & MAGIC_FILE_WRITTEN_VALID_MASK;
-        if((file_state_masked_value != FILE_VALID_MASK_VALUE) &&
-           (file_state_masked_value != FILE_INVALID_MASK_VALUE))
+        if(magic != FILE_VALID_MAGIC)
         {
             auto next_file_start_pointer = current_file_address + file_size;
             if(next_file_start_pointer % _spi_flash_configuration.sector_size != 0)
@@ -239,13 +291,17 @@ size_t get_occupied_memory_size()
         result = current_file_address;
         current_file_address = next_address;
     }
+    if (iterations_counter == MAX_FILES_COUNT)
+    {
+        return 0xFFFFFFFFUL;
+    }
 
     return result;
 }
 
 result::Result write(File& file, uint8_t* const data, const size_t size)
 {
-    if(!is_file_open(file) || !file.ram.is_write)
+    if(!is_file_open() || !file.ram.is_write)
     {
         return result::Result::ERROR_GENERAL;
     }
@@ -264,7 +320,7 @@ result::Result write(File& file, uint8_t* const data, const size_t size)
 
 result::Result read(File& file, uint8_t* data, const size_t size, size_t& read_size)
 {
-    if(!is_file_open(file) || file.ram.is_write)
+    if(!is_file_open() || file.ram.is_write)
     {
         return result::Result::ERROR_GENERAL;
     }
@@ -289,13 +345,15 @@ result::Result read(File& file, uint8_t* data, const size_t size, size_t& read_s
 
 result::Result close(File& file)
 {
-    if(!is_file_open(file))
+    if ((!is_file_open()) || 
+       (&file != current_file))
     {
         return result::Result::ERROR_INVALID_PARAMETER;
     }
-    auto& config = _spi_flash_configuration;
-    if(file.ram.is_write)
+
+    if (file.ram.is_write)
     {
+        auto& config = _spi_flash_configuration;
         // finalize file write
         file.rom.next_file_start =
             file.ram.current_file_start_address + config.page_size + file.ram.size;
@@ -307,9 +365,7 @@ result::Result close(File& file)
         }
         file.rom.size = file.ram.size;
         file.rom.magic = FILE_VALID_MAGIC;
-        const auto checksum = get_file_checksum(file);
-        file.rom.file_state_flags =
-            (MAGIC_FILE_WRITTEN_VALID_VALUE & MAGIC_FILE_WRITTEN_VALID_MASK) | checksum;
+        file.rom.file_state_flags = FILE_CLOSED_AFTER_WRITE;
 
         constexpr auto FILE_ROM_SIZE = sizeof(File::RomDescriptor);
         uint8_t file_rom_packed[FILE_ROM_SIZE];
@@ -323,30 +379,45 @@ result::Result close(File& file)
         }
         // invalidate file variable
         file.ram.runtime_magic = 0;
+        current_file = nullptr;
         return result::Result::OK;
     }
     else
     {
-        // finalize file read
-        file.rom.file_state_flags &= ~(MAGIC_FILE_WRITTEN_VALID_MASK);
-        file.rom.file_state_flags |=
-            (MAGIC_FILE_WRITTEN_INVALID_VALUE & MAGIC_FILE_WRITTEN_VALID_MASK);
-
-        constexpr auto FILE_ROM_SIZE = sizeof(File::RomDescriptor);
-        uint8_t file_rom_packed[FILE_ROM_SIZE];
-        memcpy(file_rom_packed, &file.rom, FILE_ROM_SIZE);
-
-        const auto res =
-            config.write(file.ram.current_file_start_address, file_rom_packed, FILE_ROM_SIZE);
-        if(res != result::Result::OK)
-        {
-            return res;
-        }
+        // invalidate file variable
         file.ram.runtime_magic = 0;
+        current_file = nullptr;
         return result::Result::OK;
     }
-    // unreachable
-    return result::Result::ERROR_INVALID_PARAMETER;
+}
+
+result::Result invalidate(File& file)
+{
+    if((file.ram.is_write) || 
+       (!is_file_open()) || 
+       (&file != current_file))
+    {
+        return result::Result::ERROR_INVALID_PARAMETER;
+    }
+    // so the only thing to be done is to invalidate the status flag
+    auto& config = _spi_flash_configuration;
+    // finalize file write
+
+    uint32_t header[HEADER_SIZE]{0, 0, 0, 0};
+    read_next_file_header(file.ram.current_file_start_address, header);
+    header[FILE_STATE_FLAGS_OFFSET] = FILE_INVALIDATED;
+    constexpr auto FILE_ROM_SIZE = sizeof(File::RomDescriptor);
+
+    const auto res =
+        config.write(file.ram.current_file_start_address, reinterpret_cast<uint8_t *>(header), FILE_ROM_SIZE);
+    if(res != result::Result::OK)
+    {
+        return res;
+    }
+    // invalidate file variable
+    file.ram.runtime_magic = 0;
+    current_file = nullptr;
+    return result::Result::OK;
 }
 
 } // namespace filesystem

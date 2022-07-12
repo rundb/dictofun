@@ -84,12 +84,22 @@ struct File
     };
 
     RamDescriptor ram;
+    uint16_t file_id;
 };
 
 enum class FileMode
 {
     RDONLY,
     WRONLY
+};
+
+enum FileState: uint32_t
+{
+    FILE_CREATED = 0xDEFFFFFFUL,
+    FILE_OPEN_FOR_WRITE = 0xDEADFFFFUL,
+    FILE_CLOSED_AFTER_WRITE = 0xDEADDEFFUL,
+    FILE_INVALIDATED = 0xDEADDEADUL,
+    FILE_ERROR_STATE = 0xFFFFFFFFUL,
 };
 
 // todo: define signatures for methods necessary for SPI Flash memory
@@ -117,15 +127,35 @@ struct SpiFlashConfiguration
 result::Result init(const SpiFlashConfiguration& spiFlashConfiguration);
 
 /**
- * \param flags - flags from POSIX FS (basically read and write)
+ * 1) Find the first location of the memory available for file storage.
+ *    If previously open for write file has been detected, take actions on closing it (initially - return error, later - find the end of the file and close file properly)
+ * 2) Mark this area as open for write operation.
  */
-result::Result open(File& file, FileMode mode);
+result::Result create(File& file);
 
 /**
+ * This method shall close both written and read files.
  * 
+ * If file has been open for write.
+ * 1) program and verify size of the written file and needed pointers.
+ * 2) program header to show that file is closed.
+ * 3) invalidate runtime information
+ * 
+ * If file has been open for read.
+ * 1) invalidate the runtime information
  */
 result::Result close(File& file);
 
+/**
+ * Find first file available for read operation and fill in descriptor for this file.
+ * \return error, if no files for read is available.
+ */
+result::Result open(File& file);
+
+/**
+ * Invalidate file that was previously open for read operation.
+ */
+result::Result invalidate(File& file);
 /**
  * Write <size> bytes to the end of the file <file> open for write
  */
@@ -142,16 +172,17 @@ struct FilesCount
     size_t valid;
     size_t invalid;
 };
+
 /**
  * Iterate through the file system and count valid and invalid files
  */
-FilesCount get_files_count();
+result::Result get_files_count(FilesCount& files_count);
 
 /**
  * Calculate how much memory is taken
  */
 size_t get_occupied_memory_size();
 
-bool is_file_open(File& file);
+bool is_file_open();
 
 } // namespace filesystem

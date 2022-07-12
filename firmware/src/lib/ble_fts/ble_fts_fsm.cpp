@@ -72,7 +72,13 @@ void FtsStateMachine::process_command(const BleCommands command)
         };
         case State::FS_INFO_TRANSMISSION:
         {
-            _context.files_count = filesystem::get_files_count();
+            const auto count_res = filesystem::get_files_count(_context.files_count);
+            if (result::Result::OK != count_res)
+            {
+                NRF_LOG_ERROR("Files count getter failed");    
+                _state = State::INVALID;
+                return;
+            }
             NRF_LOG_DEBUG("Sending files' count: %d", _context.files_count.valid);
 
             ble_fts_filesystem_info_t fs_info;
@@ -99,10 +105,10 @@ void FtsStateMachine::process_command(const BleCommands command)
             bool is_next_file_found{false};
             while (!is_next_file_found)
             {
-                const auto open_result = filesystem::open(_context.file, filesystem::FileMode::RDONLY);
+                const auto open_result = filesystem::open(_context.file);
                 if (result::Result::OK != open_result)
                 {
-                    // TODO:
+                    // TODO: need to signal the need of FS invalidation from here. 
                     _state = State::INVALID;
                     NRF_LOG_ERROR("Failed to open next file for reading");
                     return;
@@ -110,8 +116,8 @@ void FtsStateMachine::process_command(const BleCommands command)
                 if (_context.file.rom.size == 0)
                 {
                     NRF_LOG_INFO("Empty file has been discovered, continue");
-                    // We are not transferring empty files, it breaks the state machine. Close the file
-                    const auto close_res = filesystem::close(_context.file);
+                    // We are not transferring empty files, it breaks the state machine. Invalidate the file
+                    const auto close_res = filesystem::invalidate(_context.file);
                     if (close_res != result::Result::OK)
                     {
                         NRF_LOG_ERROR("Failed to close the file. FS invalidation might be required.");
@@ -137,7 +143,7 @@ void FtsStateMachine::process_command(const BleCommands command)
         {
             // By this time file should've been open. If not, we either can't enter this area or
             // the SM has been corrupt.
-            if (!filesystem::is_file_open(_context.file))
+            if (!filesystem::is_file_open())
             {
                 NRF_LOG_ERROR("SM is corrupt.File transmission can't be started");
                 _state = State::INVALID;
@@ -186,16 +192,21 @@ void FtsStateMachine::process_command(const BleCommands command)
         case State::FILE_TRANSMISSION_END:
         {
             // close the file
-            const auto close_res = filesystem::close(_context.file);
+            const auto close_res = filesystem::invalidate(_context.file);
             if (close_res != result::Result::OK)
             {
-                NRF_LOG_ERROR("Failed to close the file. FS invalidation might be required.");
+                NRF_LOG_ERROR("Failed to invalidate the file. FS invalidation might be required.");
                 _state = State::INVALID;
                 break;
             }
-            // send the last chunk of data
             
-            _context.files_count = filesystem::get_files_count();
+            const auto count_result = filesystem::get_files_count(_context.files_count);
+            if (count_result != result::Result::OK)
+            {
+                NRF_LOG_ERROR("Failed to retrieve files count");
+                _state = State::INVALID;
+                return;
+            }
             NRF_LOG_INFO("files count: valid=%d, invalid=%d", _context.files_count.valid, _context.files_count.invalid);
 
             _state = (_context.files_count.valid > 0) ? State::IDLE : State::DONE;
