@@ -23,6 +23,7 @@ public:
     BleServices();
     void init();
     void start();
+    void stop();
     void cyclic();
 
     nrf_ble_qwr_t * getQwrHandle();
@@ -36,6 +37,8 @@ public:
     void setFileSizeForTransfer(const size_t size) { _file_size = size; }
 
     bool isFileTransmissionComplete() { return _fsm.is_transmission_complete(); }
+
+    void abortFileTransmission();
 
     uint32_t getTimeSinceLastFtsActivity() { return _fsm.get_time_since_last_activity(); }
 

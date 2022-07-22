@@ -37,6 +37,7 @@ public:
 
     void init();
     void start();
+    void stop();
     void cyclic();
 
     static inline BleSystem& getInstance() {return *_instance; }
@@ -57,6 +58,7 @@ private:
     bool _isActive{false};
     void initBleStack();
     void startAdvertising();
+    void stopAdvertising();
     void initGapParams();
     void initGatt();
     void initConnParameters();

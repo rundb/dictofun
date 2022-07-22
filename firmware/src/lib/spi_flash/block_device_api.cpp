@@ -7,6 +7,8 @@
 #include "spi_flash.h"
 #include <cstring>
 
+#define FLASH_IS_BUSY_TIMEOUT  (100000UL)
+
 namespace integration
 {
 static const size_t SPI_FLASH_PAGE_SIZE = 256;
@@ -28,9 +30,12 @@ spi_flash_simple_fs_api_read(const uint32_t address, uint8_t* data, const size_t
     {
         return result::Result::ERROR_GENERAL;
     }
-    while(_flash->isBusy())
-        ;
-    return result::Result::OK;
+    volatile uint32_t timeout{FLASH_IS_BUSY_TIMEOUT};
+    while(_flash->isBusy() && timeout > 0U)
+    {
+        --timeout;
+    }
+    return (timeout == 0) ? result::Result::ERROR_GENERAL : result::Result::OK;
 }
 
 result::Result
@@ -44,9 +49,12 @@ spi_flash_simple_fs_api_write(const uint32_t address, const uint8_t* const data,
         {
             return result::Result::ERROR_GENERAL;
         }
-        while(_flash->isBusy())
-            ;
-        return result::Result::OK;
+        volatile uint32_t timeout{FLASH_IS_BUSY_TIMEOUT};
+        while(_flash->isBusy() && timeout > 0U)
+        {
+            --timeout;
+        }
+        return (timeout == 0) ? result::Result::ERROR_GENERAL : result::Result::OK;
     }
     if(size % SPI_FLASH_PAGE_SIZE != 0)
     {
@@ -60,8 +68,12 @@ spi_flash_simple_fs_api_write(const uint32_t address, const uint8_t* const data,
         {
             return result::Result::ERROR_GENERAL;
         }
-        while(_flash->isBusy())
-            ;
+        uint32_t timeout{FLASH_IS_BUSY_TIMEOUT};
+        while(_flash->isBusy() && timeout > 0U)
+        {
+            --timeout;
+        }
+        return (timeout == 0) ? result::Result::ERROR_GENERAL : result::Result::OK;
     }
     return result::Result::OK;
 }

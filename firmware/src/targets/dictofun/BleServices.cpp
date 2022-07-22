@@ -217,6 +217,12 @@ void BleServices::start()
     _fsm.start();
 }
 
+void BleServices::stop()
+{
+    _fsm.stop();
+    filesystem::close(_file);
+}
+
 nrf_ble_qwr_t* BleServices::getQwrHandle()
 {
     return &m_qwr;

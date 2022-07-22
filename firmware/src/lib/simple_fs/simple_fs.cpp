@@ -47,6 +47,12 @@ result::Result init(const SpiFlashConfiguration& spi_flash_configuration)
     return result::Result::OK;
 }
 
+void deinit()
+{
+    _state.is_initialized = false;
+    current_file = nullptr;
+}
+
 constexpr size_t MAX_FILES_COUNT{50U};
 
 static const size_t HEADER_SIZE = 4U;

@@ -34,6 +34,7 @@ void FtsStateMachine::start()
 void FtsStateMachine::stop()
 {
     _state = State::INVALID;
+    filesystem::close(_context.file);
 }
 
 void FtsStateMachine::process_command(const BleCommands command) 

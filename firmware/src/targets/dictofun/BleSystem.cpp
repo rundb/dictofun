@@ -79,6 +79,13 @@ void BleSystem::start()
     _isActive = true;
 }
 
+void BleSystem::stop()
+{
+    stopAdvertising();
+    _bleServices.stop();
+    _isActive = false;
+}
+
 void BleSystem::cyclic()
 {
     if (_isActive)
@@ -92,6 +99,14 @@ void BleSystem::startAdvertising()
     ret_code_t           err_code;
 
     err_code = sd_ble_gap_adv_start(m_adv_handle, APP_BLE_CONN_CFG_TAG);
+    APP_ERROR_CHECK(err_code);
+}
+
+void BleSystem::stopAdvertising()
+{
+    ret_code_t err_code;
+
+    err_code = sd_ble_gap_adv_stop(m_adv_handle);
     APP_ERROR_CHECK(err_code);
 }
 

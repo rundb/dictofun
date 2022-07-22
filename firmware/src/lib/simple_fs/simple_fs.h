@@ -126,6 +126,8 @@ struct SpiFlashConfiguration
  */
 result::Result init(const SpiFlashConfiguration& spiFlashConfiguration);
 
+void deinit();
+
 /**
  * 1) Find the first location of the memory available for file storage.
  *    If previously open for write file has been detected, take actions on closing it (initially - return error, later - find the end of the file and close file properly)

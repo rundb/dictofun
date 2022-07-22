@@ -297,12 +297,12 @@ void application_cyclic()
         const auto res = do_restart();
         if(CompletionStatus::DONE == res)
         {
-            _applicationState = AppSmState::RECORD_START;
+            _applicationState = AppSmState::PREPARE;
         }
         else
         {
             // by default restart is not supported, proceed directly to finalize
-            _applicationState = AppSmState::FINALIZE;
+            //_applicationState = AppSmState::FINALIZE;
         }
     }
     break;
@@ -462,7 +462,12 @@ CompletionStatus do_connect()
         return CompletionStatus::DONE;
     }
 
-    // TODO: add restart detection
+    const auto isButtonPressed = isRecordButtonPressed();
+    if (isButtonPressed)
+    {
+        ble::BleSystem::getInstance().stop();
+        return CompletionStatus::RESTART_DETECTED;
+    }
     
     const auto timestamp = app_timer_cnt_get();
     if (timestamp - _context.start_timestamp > CONNECT_STATE_TIMEOUT)
@@ -483,7 +488,13 @@ CompletionStatus do_transfer()
         return CompletionStatus::DONE;
     }
 
-    // TODO: add restart detection
+    const auto isButtonPressed = isRecordButtonPressed();
+    if (isButtonPressed)
+    {
+        ble::BleSystem::getInstance().stop();
+        return CompletionStatus::RESTART_DETECTED;
+    }
+
     // TODO: add transmission error detection (or incapsulate it in FTS)
     const auto timestamp = app_timer_cnt_get();
     if ((timestamp - _context.start_timestamp > TRANSFER_STATE_TIMEOUT) || 
@@ -568,7 +579,8 @@ CompletionStatus do_restart()
 {
     // handle the previous state of the operation, assure consistency of FS and
     // trigger rec_start ASAP
-    return CompletionStatus::INVALID;
+    filesystem::deinit();
+    return CompletionStatus::DONE;
 }
 
 CompletionStatus do_shutdown()
