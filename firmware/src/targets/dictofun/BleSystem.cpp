@@ -81,8 +81,11 @@ void BleSystem::start()
 
 void BleSystem::stop()
 {
-    stopAdvertising();
-    _bleServices.stop();
+    const auto disconnect_result = sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_LOCAL_HOST_TERMINATED_CONNECTION);
+    if (disconnect_result != 0)
+    {
+        NRF_LOG_WARNING("gap disconnect: err_code = %d", disconnect_result);
+    }
     _isActive = false;
 }
 
@@ -99,15 +102,11 @@ void BleSystem::startAdvertising()
     ret_code_t           err_code;
 
     err_code = sd_ble_gap_adv_start(m_adv_handle, APP_BLE_CONN_CFG_TAG);
-    APP_ERROR_CHECK(err_code);
-}
-
-void BleSystem::stopAdvertising()
-{
-    ret_code_t err_code;
-
-    err_code = sd_ble_gap_adv_stop(m_adv_handle);
-    APP_ERROR_CHECK(err_code);
+    //APP_ERROR_CHECK(err_code);
+    if (err_code != 0)
+    {
+        NRF_LOG_WARNING("startAdv: err_code = %d", err_code);
+    }
 }
 
 void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)

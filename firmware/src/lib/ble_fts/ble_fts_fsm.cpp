@@ -46,6 +46,7 @@ void FtsStateMachine::process_command(const BleCommands command)
         {
             // TODO: consider assertion here
             NRF_LOG_ERROR("fts fsm: invalid state");
+            APP_ERROR_CHECK(0xFE);
             break;
         };
         case State::IDLE:

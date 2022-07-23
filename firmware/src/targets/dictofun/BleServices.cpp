@@ -62,22 +62,19 @@ void BleServices::handleFtsData(ble_fts_t* p_fts, uint8_t const* p_data, uint16_
     switch(p_data[0])
     {
       case CMD_GET_FILE: {
-          NRF_LOG_DEBUG("cmd: get_file");
           _ble_cmd = (BleCommands)p_data[0];
           break;
       }
       case CMD_GET_FILE_INFO: {
-          NRF_LOG_DEBUG("cmd: file_info");
           _ble_cmd = (BleCommands)p_data[0];
           break;
       }
       case CMD_GET_VALID_FILES_COUNT: {
-          NRF_LOG_DEBUG("cmd: files_count");
           _ble_cmd = (BleCommands)p_data[0];
           break;
       }
       default: {
-          NRF_LOG_ERROR("Unknown command: %02x", p_data[0]);
+          //NRF_LOG_ERROR("Unknown command: %02x", p_data[0]);
           break;
       }
     }
