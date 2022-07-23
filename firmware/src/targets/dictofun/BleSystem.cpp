@@ -81,7 +81,8 @@ void BleSystem::start()
 
 void BleSystem::stop()
 {
-    const auto disconnect_result = sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_LOCAL_HOST_TERMINATED_CONNECTION);
+    const auto disconnect_result = sd_ble_gap_disconnect(BleSystem::getInstance().getConnectionHandle(), 
+        BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
     if (disconnect_result != 0)
     {
         NRF_LOG_WARNING("gap disconnect: err_code = %d", disconnect_result);

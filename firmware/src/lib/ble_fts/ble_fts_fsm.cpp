@@ -4,14 +4,14 @@
 #include "drv_audio.h"
 
 const char* stateNames[] = {
-        "INVALID",
-        "IDLE",
-        "FS_INFO_TRANSMISSION",
-        "NEXT_FILE_INFO_TRANSMISSION",
-        "FILE_TRANSMISSION_START",
-        "FILE_TRANSMISSION_RUNNING",
-        "FILE_TRANSMISSION_END",
-        "DONE",
+        "invld",
+        "idle",
+        "fs_info_tx",
+        "fl_info_tx",
+        "data_tx_st",
+        "data_tx_rn",
+        "data_tx_end",
+        "done",
     };
 
 /// Glue code elements, connecting standard Nordic C API and CPP code of this repo

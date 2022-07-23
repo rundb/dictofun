@@ -74,7 +74,6 @@ void BleServices::handleFtsData(ble_fts_t* p_fts, uint8_t const* p_data, uint16_
           break;
       }
       default: {
-          //NRF_LOG_ERROR("Unknown command: %02x", p_data[0]);
           break;
       }
     }
@@ -238,11 +237,18 @@ static void led_write_handler(uint16_t conn_handle, ble_lbs_t* p_lbs, uint8_t le
     // TODO: get rid or fix to use the write LED
 }
 
+const char * dbg_command_decode[4] = {
+    "-",
+    "data",
+    "fileinfo",
+    "fsinfo",
+};
+
 void BleServices::cyclic()
 {
     if (_ble_cmd != CMD_EMPTY)
     {
-        NRF_LOG_INFO("cmd: %d", _ble_cmd);
+        NRF_LOG_INFO("cmd: %s", dbg_command_decode[_ble_cmd]);
     }
     _fsm.process_command(_ble_cmd);
     _ble_cmd = CMD_EMPTY;
