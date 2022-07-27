@@ -13,12 +13,15 @@
 #include <libraries/timer/app_timer.h>
 #include <nrf_gpio.h>
 #include <nrf_log.h>
+#include "tasks/battery_measurement.h"
 
 namespace application
 {
 AppSmState _applicationState{AppSmState::INIT};
 filesystem::File _currentFile;
 static const int SHUTDOWN_COUNTER_INIT_VALUE = 100;
+
+battery::BatteryMeasurement _batteryMeasurement(2U);
 
 const char* stateNames[] = {"INIT",
                             "PREPARE",
@@ -395,20 +398,38 @@ CompletionStatus do_record()
 
 CompletionStatus do_record_finalize()
 {
-    // close the audio file
-    const auto file_size = _currentFile.ram.size;
-    const auto close_res = filesystem::close(_currentFile);
-    if(close_res != result::Result::OK)
+    if (_context.state == InternalFsmState::DONE)
     {
-        NRF_LOG_ERROR("Record finalize: failed to close the file");
-        _context.is_unrecoverable_error_detected = true;
-        return CompletionStatus::ERROR;
+        // close the audio file
+        const auto file_size = _currentFile.ram.size;
+        const auto close_res = filesystem::close(_currentFile);
+        if(close_res != result::Result::OK)
+        {
+            NRF_LOG_ERROR("Record finalize: failed to close the file");
+            _context.is_unrecoverable_error_detected = true;
+            _context.state = InternalFsmState::DONE;
+            return CompletionStatus::ERROR;
+        }
+        // TODO: perform measurement of battery voltage.
+        if (!_batteryMeasurement.isInitialized())
+        {
+            _batteryMeasurement.init();
+        }
+        _batteryMeasurement.start();
+        _context.state = InternalFsmState::RUNNING;
     }
-    if(file_size == 0)
+    else if (_context.state == InternalFsmState::RUNNING)
     {
-        return CompletionStatus::INVALID;
+        if (_batteryMeasurement.isBusy())
+        {
+            return CompletionStatus::PENDING;
+        }
+        else
+        {
+            return CompletionStatus::DONE;        
+        }
     }
-
+    
     return CompletionStatus::DONE;
 }
 

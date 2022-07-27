@@ -131,6 +131,7 @@
       <file file_name="../../../sdk/nRF5_SDK_17.1.0_ddde560/modules/nrfx/drivers/src/nrfx_pdm.c" />
       <file file_name="../../../sdk/nRF5_SDK_17.1.0_ddde560/modules/nrfx/hal/nrf_nvmc.c" />
       <file file_name="../../../sdk/nRF5_SDK_17.1.0_ddde560/modules/nrfx/drivers/src/nrfx_wdt.c" />
+      <file file_name="../../../sdk/nRF5_SDK_17.1.0_ddde560/modules/nrfx/drivers/src/nrfx_saadc.c" />
     </folder>
     <folder Name="Application">
       <file file_name="./main.cpp" />
@@ -141,6 +142,7 @@
       <file file_name="./tasks/task_state.cpp" />
       <file file_name="./tasks/task_memory.cpp" />
       <file file_name="./tasks/task_led.cpp" />
+      <file file_name="./tasks/battery_measurement.cpp" />
     </folder>
     <folder Name="Lib">
       <file file_name="../../lib/spi_flash/spi.cpp" />
@@ -173,6 +175,7 @@
     </folder>
     <folder Name="nRF_BLE_Services">
       <file file_name="../../../sdk/nRF5_SDK_17.1.0_ddde560/components/ble/ble_services/ble_lbs/ble_lbs.c" />
+      <file file_name="../../../sdk/nRF5_SDK_17.1.0_ddde560/components/ble/ble_services/ble_bas/ble_bas.c" />
       <file file_name="../../../sdk/nRF5_SDK_17.1.0_ddde560/components/ble/ble_services/ble_dfu/ble_dfu.c" />
       <file file_name="../../../sdk/nRF5_SDK_17.1.0_ddde560/components/ble/ble_services/ble_dfu/ble_dfu_bonded.c" />
     </folder>

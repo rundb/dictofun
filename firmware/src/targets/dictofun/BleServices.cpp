@@ -9,6 +9,7 @@
 #include <ble/nrf_ble_qwr/nrf_ble_qwr.h>
 #include <ble_file_transfer_service.h>
 #include <ble_services/ble_lbs/ble_lbs.h>
+#include <ble_services/ble_bas/ble_bas.h>
 #include <boards/boards.h>
 #include <nrf_log.h>
 
@@ -28,8 +29,11 @@
 
 #include "simple_fs.h"
 
+#include "tasks/battery_measurement.h"
+
 NRF_BLE_QWR_DEF(m_qwr);
 BLE_LBS_DEF(m_lbs);
+BLE_BAS_DEF(m_bas);
 
 #define APP_ADV_INTERVAL 300
 #define APP_ADV_DURATION 18000
@@ -206,11 +210,33 @@ void BleServices::init()
     dfus_init.evt_handler = ble_dfu_evt_handler;
     err_code = ble_dfu_buttonless_init(&dfus_init);
     APP_ERROR_CHECK(err_code);
+
+    ble_bas_init_t bas_init_obj;
+
+    memset(&bas_init_obj, 0, sizeof(bas_init_obj));
+
+    bas_init_obj.support_notification = true;
+    bas_init_obj.initial_batt_level   = 100;
+
+    // Here the sec level for the Battery Service can be changed/increased.
+    bas_init_obj.bl_rd_sec        = SEC_OPEN;
+    bas_init_obj.bl_cccd_wr_sec   = SEC_OPEN;
+    bas_init_obj.bl_report_rd_sec = SEC_OPEN;
+
+    err_code = ble_bas_init(&m_bas, &bas_init_obj);
+    APP_ERROR_CHECK(err_code);
 }
 
 void BleServices::start()
 {
     _fsm.start();
+
+    const auto battery_level = battery::BatteryMeasurement::getInstance().level();
+    const auto err_code = ble_bas_battery_level_update(&m_bas, battery_level, BLE_CONN_HANDLE_ALL);
+    if (err_code != NRF_SUCCESS)
+    {
+        APP_ERROR_HANDLER(err_code);
+    }
 }
 
 void BleServices::stop()
