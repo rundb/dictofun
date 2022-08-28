@@ -339,8 +339,8 @@ CompletionStatus do_prepare()
         if (!_batteryMeasurement.isInitialized())
         {
             _batteryMeasurement.init();
+            _batteryMeasurement.start();
         }
-        _batteryMeasurement.start();
 
         volatile auto fs_init_res = filesystem::init(integration::spi_flash_simple_fs_config);
         // mount the filesystem
@@ -610,7 +610,10 @@ CompletionStatus do_restart()
 {
     // handle the previous state of the operation, assure consistency of FS and
     // trigger rec_start ASAP
+    filesystem::close(_currentFile);
     filesystem::deinit();
+    _context.state = InternalFsmState::DONE;
+
     return CompletionStatus::DONE;
 }
 

@@ -47,6 +47,8 @@ result::Result audio_stop_record()
     float store_rate = (float)written_data * 1000 / float(end_time - start_time);
     NRF_LOG_INFO("audio: timespan=%d, data rate = %d, store rate = %d", end_time - start_time, (int)data_rate, (int)store_rate);
 
+    _current_audio_file = nullptr;
+
     return (invalid_writes_counter > valid_writes_counter) ? result::Result::ERROR_GENERAL : result::Result::OK;
 }
 
