@@ -336,8 +336,13 @@ CompletionStatus do_prepare()
 
     if(_context.state == InternalFsmState::DONE)
     {
+        if (!_batteryMeasurement.isInitialized())
+        {
+            _batteryMeasurement.init();
+        }
+        _batteryMeasurement.start();
+
         volatile auto fs_init_res = filesystem::init(integration::spi_flash_simple_fs_config);
-        _context.state == InternalFsmState::RUNNING;
         // mount the filesystem
         if(fs_init_res != result::Result::OK)
         {
@@ -353,16 +358,26 @@ CompletionStatus do_prepare()
             return CompletionStatus::ERROR;
         }
 
-        _context.state == InternalFsmState::DONE;
-        return CompletionStatus::DONE;
+        _context.state = InternalFsmState::RUNNING;
+        return CompletionStatus::PENDING;
     }
     else if(_context.state == InternalFsmState::RUNNING)
     {
-        return CompletionStatus::DONE;
+        if (!_batteryMeasurement.isBusy())
+        {
+            _context.state = InternalFsmState::DONE;
+            if (_batteryMeasurement.voltage() < battery::BatteryMeasurement::MINIMAL_OPERATIONAL_VOLTAGE)
+            {
+                NRF_LOG_ERROR("Battery low (%dmV)", static_cast<int>(_batteryMeasurement.voltage() * 1000));
+                return CompletionStatus::ERROR;
+            }
+            return CompletionStatus::DONE;
+        }
+        return CompletionStatus::PENDING;
     }
 
-    _context.state = InternalFsmState::DONE;
-    return CompletionStatus::DONE;
+    _context.state = InternalFsmState::RUNNING;
+    return CompletionStatus::PENDING;
 }
 
 CompletionStatus do_record_start()
@@ -410,12 +425,6 @@ CompletionStatus do_record_finalize()
             _context.state = InternalFsmState::DONE;
             return CompletionStatus::ERROR;
         }
-        // TODO: perform measurement of battery voltage.
-        if (!_batteryMeasurement.isInitialized())
-        {
-            _batteryMeasurement.init();
-        }
-        _batteryMeasurement.start();
         _context.state = InternalFsmState::RUNNING;
     }
     else if (_context.state == InternalFsmState::RUNNING)

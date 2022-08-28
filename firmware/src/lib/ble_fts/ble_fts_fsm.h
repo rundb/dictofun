@@ -92,6 +92,19 @@ private:
     result::Result send_data(Context& context, size_t size);
 
     static const uint16_t BLE_ITS_MAX_DATA_LEN = BLE_GATT_ATT_MTU_DEFAULT - 3;
+
+    struct CommandSequenceTimestamps
+    {
+        uint32_t last_get_fs_info_timestamp{INVALID_TIMESTAMP};
+        uint32_t last_get_file_info_timestamp{INVALID_TIMESTAMP};
+        bool is_command_sequence_malfunction_detection_active{false};
+        bool is_last_command_updated{false};
+        BleCommands last_command{CMD_EMPTY};
+        static const uint32_t INVALID_TIMESTAMP{0xFEDEEDEFUL};
+        static const uint32_t INVALID_STATE_THRESHOLD_MS{2000};
+    };
+    CommandSequenceTimestamps _malfunction_detection_context;
+    bool detect_command_sequence_malfunction();
 };
 
 } // namespace fts

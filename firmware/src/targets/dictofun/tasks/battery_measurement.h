@@ -32,6 +32,7 @@ public:
     uint8_t level();
     void isr();
     static inline BatteryMeasurement& getInstance() { return *_instance;}
+    static constexpr float MINIMAL_OPERATIONAL_VOLTAGE{3.2};
 private:
     static BatteryMeasurement * _instance;
     bool _isInitialized{false};

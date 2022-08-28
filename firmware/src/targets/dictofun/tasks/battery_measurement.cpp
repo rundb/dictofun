@@ -33,6 +33,7 @@ void BatteryMeasurement::init()
 void BatteryMeasurement::start()
 {
   _samples_gathered = 0;
+  while (nrfx_saadc_is_busy());
   auto err_code = nrfx_saadc_buffer_convert(_samples, 1);
   APP_ERROR_CHECK(err_code);
   err_code = nrfx_saadc_sample();
@@ -42,10 +43,6 @@ void BatteryMeasurement::start()
 
 bool BatteryMeasurement::isBusy()
 {
-    // if (nrfx_adc_is_busy())
-    // {
-    //     return true;
-    // }
     return _isBusy;
 }
 

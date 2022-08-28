@@ -37,6 +37,54 @@ void FtsStateMachine::stop()
     filesystem::close(_context.file);
 }
 
+
+/**
+ * This function has been introduced as response to sporadic failure in the command sequence.
+ * It happens always immediately after pairing and sometimes during the normal operation.
+ * 
+ * Idea of this detection is the following: 
+ * - if CMD_GET_VALID_FILES_COUNT has been received, CMD_GET_FILE_INFO request should 
+ *   show up no more than 2 seconds afterwards;
+ * - if CMD_GET_FILE_INFO has been received and next file is not empty, CMD_GET_FILE should 
+ *   show up no more than 2 seconds afterwards.
+ * 
+ * This function only detects this malfunction and is not responsible for the response generation.
+ * Suggested response to this event - restart the main FSM of the system from `connecting` state.
+ */
+bool FtsStateMachine::detect_command_sequence_malfunction()
+{
+    if (!_malfunction_detection_context.is_command_sequence_malfunction_detection_active)
+    {
+        return false;
+    }
+    const auto current_timestamp = _timestamp_function();
+    if (_malfunction_detection_context.is_last_command_updated)
+    {
+        if (_malfunction_detection_context.last_command == CMD_GET_FILE_INFO)
+        {
+            _malfunction_detection_context.last_get_file_info_timestamp = current_timestamp;
+        }
+        else if (_malfunction_detection_context.last_command == CMD_GET_VALID_FILES_COUNT)
+        {
+            _malfunction_detection_context.last_get_fs_info_timestamp = current_timestamp;
+        }
+        _malfunction_detection_context.is_last_command_updated = false;
+    }
+    else
+    {
+        // process timeout detection
+        if ((_malfunction_detection_context.last_command == CMD_GET_FILE_INFO && 
+            ((current_timestamp - _malfunction_detection_context.last_get_file_info_timestamp) > CommandSequenceTimestamps::INVALID_STATE_THRESHOLD_MS)) || 
+            (_malfunction_detection_context.last_command == CMD_GET_VALID_FILES_COUNT && 
+            ((current_timestamp - _malfunction_detection_context.last_get_fs_info_timestamp) > CommandSequenceTimestamps::INVALID_STATE_THRESHOLD_MS)))
+        {
+            _malfunction_detection_context.is_command_sequence_malfunction_detection_active = false;
+            return true;   
+        }
+    }
+    return false;
+}
+
 void FtsStateMachine::process_command(const BleCommands command) 
 {
     const State prev_state{_state};
@@ -56,16 +104,25 @@ void FtsStateMachine::process_command(const BleCommands command)
                 case CMD_GET_FILE:
                 {
                     _state = State::FILE_TRANSMISSION_START;
+                    _malfunction_detection_context.last_command = command;
+                    _malfunction_detection_context.is_command_sequence_malfunction_detection_active = false;
+                    _malfunction_detection_context.is_last_command_updated = true;
                     break;
                 }
                 case CMD_GET_FILE_INFO:
                 {
                     _state = State::NEXT_FILE_INFO_TRANSMISSION;
+                    _malfunction_detection_context.last_command = command;
+                    _malfunction_detection_context.is_command_sequence_malfunction_detection_active = true;
+                    _malfunction_detection_context.is_last_command_updated = true;
                     break;
                 }
                 case CMD_GET_VALID_FILES_COUNT:
                 {
                     _state = State::FS_INFO_TRANSMISSION;
+                    _malfunction_detection_context.last_command = command;
+                    _malfunction_detection_context.is_command_sequence_malfunction_detection_active = true;
+                    _malfunction_detection_context.is_last_command_updated = true;
                     break;
                 }
                 default: break;
@@ -220,6 +277,11 @@ void FtsStateMachine::process_command(const BleCommands command)
     if (_state != prev_state)
     {
         NRF_LOG_INFO("%s->%s(%d)", stateNames[(int)prev_state], stateNames[(int)_state], command);
+    }
+    if (detect_command_sequence_malfunction())
+    {
+        NRF_LOG_ERROR("FSM: detected FSM failure, state %s. Finalizing operation.", stateNames[(int)_state]);
+        _state = State::DONE;
     }
 }
 
