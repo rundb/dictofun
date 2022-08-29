@@ -101,7 +101,7 @@ private:
         bool is_last_command_updated{false};
         BleCommands last_command{CMD_EMPTY};
         static const uint32_t INVALID_TIMESTAMP{0xFEDEEDEFUL};
-        static const uint32_t INVALID_STATE_THRESHOLD_MS{5000};
+        static const uint32_t INVALID_STATE_THRESHOLD_MS{10000};
     };
     CommandSequenceTimestamps _malfunction_detection_context;
     bool detect_command_sequence_malfunction();

@@ -138,7 +138,7 @@ void FtsStateMachine::process_command(const BleCommands command)
                 _state = State::INVALID;
                 return;
             }
-            NRF_LOG_DEBUG("Sending files' count: %d", _context.files_count.valid);
+            NRF_LOG_INFO("files count: valid(%d), invalid(%d)", _context.files_count.valid, _context.files_count.invalid);
 
             ble_fts_filesystem_info_t fs_info;
             fs_info.valid_files_count = _context.files_count.valid;
@@ -146,6 +146,10 @@ void FtsStateMachine::process_command(const BleCommands command)
             if (res != 0)
             {
                 NRF_LOG_ERROR("fts filesystem info send has failed, error code %d", res);
+                // FIXME: artificial delay for 200 ms should help in this case
+                const auto delay_start_timestamp = _timestamp_function();
+                while ((_timestamp_function() - delay_start_timestamp) < 200);
+
             }
             else 
             {

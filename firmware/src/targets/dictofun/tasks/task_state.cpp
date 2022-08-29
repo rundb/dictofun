@@ -464,6 +464,7 @@ CompletionStatus do_connect()
         {
             NRF_LOG_ERROR("task_state: file opening failure!");
             _context.is_unrecoverable_error_detected = true;
+            _context.state = InternalFsmState::DONE;
             return CompletionStatus::ERROR;
         }
         file_size = _currentFile.rom.size;
