@@ -187,10 +187,19 @@ void FtsStateMachine::process_command(const BleCommands command)
                         _state = State::INVALID;
                         return;
                     }
+                    filesystem::get_files_count(_context.files_count);
+                    if (_context.files_count.valid == 0U)
+                    {
+                        _state = State::DONE;
+                    }
                     continue;
                 }
                 _context.current_file_size = _context.file.rom.size;
                 is_next_file_found = true;
+            }
+            if (_state == State::DONE)
+            {
+                break;
             }
 
             ble_fts_file_info_t file_info;
@@ -270,7 +279,7 @@ void FtsStateMachine::process_command(const BleCommands command)
                 _state = State::INVALID;
                 return;
             }
-            NRF_LOG_INFO("files count: valid=%d, invalid=%d", _context.files_count.valid, _context.files_count.invalid);
+            NRF_LOG_INFO("files count after transmission: valid=%d, invalid=%d", _context.files_count.valid, _context.files_count.invalid);
 
             _state = (_context.files_count.valid > 0) ? State::IDLE : State::DONE;
             save_activity_timestamp();

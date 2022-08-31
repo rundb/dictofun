@@ -77,12 +77,12 @@ struct FsmContext
 };
 
 // connection timeout in milliseconds (60 seconds)
-static const uint32_t CONNECT_STATE_TIMEOUT = 60000;
+static const uint32_t CONNECT_STATE_TIMEOUT = 30000;
 
-// transfer timeout in milliseconds (600 seconds)
-static const uint32_t TRANSFER_STATE_TIMEOUT = 600000;
+// transfer timeout in milliseconds (1200 seconds)
+static const uint32_t TRANSFER_STATE_TIMEOUT = 1200000;
 
-static const uint32_t REPORT_TRANSMISSION_PROGRESS_TIMEOUT = 15000;
+static const uint32_t REPORT_TRANSMISSION_PROGRESS_TIMEOUT = 10000;
 
 // activity timeout in milliseconds (120 seconds)
 static const uint32_t TRANSFER_STATE_INACTIVITY_TIMEOUT = 120000;
@@ -435,6 +435,7 @@ CompletionStatus do_record_finalize()
         }
         else
         {
+            _context.state = InternalFsmState::DONE;
             return CompletionStatus::DONE;        
         }
     }
@@ -452,6 +453,7 @@ CompletionStatus do_connect()
     if (result::Result::OK != count_result)
     {
         _context.is_unrecoverable_error_detected = true;
+        _context.state = InternalFsmState::DONE;
         return CompletionStatus::ERROR;
     }
 
@@ -462,7 +464,7 @@ CompletionStatus do_connect()
         const auto open_result = filesystem::open(_currentFile);
         if(open_result != result::Result::OK)
         {
-            NRF_LOG_ERROR("task_state: file opening failure!");
+            NRF_LOG_ERROR("task_state: file opening failure (%d)", open_result);
             _context.is_unrecoverable_error_detected = true;
             _context.state = InternalFsmState::DONE;
             return CompletionStatus::ERROR;
@@ -498,12 +500,14 @@ CompletionStatus do_connect()
     if (isButtonPressed)
     {
         ble::BleSystem::getInstance().stop();
+        _context.state = InternalFsmState::DONE;
         return CompletionStatus::RESTART_DETECTED;
     }
     
     const auto timestamp = app_timer_cnt_get();
     if (timestamp - _context.start_timestamp > CONNECT_STATE_TIMEOUT)
     {
+        NRF_LOG_ERROR("Connection timeout error.");
         return CompletionStatus::TIMEOUT;
     }
 
@@ -517,6 +521,7 @@ CompletionStatus do_transfer()
     // transfer the data to the phone
     if(ble::BleSystem::getInstance().getServices().isFileTransmissionComplete())
     {
+        _context.state = InternalFsmState::DONE;
         return CompletionStatus::DONE;
     }
 
@@ -524,6 +529,7 @@ CompletionStatus do_transfer()
     if (isButtonPressed)
     {
         ble::BleSystem::getInstance().stop();
+        _context.state = InternalFsmState::DONE;
         return CompletionStatus::RESTART_DETECTED;
     }
 
@@ -532,6 +538,7 @@ CompletionStatus do_transfer()
     if ((timestamp - _context.start_timestamp > TRANSFER_STATE_TIMEOUT) || 
         (ble::BleSystem::getInstance().getServices().getTimeSinceLastFtsActivity() > TRANSFER_STATE_INACTIVITY_TIMEOUT))
     {
+        NRF_LOG_ERROR("Transfer timeout error.");
         return CompletionStatus::TIMEOUT;
     }
 
@@ -539,6 +546,13 @@ CompletionStatus do_transfer()
     {
         _context.last_file_transmission_report_timestamp = timestamp;
         const auto report = ble::BleSystem::getInstance().getServices().getProgressReportData();
+        if (report.files_left_count == 0U)
+        {
+            // This is a sign of inconsistency in the state machine operation on the phone's side.
+            // It's safe to say that at this stage transmission won't happen, so timeout can be reported
+            NRF_LOG_ERROR("Phone has failed to initiate transfer. Timeout error, causing a shutdown.");
+            return CompletionStatus::TIMEOUT;
+        }
 
         NRF_LOG_INFO("progress: %d, %d %", report.files_left_count, (report.transferred_data_size * 100)/(report.current_file_size+1));
     }
@@ -550,6 +564,7 @@ CompletionStatus do_disconnect()
 {
     // TODO: close the BLE connection
     ble::BleSystem::getInstance().disconnect();
+    _context.state = InternalFsmState::DONE;
     return CompletionStatus::DONE;
 }
 

@@ -360,6 +360,7 @@ result::Result close(File& file)
     if (file.ram.is_write)
     {
         auto& config = _spi_flash_configuration;
+
         // finalize file write
         file.rom.next_file_start =
             file.ram.current_file_start_address + config.page_size + file.ram.size;
