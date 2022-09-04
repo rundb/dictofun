@@ -85,8 +85,9 @@ void BleSystem::stop()
         BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
     if (disconnect_result != 0)
     {
-        NRF_LOG_WARNING("gap disconnect: err_code = %d", disconnect_result);
+        NRF_LOG_WARNING("gap disconnect: err_code = 0x%x", disconnect_result);
     }
+    stopAdvertising();
     _isActive = false;
 }
 
@@ -107,6 +108,17 @@ void BleSystem::startAdvertising()
     if (err_code != 0)
     {
         NRF_LOG_WARNING("startAdv: err_code = %d", err_code);
+    }
+}
+
+void BleSystem::stopAdvertising()
+{
+    ret_code_t           err_code;
+
+    err_code = sd_ble_gap_adv_stop(m_adv_handle);
+    if (err_code != 0)
+    {
+        NRF_LOG_WARNING("stopAdv: err_code = %d", err_code);
     }
 }
 
