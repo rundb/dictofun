@@ -206,10 +206,20 @@ void FtsStateMachine::process_command(const BleCommands command)
             file_info.file_size_bytes = _context.current_file_size;
             const auto result = ble_fts_file_info_send(&m_fts, &file_info);
             NRF_LOG_DEBUG("Sending file info, size %d, result(%d)", _context.current_file_size, result);
+            if (result != 0)
+            {
+                NRF_LOG_ERROR("fts file info send has failed, error code %d", result);
+                // FIXME: artificial delay for 200 ms should help in this case
+                const auto delay_start_timestamp = _timestamp_function();
+                while ((_timestamp_function() - delay_start_timestamp) < 200);
 
-            save_activity_timestamp();
-            _state = State::IDLE;
-            break;
+            }
+            else
+            {
+                save_activity_timestamp();
+                _state = State::IDLE;
+                break;
+            }
         }
         case State::FILE_TRANSMISSION_START:
         {
