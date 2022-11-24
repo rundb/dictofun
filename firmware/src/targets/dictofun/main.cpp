@@ -20,6 +20,10 @@
 #include "nrf_drv_clock.h"
 #include "nrf_drv_wdt.h"
 
+#include "FreeRTOS.h"
+#include "task.h"
+#include "timers.h"
+
 #include <tasks/task_audio.h>
 #include <tasks/task_led.h>
 #include <tasks/task_state.h>
