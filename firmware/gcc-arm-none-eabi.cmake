@@ -9,7 +9,6 @@ set(CMAKE_CXX_COMPILER          arm-none-eabi-g++)
 set(CMAKE_LINKER                arm-none-eabi-gcc)
 set(CMAKE_OBJCOPY               arm-none-eabi-objcopy)
 
-#SET(CMAKE_C_FLAGS               "-specs=nosys.specs")
 SET(CMAKE_EXE_LINKER_FLAGS      "-specs=nosys.specs")
 
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM     NEVER)
