@@ -1,0 +1,1 @@
+add_executable(dictofun_main main.cpp)
