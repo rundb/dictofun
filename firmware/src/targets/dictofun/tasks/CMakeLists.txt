@@ -13,4 +13,5 @@ add_library(tasks STATIC
 
 target_include_directories(tasks PUBLIC ./)
 
-target_link_libraries(application PRIVATE ble_fts)
+target_link_libraries(tasks PRIVATE ble_fts)
+target_link_libraries(tasks PRIVATE nrf5_nrfx_saadc)

@@ -2,8 +2,8 @@
 /*
  * Copyright (c) 2022, Roman Turkin
  */
-#include "tasks/task_audio.h"
-#include "tasks/task_state.h"
+#include "task_audio.h"
+#include "task_state.h"
 #include <nrfx.h>
 #include "nrf_log.h"
 #include "simple_fs.h"

@@ -7,3 +7,4 @@ project(Dictofun LANGUAGES C CXX ASM)
 include("cmake/nrf5.cmake")
 
 add_subdirectory(src)
+

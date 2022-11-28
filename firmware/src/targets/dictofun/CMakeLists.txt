@@ -9,6 +9,6 @@ target_link_libraries(dictofun_main PRIVATE
     application
     tasks)
 
-target_link_libraries(dictofun_main PRIVATE
+target_link_libraries(dictofun_main PUBLIC
     nrf5_nrfx_common
 )
