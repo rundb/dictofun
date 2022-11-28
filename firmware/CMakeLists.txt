@@ -4,4 +4,6 @@ cmake_minimum_required(VERSION 3.22)
 
 project(Dictofun LANGUAGES C CXX ASM)
 
+include("cmake/nrf5.cmake")
+
 add_subdirectory(src)

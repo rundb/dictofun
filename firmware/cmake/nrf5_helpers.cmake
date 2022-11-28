@@ -36,7 +36,7 @@ function(nrf5_get_sdk_version sdk_path out_sdk_version)
 endfunction()
 
 function(nrf5_validate_sdk_version sdk_version)
-  set(supported_sdk_versions "15.3.0" "16.0.0")
+  set(supported_sdk_versions "15.3.0" "16.0.0" "17.1.0")
   list(FIND supported_sdk_versions ${sdk_version} sdk_version_index)
   if(sdk_version_index EQUAL -1)
     message(FATAL_ERROR "Provided nRF SDK version ${sdk_version} is not supported, try these: ${supported_sdk_versions}")
@@ -64,7 +64,7 @@ function(nrf5_get_board_target sdk_version board out_target out_define)
   set(board_pca10028      nrf51422_xxac BOARD_PCA10028 15.3.0 16.0.0)
   set(board_pca10031      nrf51422_xxac BOARD_PCA10031 15.3.0 16.0.0)
   set(board_pca10036      nrf52832_xxaa BOARD_PCA10036 15.3.0 16.0.0)
-  set(board_pca10040      nrf52832_xxaa BOARD_PCA10040 15.3.0 16.0.0)
+  set(board_pca10040      nrf52832_xxaa BOARD_PCA10040 15.3.0 17.1.0)
   set(board_pca10040e     nrf52810_xxaa BOARD_PCA10040 15.3.0 16.0.0)
   set(board_pca10056      nrf52840_xxaa BOARD_PCA10056 15.3.0 16.0.0)
   set(board_pca10056e     nrf52811_xxaa BOARD_PCA10056 15.3.0 16.0.0)
@@ -131,7 +131,7 @@ function(nrf5_get_target_flags sdk_version target out_target out_target_short ou
   set(target_nrf52805_xxaa nrf52805 NRF52805_XXAA 15.3.0 16.0.0)
   set(target_nrf52810_xxaa nrf52810 NRF52810_XXAA 15.3.0 16.0.0)
   set(target_nrf52811_xxaa nrf52811 NRF52811_XXAA 15.3.0 16.0.0)
-  set(target_nrf52832_xxaa nrf52832 NRF52832_XXAA 15.3.0 16.0.0)
+  set(target_nrf52832_xxaa nrf52832 NRF52832_XXAA 15.3.0 17.1.0)
   set(target_nrf52832_xxab nrf52832 NRF52832_XXAB 15.3.0 16.0.0)
   set(target_nrf52833_xxaa nrf52833 NRF52833_XXAA 16.0.0 16.0.0)
   set(target_nrf52840_xxaa nrf52840 NRF52840_XXAA 15.3.0 16.0.0)
@@ -237,6 +237,7 @@ function(nrf5_get_softdevice_data sdk_path sdk_version target sd_variant out_sd_
   # Check supported SD.
   set(softdevices_15.3.0 s112 s132 s140 s212 s312 s332 s340)
   set(softdevices_16.0.0 s112 s113 s132 s140 s212 s312 s332 s340)
+  set(softdevices_17.1.0 s112 s113 s132 s140 s212 s312 s332 s340)
 
   list(FIND softdevices_${sdk_version} ${sd_variant} sd_variant_supported)
   if (sd_variant_supported EQUAL -1)
@@ -260,6 +261,8 @@ function(nrf5_get_softdevice_data sdk_path sdk_version target sd_variant out_sd_
   set(supports_16.0.0_s312 nrf52810)
   set(supports_16.0.0_s332 nrf52832)
   set(supports_16.0.0_s340 nrf52840)
+
+  set(supports_17.1.0_s132 nrf52832)
 
   list(FIND supports_${sdk_version}_${sd_variant} ${target_group} sd_target_supported)
   if (sd_target_supported EQUAL -1)
@@ -295,6 +298,8 @@ function(nrf5_get_softdevice_data sdk_path sdk_version target sd_variant out_sd_
   set(softdevice_16.0.0_s312 6.1.1 YES YES)
   set(softdevice_16.0.0_s332 6.1.1 YES YES)
   set(softdevice_16.0.0_s340 6.1.1 YES YES)
+
+  set(softdevice_17.1.0_s132 7.2.0 YES NO)
 
   list(GET softdevice_${sdk_version}_${sd_variant} ${sd_key_version} sd_version)
   list(GET softdevice_${sdk_version}_${sd_variant} ${sd_key_use_ble} sd_use_ble)
