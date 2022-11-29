@@ -6,3 +6,7 @@ add_library(ble_fts STATIC
 )
 
 target_include_directories(ble_fts PUBLIC ./)
+
+target_link_libraries(ble_fts PUBLIC project_config)
+target_link_libraries(ble_fts PUBLIC nrf5_soc)
+target_link_libraries(ble_fts PUBLIC nrf5_ble_common)

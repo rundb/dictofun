@@ -1,14 +1,10 @@
 add_executable(dictofun_main main.cpp)
 
-add_subdirectory(application)
 add_subdirectory(tasks)
+add_subdirectory(config)
 
 nrf5_target(dictofun_main)
 
 target_link_libraries(dictofun_main PRIVATE 
-    application
-    tasks)
-
-target_link_libraries(dictofun_main PUBLIC
-    nrf5_nrfx_common
+    tasks
 )
