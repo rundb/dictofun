@@ -6,11 +6,11 @@
 #include "BleServices.h"
 
 #include "drv_audio.h"
-#include <ble/nrf_ble_qwr/nrf_ble_qwr.h>
+#include <nrf_ble_qwr.h>
 #include <ble_file_transfer_service.h>
-#include <ble_services/ble_lbs/ble_lbs.h>
-#include <ble_services/ble_bas/ble_bas.h>
-#include <boards/boards.h>
+#include <ble_lbs.h>
+#include <ble_bas.h>
+#include <boards.h>
 #include <nrf_log.h>
 
 #include "nrf_dfu_ble_svci_bond_sharing.h"
@@ -29,7 +29,7 @@
 
 #include "simple_fs.h"
 
-#include "tasks/battery_measurement.h"
+#include "battery_measurement.h"
 
 NRF_BLE_QWR_DEF(m_qwr);
 BLE_LBS_DEF(m_lbs);

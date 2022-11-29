@@ -6,7 +6,7 @@
 
 #if defined(BOARD_NRF6310)
 #elif defined(BOARD_PCA10040)
-  #include "pca10040.h"
+  #include "pca10040_dictofun.h"
 #elif defined(BOARD_PCA10056)
   #include "pca10056.h"
 #elif defined(BOARD_CUSTOM)

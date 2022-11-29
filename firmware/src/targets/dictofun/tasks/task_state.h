@@ -4,7 +4,7 @@
  */
 #pragma once
 
-#include "boards/boards.h"
+#include "boards.h"
 
 namespace application
 {

@@ -8,3 +8,4 @@ include("cmake/nrf5.cmake")
 
 add_subdirectory(src)
 
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DNRF_DFU_SETTINGS_VERSION=2")

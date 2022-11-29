@@ -28,7 +28,7 @@
 #include "nrf_log.h"
 
 #include "nrf_drv_pdm.h"
-#include "boards/boards.h"
+#include "boards.h"
 
 
 //#define DBG_RADIO_STATUS			31
