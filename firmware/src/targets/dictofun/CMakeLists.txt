@@ -8,4 +8,6 @@ nrf5_target(dictofun_main)
 
 target_link_libraries(dictofun_main PRIVATE 
     tasks
+    spi_flash
+    boards
 )

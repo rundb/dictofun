@@ -16,10 +16,10 @@ void application_cyclic();
 
 #include <ble_types.h>
 #include <ble.h>
-#include <libraries/util/app_util.h>
-#include <libraries/timer/app_timer.h>
-#include <ble/nrf_ble_gatt/nrf_ble_gatt.h>
-#include <ble/peer_manager/peer_manager.h>
+#include <app_util.h>
+#include <app_timer.h>
+#include <nrf_ble_gatt.h>
+#include <peer_manager.h>
 #include "BleServices.h"
 #include "simple_fs.h"
 

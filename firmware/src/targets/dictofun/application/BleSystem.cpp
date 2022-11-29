@@ -4,20 +4,20 @@
  */
 
 #include "BleSystem.h"
-#include <softdevice/common/nrf_sdh.h>
-#include <softdevice/common/nrf_sdh_ble.h>
-#include <ble/nrf_ble_qwr/nrf_ble_qwr.h>
-#include <ble/nrf_ble_gatt/nrf_ble_gatt.h>
-#include <ble/ble_services/ble_lbs/ble_lbs.h>
-#include <ble/common/ble_advdata.h>
-#include <ble/common/ble_conn_params.h>
-#include <ble/peer_manager/peer_manager_handler.h>
-#include <libraries/util/app_error.h>
+#include <nrf_sdh.h>
+#include <nrf_sdh_ble.h>
+#include <nrf_ble_qwr.h>
+#include <nrf_ble_gatt.h>
+#include <ble_lbs.h>
+#include <ble_advdata.h>
+#include <ble_conn_params.h>
+#include <peer_manager_handler.h>
+#include <app_error.h>
 #include "ble_file_transfer_service.h"
 #include <nrf_log.h>
 #include <stdint.h>
 #include "BleServices.h"
-#include <boards/boards.h>
+#include <boards.h>
 #include "simple_fs.h"
 
 // Legacy define. I haven't come up with a replacement for this part of nordic interfaces
