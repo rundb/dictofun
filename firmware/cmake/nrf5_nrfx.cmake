@@ -1229,3 +1229,48 @@ list(APPEND NRF5_LIBRARY_NRF5_NRFX_QDEC_DEPENDENCIES
   nrf5_soc
   nrf5_strerror
 )
+
+# PDM nrfx driver
+add_library(nrf5_nrfx_pdm OBJECT EXCLUDE_FROM_ALL
+  "${NRF5_SDK_PATH}/modules/nrfx/drivers/src/nrfx_pdm.c"
+)
+target_include_directories(nrf5_nrfx_pdm PUBLIC
+  "${NRF5_SDK_PATH}/components/libraries/util"
+  "${NRF5_SDK_PATH}/modules/nrfx/drivers/include"
+  "${NRF5_SDK_PATH}/integration/nrfx/legacy"
+)
+target_link_libraries(nrf5_nrfx_pdm PUBLIC
+  nrf5_log
+  nrf5_nrfx_common
+)
+list(APPEND NRF5_LIBRARY_NRF5_NRFX_PDM_DEPENDENCIES
+  nrf5_app_scheduler
+  nrf5_app_util_platform
+  nrf5_atfifo
+  nrf5_atomic
+  nrf5_balloc
+  nrf5_balloc_fwd
+  nrf5_cli
+  nrf5_cli_fwd
+  nrf5_config
+  nrf5_crc16
+  nrf5_delay
+  nrf5_ext_fprintf
+  nrf5_fds
+  nrf5_fstorage
+  nrf5_log
+  nrf5_log_fwd
+  nrf5_mdk
+  nrf5_memobj
+  nrf5_memobj_fwd
+  nrf5_mtx
+  nrf5_nrfx_common
+  nrf5_nrfx_hal
+  nrf5_pwr_mgmt
+  nrf5_queue
+  nrf5_ringbuf
+  nrf5_sdh
+  nrf5_section
+  nrf5_soc
+  nrf5_strerror
+)
