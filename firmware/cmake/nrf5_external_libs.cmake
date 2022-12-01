@@ -62,43 +62,6 @@ if (NOT is_short_wchar EQUAL -1)
   set(short_wchar "short-wchar")
 endif()
 
-
-# CC310 library
-
-set(cc310_interrupts "")
-file(STRINGS "${NRF5_SDKCONFIG_PATH}/sdk_config.h" sdk_config_file)
-string(REGEX MATCH "NRF_CRYPTO_BACKEND_CC310_INTERRUPTS_ENABLED 1" cc310_interrupts_enabled "${sdk_config_file}")
-if(NOT cc310_interrupts_enabled)
-  set(cc310_interrupts "no-interrupts")
-endif()
-
-set(cc310_variant "${cpu_type}/${float_abi}/${short_wchar}/${cc310_interrupts}")
-set(cc310_lib_path "${NRF5_SDK_PATH}/external/nrf_cc310/lib/${cc310_variant}/libnrf_cc310_0.9.12.a")
-
-if(EXISTS "${cc310_lib_path}")
-  target_link_libraries(nrf5_crypto_cc310_backend PUBLIC "${cc310_lib_path}")
-else()
-  message(WARNING "CC310 library not found: ${cc310_lib_path}")
-endif()
-
-# CC310 BL library
-
-set(cc310_bl_interrupts "")
-file(STRINGS "${NRF5_SDKCONFIG_PATH}/sdk_config.h" sdk_config_file)
-string(REGEX MATCH "NRF_CRYPTO_BACKEND_CC310_BL_INTERRUPTS_ENABLED 1" cc310_bl_interrupts_enabled "${sdk_config_file}")
-if(NOT cc310_bl_interrupts_enabled)
-  set(cc310_bl_interrupts "no-interrupts")
-endif()
-
-set(cc310_bl_variant "${cpu_type}/${float_abi}/${short_wchar}/${cc310_bl_interrupts}")
-set(cc310_bl_lib_path "${NRF5_SDK_PATH}/external/nrf_cc310_bl/lib/${cc310_bl_variant}/libnrf_cc310_bl_0.9.12.a")
-
-if(EXISTS "${cc310_bl_lib_path}")
-  target_link_libraries(nrf5_crypto_cc310_bl_backend PUBLIC "${cc310_bl_lib_path}")
-else()
-  message(WARNING "CC310 BL library not found: ${cc310_bl_lib_path}")
-endif()
-
 # Micro ECC
 function(add_micro_ecc_target micro_ecc_source)
   add_library(nrf5_ext_micro_ecc_fwd INTERFACE)
@@ -136,19 +99,4 @@ else()
   set(micro_ecc_source_dir "${SOURCE_DIR}")
   add_micro_ecc_target("${micro_ecc_source_dir}")
   add_dependencies(nrf5_ext_micro_ecc_fwd micro_ecc_src)
-endif()
-
-# Oberon
-
-set(oberon_variant "${cpu_type}/${float_abi}/${short_wchar}")
-if(NRF5_SDK_VERSION VERSION_EQUAL 15.3.0)
-set(oberon_lib_path "${NRF5_SDK_PATH}/external/nrf_oberon/lib/${oberon_variant}/liboberon_2.0.7.a")
-else()
-set(oberon_lib_path "${NRF5_SDK_PATH}/external/nrf_oberon/lib/${oberon_variant}/liboberon_3.0.1.a")
-endif()
-
-if(EXISTS "${oberon_lib_path}")
-  target_link_libraries(nrf5_crypto_oberon_backend PUBLIC "${oberon_lib_path}")
-else()
-  message(WARNING "Oberon library not found: ${oberon_lib_path}")
 endif()
