@@ -64,7 +64,7 @@ static const size_t FILE_STATE_FLAGS_OFFSET = 3;
 result::Result read_next_file_header(const uint32_t address, uint32_t* header)
 {
     auto& config = _spi_flash_configuration;
-    uint32_t timeout{10000UL};
+    uint32_t timeout{100UL};
     result::Result res;
     do
     {

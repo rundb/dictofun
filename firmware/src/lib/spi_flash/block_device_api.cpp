@@ -7,7 +7,7 @@
 #include "spi_flash.h"
 #include <cstring>
 
-#define FLASH_IS_BUSY_TIMEOUT  (100000UL)
+#define FLASH_IS_BUSY_TIMEOUT  (10000UL)
 
 namespace integration
 {
@@ -16,14 +16,25 @@ static const size_t SPI_FLASH_SECTOR_SIZE = 4096;
 
 static flash::SpiFlash* _flash{nullptr};
 
-void init_filesystem(flash::SpiFlash* spiFlash)
+uint8_t spi_flash_jedec_id[6U]{0U};
+bool is_spi_flash_operational{true};
+
+result::Result init_filesystem(flash::SpiFlash* spiFlash)
 {
     _flash = spiFlash;
+    _flash->readJedecId(spi_flash_jedec_id);
+    if ((spi_flash_jedec_id[0] == 0U || spi_flash_jedec_id[0] == 0xFFU) ||
+        (spi_flash_jedec_id[1] == 0U || spi_flash_jedec_id[1] == 0xFFU))
+    {
+        is_spi_flash_operational = false;
+    }
+    return result::Result::OK;
 }
 
 result::Result
 spi_flash_simple_fs_api_read(const uint32_t address, uint8_t* data, const size_t size)
 {
+    if (!is_spi_flash_operational) return result::Result::ERROR_GENERAL;
     // todo: add paramter validation
     const auto result = _flash->read(address, data, size);
     if(result != flash::SpiFlash::Result::OK)
@@ -41,6 +52,7 @@ spi_flash_simple_fs_api_read(const uint32_t address, uint8_t* data, const size_t
 result::Result
 spi_flash_simple_fs_api_write(const uint32_t address, const uint8_t* const data, const size_t size)
 {
+    if (!is_spi_flash_operational) return result::Result::ERROR_GENERAL;
     // todo: proceed with validation and split operation into chunks of <PAGE_SIZE> bytes
     if(size <= SPI_FLASH_PAGE_SIZE)
     {

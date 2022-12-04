@@ -201,8 +201,8 @@ uint8_t SpiFlash::getSR1()
 
 void SpiFlash::readJedecId(uint8_t* id)
 {
-    while(isBusy())
-        ;
+    // while(isBusy())
+    //     ;
     _isSpiOperationPending = true;
     uint8_t tx_data[] = {0x9F, 0x00, 0x00, 0x00, 0x00, 0x00};
     uint8_t rx_data[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
