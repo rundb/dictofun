@@ -56,6 +56,10 @@ static const spi::Spi::Configuration flash_spi_config{NRF_DRV_SPI_FREQ_2M,
                                                       SPI_FLASH_MISO_PIN};
 int main()
 {
+    const auto err_code = nrf_drv_clock_init();
+    APP_ERROR_CHECK(err_code);
+    nrf_drv_clock_lfclk_request(NULL);
+
     nrf_gpio_cfg_output(LDO_EN_PIN);
     nrf_gpio_cfg_input(BUTTON_PIN, NRF_GPIO_PIN_PULLDOWN);
     nrf_gpio_pin_set(LDO_EN_PIN);
@@ -66,10 +70,6 @@ int main()
                  NRF_GPIO_PIN_PULLDOWN,
                  NRF_GPIO_PIN_H0S1,
                  NRF_GPIO_PIN_NOSENSE);
-
-    const auto err_code = nrf_drv_clock_init();
-    APP_ERROR_CHECK(err_code);
-    nrf_drv_clock_lfclk_request(NULL);
 
     log_init();
 
