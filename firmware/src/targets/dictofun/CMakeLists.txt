@@ -13,6 +13,7 @@ target_link_libraries(dictofun_main PRIVATE
     nrf5_app_error
     nrf5_drv_clock
     nrf5_nrfx_clock
+    nrf5_app_timer_v2
     nrf5_log
     nrf5_log_default_backends
     # TODO: fix following dependencies
@@ -47,4 +48,9 @@ target_link_libraries(dictofun_main PRIVATE
     nrf5_ble_peer_id
     nrf5_ble_pm_buffer
     nrf5_atflags
+    nrf5_sortlist
 )
+
+add_custom_command(TARGET dictofun_main
+    POST_BUILD
+    COMMAND ${CMAKE_OBJCOPY} ARGS -O ihex dictofun_main ${PROJECT_NAME}.hex)

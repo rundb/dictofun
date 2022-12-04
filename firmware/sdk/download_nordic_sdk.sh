@@ -1,9 +1,10 @@
 #!/bin/bash
 
-FOLDER_NAME="nRF5_SDK_17.1.0_ddde560"
+FOLDER_NAME="nrf5_sdk_17.1.0_ddde560"
 FILE_NAME="$FOLDER_NAME.zip"
 
-wget "https://www.nordicsemi.com/-/media/Software-and-other-downloads/SDKs/nRF5/Binaries/${FILE_NAME}"
+#wget "https://www.nordicsemi.com/-/media/Software-and-other-downloads/SDKs/nRF5/Binaries/${FILE_NAME}"
+wget "https://nsscprodmedia.blob.core.windows.net/prod/software-and-other-downloads/sdks/nrf5/binaries/${FILE_NAME}"
 
 unzip $FILE_NAME -d ./
 
