@@ -76,7 +76,6 @@ function(nrf5_get_board_target sdk_version board out_target out_define)
   set(board_d52dk1        nrf52832_xxaa BOARD_D52DK1   15.3.0 16.0.0)
   set(board_arduinoprimo  nrf52832_xxaa BOARD_ARDUINO_PRIMO 15.3.0 16.0.0)
   set(board_dictofun_v_1_1      nrf52832_xxaa BOARD_DICTOFUN_1_1 17.1.0 17.1.0)
-  # TODO: Support for custom boards?
 
   if(NOT board_${board})
     message(FATAL_ERROR "Unsupported nRF board: ${board}")
