@@ -5,6 +5,7 @@
 
 #include "simple_fs.h"
 #include <cstring>
+#include "result.h"
 
 namespace filesystem
 {
@@ -60,15 +61,17 @@ static const size_t NEXT_FILE_POINTER_OFFSET = 0;
 static const size_t FILE_SIZE_POINTER_OFFSET = 1;
 static const size_t FILE_MAGIC_OFFSET = 2;
 static const size_t FILE_STATE_FLAGS_OFFSET = 3;
-void read_next_file_header(const uint32_t address, uint32_t* header)
+result::Result read_next_file_header(const uint32_t address, uint32_t* header)
 {
     auto& config = _spi_flash_configuration;
+    uint32_t timeout{10000UL};
     result::Result res;
     do
     {
         res = config.read(
             address, reinterpret_cast<uint8_t*>(header), HEADER_SIZE * sizeof(uint32_t));
-    } while(res != result::Result::OK);
+    } while(res != result::Result::OK && timeout-- > 0U);
+    return res;
 }
 
 // make sure to fill in corresponding fields in file.rom before calling this checksum
@@ -113,7 +116,11 @@ result::Result create(File& file)
     while (!is_last_file_found && iterations_counter < MAX_FILES_COUNT)
     {
         ++iterations_counter;
-        read_next_file_header(current_file_address, header);
+        const auto result = read_next_file_header(current_file_address, header);
+        if (result != result::Result::OK)
+        {
+            return result;
+        }
         const auto next_address = header[NEXT_FILE_POINTER_OFFSET];
         const auto magic = header[FILE_MAGIC_OFFSET];
         const auto file_status = header[FILE_STATE_FLAGS_OFFSET];
@@ -163,7 +170,11 @@ result::Result open(File& file)
     while(!is_first_valid_file_found && iterations_counter < MAX_FILES_COUNT)
     {
         ++iterations_counter;
-        read_next_file_header(current_file_address, header);
+        const auto result = read_next_file_header(current_file_address, header);
+        if (result != result::Result::OK)
+        {
+            return result;
+        }
         const auto next_address = header[NEXT_FILE_POINTER_OFFSET];
         const auto magic = header[FILE_MAGIC_OFFSET];
         const auto file_state_flags = header[FILE_STATE_FLAGS_OFFSET];
@@ -225,7 +236,11 @@ result::Result get_files_count(FilesCount& files_count)
             continue;
         }
 
-        read_next_file_header(current_file_address, header);
+        const auto result = read_next_file_header(current_file_address, header);
+        if (result != result::Result::OK)
+        {
+            return result;
+        }
         const auto next_address = header[NEXT_FILE_POINTER_OFFSET];
         const auto magic = header[FILE_MAGIC_OFFSET];
         const auto file_state_flags = header[FILE_STATE_FLAGS_OFFSET];
@@ -275,7 +290,11 @@ size_t get_occupied_memory_size()
             continue;
         }
 
-        read_next_file_header(current_file_address, header);
+        const auto header_read_result = read_next_file_header(current_file_address, header);
+        if (header_read_result != result::Result::OK)
+        {
+            return 0UL;
+        }
         const auto next_address = header[NEXT_FILE_POINTER_OFFSET];
         const auto file_state_flags = header[FILE_STATE_FLAGS_OFFSET];
         const auto file_size = header[FILE_SIZE_POINTER_OFFSET];
