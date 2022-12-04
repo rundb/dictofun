@@ -1,0 +1,24 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+
+        {
+            "cwd": "${workspaceRoot}/firmware",
+            "executable": "${workspaceRoot}/firmware/build/src/targets/dictofun/dictofun_main",
+            "name": "Debug Microcontroller",
+            "request": "launch",
+            "type": "cortex-debug",
+            "servertype": "jlink",
+            "serverpath": "/usr/bin/JLinkGDBServerCLExe",
+            "device": "nRF52832_xxAA",
+            "interface": "swd",
+            "serialNumber": "", // add J-Link serial number if having multiple attached the same time.
+            "runToMain": false,
+            "svdFile": "${workspaceRoot}/firmware/sdk/nRF5_SDK_17.1.0_ddde560/modules/nrfx/mdk/nrf52.svd",
+            "showDevDebugOutput": "parsed",
+        }
+    ]
+}
