@@ -22,12 +22,6 @@ bool is_spi_flash_operational{true};
 result::Result init_filesystem(flash::SpiFlash* spiFlash)
 {
     _flash = spiFlash;
-    // _flash->readJedecId(spi_flash_jedec_id);
-    // if ((spi_flash_jedec_id[0] == 0U || spi_flash_jedec_id[0] == 0xFFU) ||
-    //     (spi_flash_jedec_id[1] == 0U || spi_flash_jedec_id[1] == 0xFFU))
-    // {
-    //     is_spi_flash_operational = false;
-    // }
     return result::Result::OK;
 }
 
