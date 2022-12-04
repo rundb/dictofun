@@ -1,11 +1,12 @@
 cmake_minimum_required(VERSION 3.22)
 
-#set(CMAKE_TOOLCHAIN_FILE gcc_arm_none_eabi_10.cmake)
+# This conditional selection is designed for build selection between dictofun builds and unit test builds.
+if ("${BUILD_TARGET}" STREQUAL "dictofun")
+    project(Dictofun LANGUAGES C CXX ASM)
 
-project(Dictofun LANGUAGES C CXX ASM)
+    include("cmake/nrf5.cmake")
+    include("cmake/dictofun.cmake")
 
-include("cmake/nrf5.cmake")
+    add_subdirectory(src)
+endif()
 
-add_subdirectory(src)
-
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DNRF_DFU_SETTINGS_VERSION=2 -DAPP_TIMER_V2 -DAPP_TIMER_V2_RTC1_ENABLED")
