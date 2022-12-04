@@ -4,8 +4,8 @@ cmake_minimum_required(VERSION 3.22)
 if ("${BUILD_TARGET}" STREQUAL "dictofun")
     project(Dictofun LANGUAGES C CXX ASM)
 
-    include("cmake/nrf5.cmake")
     include("cmake/dictofun.cmake")
+    include("cmake/nrf5.cmake")
 
     add_subdirectory(src)
 endif()

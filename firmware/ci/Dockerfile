@@ -4,7 +4,7 @@ LABEL maintainer="rundb"
 ENV DEBIAN_FRONTEND=noninteractive
 
 # TODO: consider adding here a selection of x86/ARM targets
-RUN apt update && apt install -y wget bzip2 unzip
+RUN apt update && apt install -y wget bzip2 unzip make gcc g++ git 
 
 ARG GCC_VERSION="gcc-arm-none-eabi-10.3-2021.10"
 ARG GCC_PATH="${GCC_VERSION}"
@@ -19,8 +19,8 @@ RUN cd /tools && mkdir cmake && cd cmake && wget -O ${CMAKE_INSTALL_SCRIPT} http
 ENV PATH="${PATH}:/tools/cmake/bin:/tools/${GCC_PATH}/bin"
 
 # Set up Nordic instruments
-ARG SDK_FOLDER_NAME="nRF5_SDK_17.1.0_ddde560"
+ARG SDK_FOLDER_NAME="nrf5_sdk_17.1.0_ddde560"
 ARG SDK_ZIP_FILE_NAME="${SDK_FOLDER_NAME}.zip"
 
-RUN mkdir -p /sdk && cd /sdk && wget https://www.nordicsemi.com/-/media/Software-and-other-downloads/SDKs/nRF5/Binaries/${SDK_ZIP_FILE_NAME} && \
+RUN mkdir -p /sdk && cd /sdk && wget https://nsscprodmedia.blob.core.windows.net/prod/software-and-other-downloads/sdks/nrf5/binaries/${SDK_ZIP_FILE_NAME} && \
   unzip ${SDK_ZIP_FILE_NAME} -d ./ && rm ${SDK_ZIP_FILE_NAME}
