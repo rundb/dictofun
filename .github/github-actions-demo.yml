@@ -1,9 +1,9 @@
 name: GitHub Actions Demo
 run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
-on: [push]
+on: [pull-request, push]
 jobs:
-  Explore-GitHub-Actions:
-    runs-on: ubuntu-latest
+  Explore-GitHub-Actions-on-self-hosted-runner:
+    runs-on: [self-hosted, linux, ARM64]
     steps:
       - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
       - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
