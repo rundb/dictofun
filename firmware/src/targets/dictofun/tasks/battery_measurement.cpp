@@ -3,7 +3,7 @@
  * Copyright (c) 2022, Roman Turkin
  */
 
-#include "tasks/battery_measurement.h"
+#include "battery_measurement.h"
 #include <nrfx_saadc.h>
 
 namespace battery

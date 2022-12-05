@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "tasks/task_memory.h"
+#include "task_memory.h"
 
 namespace memory
 {

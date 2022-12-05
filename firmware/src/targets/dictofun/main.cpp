@@ -10,23 +10,23 @@
 #include "ble_dfu.h"
 #include "spi.h"
 #include "spi_flash.h"
-#include <boards/boards.h>
-#include <libraries/log/nrf_log.h>
-#include <libraries/log/nrf_log_ctrl.h>
-#include <libraries/log/nrf_log_default_backends.h>
+#include <boards.h>
+#include <nrf_log.h>
+#include <nrf_log_ctrl.h>
+#include <nrf_log_default_backends.h>
 #include <nrf_gpio.h>
 #include "simple_fs.h"
 #include "block_device_api.h"
 #include "nrf_drv_clock.h"
 #include "nrf_drv_wdt.h"
 
-#include "FreeRTOS.h"
-#include "task.h"
-#include "timers.h"
+// #include "FreeRTOS.h"
+// #include "task.h"
+// #include "timers.h"
 
-#include <tasks/task_audio.h>
-#include <tasks/task_led.h>
-#include <tasks/task_state.h>
+#include <task_audio.h>
+#include <task_led.h>
+#include <task_state.h>
 
 static void log_init();
 static void idle_state_handle();
@@ -56,6 +56,10 @@ static const spi::Spi::Configuration flash_spi_config{NRF_DRV_SPI_FREQ_2M,
                                                       SPI_FLASH_MISO_PIN};
 int main()
 {
+    const auto err_code = nrf_drv_clock_init();
+    APP_ERROR_CHECK(err_code);
+    nrf_drv_clock_lfclk_request(NULL);
+
     nrf_gpio_cfg_output(LDO_EN_PIN);
     nrf_gpio_cfg_input(BUTTON_PIN, NRF_GPIO_PIN_PULLDOWN);
     nrf_gpio_pin_set(LDO_EN_PIN);
@@ -66,10 +70,6 @@ int main()
                  NRF_GPIO_PIN_PULLDOWN,
                  NRF_GPIO_PIN_H0S1,
                  NRF_GPIO_PIN_NOSENSE);
-
-    const auto err_code = nrf_drv_clock_init();
-    APP_ERROR_CHECK(err_code);
-    nrf_drv_clock_lfclk_request(NULL);
 
     log_init();
 

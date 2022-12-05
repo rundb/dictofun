@@ -1,6 +1,8 @@
 #ifndef _DICTOFUN_PCA10040_H_
 #define _DICTOFUN_PCA10040_H_
 
+#include <nrf_spi.h>
+
 #define BSP_BUTTON_0       25
 #define LED_1              13    // BLUE
 #define LED_2              14 // GREEN

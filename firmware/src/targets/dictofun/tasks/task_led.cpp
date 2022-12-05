@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-#include "tasks/task_led.h"
+#include "task_led.h"
 #include <stdint.h>
 #include <nrf_gpio.h>
-#include <libraries/timer/app_timer.h>
-#include "boards/boards.h"
+#include <app_timer.h>
+#include "boards.h"
 
 namespace led
 {

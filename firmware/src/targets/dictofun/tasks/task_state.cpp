@@ -3,17 +3,17 @@
  * Copyright (c) 2022, Roman Turkin
  */
 
-#include "tasks/task_state.h"
+#include "task_state.h"
 #include "BleSystem.h"
 #include "block_device_api.h"
 #include "spi_flash.h"
-#include "tasks/task_audio.h"
-#include "tasks/task_led.h"
-#include "tasks/task_memory.h"
-#include <libraries/timer/app_timer.h>
+#include "task_audio.h"
+#include "task_led.h"
+#include "task_memory.h"
+#include <app_timer.h>
 #include <nrf_gpio.h>
 #include <nrf_log.h>
-#include "tasks/battery_measurement.h"
+#include "battery_measurement.h"
 
 namespace application
 {

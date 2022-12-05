@@ -6,7 +6,7 @@
 #pragma once
 
 #include <stdint.h>
-#include <ble/nrf_ble_qwr/nrf_ble_qwr.h>
+#include <nrf_ble_qwr.h>
 #include "ble_file_transfer_service.h"
 #include "ble_fts_fsm.h"
 #include "simple_fs.h"
