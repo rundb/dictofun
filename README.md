@@ -41,3 +41,5 @@ After the download one can open a corresponding Segger SES Project with SES. Lat
 * install `cmake` 3.22 or newer
 * install `make`
 * run script `firmware/sdk/download_nordic_sdk.sh`
+
+It's a dummy change to trigger a self-hosted github action
