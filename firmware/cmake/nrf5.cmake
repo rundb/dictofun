@@ -20,8 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-include("nrf5_utils")
-include("nrf5_helpers")
+include("cmake/nrf5_utils.cmake")
+include("cmake/nrf5_helpers.cmake")
 
 # Check nRF SDK
 set(NRF5_SDK_PATH "" CACHE PATH "Path to the nRF5 SDK")
@@ -254,24 +254,24 @@ target_link_libraries(nrf5_hardfault_handler PUBLIC
 )
 
 # Target definitions
-include("nrf5_common")
-include("nrf5_storage")
-include("nrf5_log")
-include("nrf5_app")
-include("nrf5_nrfx")
-include("nrf5_drv")
-include("nrf5_bsp")
-include("nrf5_crypto")
-include("nrf5_ble")
-include("nrf5_ble_pm")
-include("nrf5_ble_srv")
-include("nrf5_iot")
-include("nrf5_usbd")
-include("nrf5_dfu")
-include("nrf5_misc")
-include("nrf5_external")
-include("nrf5_external_libs")
-include("nrf5_groups")
+include("cmake/nrf5_common.cmake")
+include("cmake/nrf5_storage.cmake")
+include("cmake/nrf5_log.cmake")
+include("cmake/nrf5_app.cmake")
+include("cmake/nrf5_nrfx.cmake")
+include("cmake/nrf5_drv.cmake")
+include("cmake/nrf5_bsp.cmake")
+include("cmake/nrf5_crypto.cmake")
+include("cmake/nrf5_ble.cmake")
+include("cmake/nrf5_ble_pm.cmake")
+include("cmake/nrf5_ble_srv.cmake")
+include("cmake/nrf5_iot.cmake")
+include("cmake/nrf5_usbd.cmake")
+include("cmake/nrf5_dfu.cmake")
+include("cmake/nrf5_misc.cmake")
+include("cmake/nrf5_external.cmake")
+include("cmake/nrf5_external_libs.cmake")
+include("cmake/nrf5_groups.cmake")
 
 function(nrf5_target exec_target)
   # nrf5_mdk must be linked as startup_*.S contains definition of the Reset_Handler entry symbol 

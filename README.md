@@ -34,3 +34,10 @@ Before building the firmware, SDK should be downloaded. To do that, go to `firmw
 `download_nordic_sdk.sh`. This command downloads and extracts the SDK files into the folder locally.
 
 After the download one can open a corresponding Segger SES Project with SES. Later it should be possible to build with CMake. 
+
+## Prerequisites
+
+* install `gcc-arm-none-eabi-10.3-2021.10` to `/usr/share/gcc-arm-none-eabi-10.3-2021.10`.
+* install `cmake` 3.22 or newer
+* install `make`
+* run script `firmware/sdk/download_nordic_sdk.sh`

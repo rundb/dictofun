@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-include("nrf5_utils")
+include("cmake/nrf5_utils.cmake")
 
 function(nrf5_get_sdk_version sdk_path out_sdk_version)
   if(NOT EXISTS ${sdk_path})
