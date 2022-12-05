@@ -14,7 +14,7 @@ ARG GCC_ARCHIVE_NAME_ARM="${GCC_VERSION}-aarch64-linux.tar.bz2"
 
 RUN mkdir /tools
 
-RUN  if [ "${HOST_ARCHITECTURE}" = "armv7" ]; then \
+RUN  if [ "${HOST_ARCHITECTURE}" = "arm" ]; then \
       cd /tools && wget https://developer.arm.com/-/media/Files/downloads/gnu-rm/10.3-2021.10/${GCC_ARCHIVE_NAME_ARM} -P /tools \
       && tar -xf ./${GCC_ARCHIVE_NAME_ARM} && rm ${GCC_ARCHIVE_NAME_ARM}; \
    else \
@@ -24,7 +24,7 @@ RUN  if [ "${HOST_ARCHITECTURE}" = "armv7" ]; then \
 
 ARG CMAKE_INSTALL_SCRIPT="cmake_install_script.sh"
 RUN cd /tools && mkdir cmake && cd cmake && \
-   if [ "${HOST_ARCHITECTURE}" = "armv7" ]; then \
+   if [ "${HOST_ARCHITECTURE}" = "arm" ]; then \
       wget -O ${CMAKE_INSTALL_SCRIPT} https://github.com/Kitware/CMake/releases/download/v3.25.0/cmake-3.25.0-linux-aarch64.sh; \
    else \
       wget -O ${CMAKE_INSTALL_SCRIPT} https://github.com/Kitware/CMake/releases/download/v3.25.1/cmake-3.25.1-linux-x86_64.sh; \ 

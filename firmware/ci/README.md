@@ -11,7 +11,7 @@ docker build -t dictofun_builder .
 ```
 OR
 ```
-docker build -t dictofun_builder --build-arg HOST_ARCHITECTURE="armv7" .
+docker build -t dictofun_builder --build-arg HOST_ARCHITECTURE="arm" .
 ```
 
 2. (manual build) Step one folder up and launch docker:
@@ -32,5 +32,5 @@ cd /code/build
 2. (automated build) Launch following command from `firmware` folder
 
 ```
-docker run -v $(pwd):/code  dictofun_builder /bin/bash -c "cd /code/build && ../ci/build_dictofun.sh"
+docker run -v $(pwd):/code  dictofun_builder /bin/bash -c "mkdir -p /code/build && cd /code/build && ../ci/build_dictofun.sh"
 ```
