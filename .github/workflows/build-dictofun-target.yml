@@ -1,4 +1,4 @@
-name: build-dictofun-target
+name: Build target
 run-name: run dictofun target build
 on: [push]
 jobs:
