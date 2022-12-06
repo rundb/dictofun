@@ -1,5 +1,7 @@
 # DictoFun
 
+![build](https://github.com/rundb/dictofun/actions/workflows/build-dictofun-target.yml/badge.svg)
+
 Small wearable NRF52832-based-based voice recorder.
 
 ![DictoFun](https://github.com/rundb/dictofun/blob/master/pcb/out/v1.1/dictofun_1.1_top.PNG?raw=true)
