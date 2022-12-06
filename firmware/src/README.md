@@ -10,7 +10,6 @@ Following code structure is intended:
 - `lib` contains modules that do not necessarily stick to a particular hardware. 
 - `targets` contains target-specific code.
 - - target `dictofun` is the target application firmware that is eventually executed on the dictofun hardware
-- - target `pca10040` is intended to be used with NRF52 DK. It should be used for development and testing of the modules in lib folder.
 - - target `bootloader` is the bootloader code. Out goal is to minimize development of bootloader and maximal reuse and compatibility with the bootloader provided by Nordic.
 
 ## How to build
