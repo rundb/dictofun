@@ -16,6 +16,10 @@ target_link_libraries(dictofun_main PRIVATE
     nrf5_app_timer_v2
     nrf5_log
     nrf5_log_default_backends
+    nrf5_freertos
+    nrf52_freertos_portable_gcc
+    nrf52_freertos_portable_cmsis
+    nrf5_freertos_portable_memmang_1
     # TODO: fix following dependencies (spread them across corresponding modules)
     nrf5_sdh
     nrf5_app_util_platform

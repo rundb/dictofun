@@ -272,6 +272,7 @@ include("cmake/nrf5_misc.cmake")
 include("cmake/nrf5_external.cmake")
 include("cmake/nrf5_external_libs.cmake")
 include("cmake/nrf5_groups.cmake")
+include("cmake/freertos.cmake")
 
 function(nrf5_target exec_target)
   # nrf5_mdk must be linked as startup_*.S contains definition of the Reset_Handler entry symbol 
