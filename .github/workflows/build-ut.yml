@@ -1,5 +1,5 @@
-name: Build target
-run-name: run dictofun target build
+name: Build unit-tests
+run-name: run dictofun unit-tests
 on: [push]
 jobs:
   checkout-the-repo:
@@ -10,4 +10,4 @@ jobs:
   run-cmake-target-build:
     runs-on: [self-hosted, linux]
     steps:
-      - run: cd firmware && docker run -v $(pwd):/code  dictofun_builder /bin/bash -c "mkdir -p /code/build && cd /code/build && rm -rf ./* && ../ci/build_dictofun.sh"
+      - run: cd firmware && docker run -v $(pwd):/code  dictofun_builder /bin/bash -c "mkdir -p /code/build && cd /code/build && rm -rf ./* && ../ci/build_unit_tests.sh"

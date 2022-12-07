@@ -1,4 +1,4 @@
-add_library(drv_pdm STATIC
+add_library(drv_pdm STATIC EXCLUDE_FROM_ALL
     ./drv_audio.c
 )
 
