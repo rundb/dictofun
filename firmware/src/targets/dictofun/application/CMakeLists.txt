@@ -15,3 +15,5 @@ target_link_libraries(application PUBLIC nrf5_dfu_ble)
 target_link_libraries(application PRIVATE nrf5_ble_advertising)
 target_link_libraries(application PUBLIC nrf5_ble_srv_dfu)
 target_link_libraries(application PUBLIC nrf5_ble_gatt)
+
+add_subdirectory(audio)

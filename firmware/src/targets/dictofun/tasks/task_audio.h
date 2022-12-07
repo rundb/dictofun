@@ -9,6 +9,8 @@
 #include "simple_fs.h"
 #include "result.h"
 
+void task_audio(void *);
+
 void audio_init();
 void audio_start_record(filesystem::File& file);
 result::Result audio_stop_record();

@@ -17,4 +17,7 @@ target_link_libraries(tasks PUBLIC drv_pdm)
 target_link_libraries(tasks PUBLIC nrf5_nrfx_saadc)
 target_link_libraries(tasks PRIVATE spi_flash)
 
-target_link_libraries(tasks PUBLIC application)
+target_link_libraries(tasks PUBLIC 
+    application
+    nrf5_freertos
+)
