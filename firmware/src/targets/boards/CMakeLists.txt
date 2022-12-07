@@ -1,4 +1,4 @@
-add_library(boards OBJECT EXCLUDE_FROM_ALL
+add_library(boards OBJECT
     boards.c
 )
 

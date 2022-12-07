@@ -1,2 +1,2 @@
 add_subdirectory(dictofun)
-add_subdirectory(boards EXCLUDE_FROM_ALL)
+add_subdirectory(boards)
