@@ -1,4 +1,5 @@
-add_executable(dictofun_main main.cpp)
+add_executable(dictofun_main 
+    main.cpp)
 
 add_subdirectory(tasks)
 add_subdirectory(config)
@@ -20,6 +21,7 @@ target_link_libraries(dictofun_main PRIVATE
     nrf52_freertos_portable_gcc
     nrf52_freertos_portable_cmsis
     nrf5_freertos_portable_memmang_1
+    dummy_module
     # TODO: fix following dependencies (spread them across corresponding modules)
     nrf5_sdh
     nrf5_app_util_platform

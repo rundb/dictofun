@@ -1,4 +1,4 @@
-add_library(spi_flash STATIC
+add_library(spi_flash STATIC EXCLUDE_FROM_ALL
     spi_flash.cpp
     spi.cpp
     block_device_api.cpp

@@ -1,6 +1,5 @@
-add_library(boards STATIC
+add_library(boards OBJECT
     boards.c
-    boards.h
 )
 
 target_include_directories(boards PUBLIC ./)
