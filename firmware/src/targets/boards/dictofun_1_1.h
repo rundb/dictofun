@@ -34,4 +34,7 @@
 #define CONFIG_IO_PDM_CLK           28
 #define CONFIG_IO_PDM_DATA          29
 
+#define UART_TX_PIN_NUMBER 11
+#define UART_RX_PIN_NUMBER 12
+
 #endif //_DICTOFUN_1_1_H_

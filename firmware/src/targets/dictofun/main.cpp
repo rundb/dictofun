@@ -11,38 +11,29 @@
 #include "spi.h"
 #include "spi_flash.h"
 #include <boards.h>
-#include <nrf_log.h>
-#include <nrf_log_ctrl.h>
-#include <nrf_log_default_backends.h>
 #include <nrf_gpio.h>
 #include "simple_fs.h"
 #include "block_device_api.h"
 #include "nrf_drv_clock.h"
+#include "nrf_log.h"
+#include "nrf_log_ctrl.h"
 
 #include "FreeRTOS.h"
 #include "task.h"
 #include "timers.h"
 
-#include <task_audio.h>
 #include <task_led.h>
 #include <task_state.h>
+#include "task_audio.h"
+#include "task_cli_logger.h"
 
 #include "audio_processor.h"
 #include "microphone_pdm.h"
-
-static void log_init();
-static void idle_state_handle();
-static void timers_init();
 
 ble::BleSystem bleSystem{};
 spi::Spi flashSpi(0, SPI_FLASH_CS_PIN);
 flash::SpiFlash flashMemory(flashSpi);
 flash::SpiFlash& getSpiFlash() { return flashMemory;}
-
-constexpr size_t pdm_sample_size{8U};
-using AudioSampleType = audio::microphone::PdmSample<pdm_sample_size>;
-audio::microphone::PdmMicrophone<pdm_sample_size> pdm_mic;
-audio::AudioProcessor<audio::microphone::PdmMicrophone<pdm_sample_size>::SampleType> audio_processor{pdm_mic};
 
 static const spi::Spi::Configuration flash_spi_config{NRF_DRV_SPI_FREQ_2M,
                                                       NRF_DRV_SPI_MODE_0,
@@ -51,7 +42,13 @@ static const spi::Spi::Configuration flash_spi_config{NRF_DRV_SPI_FREQ_2M,
                                                       SPI_FLASH_MOSI_PIN,
                                                       SPI_FLASH_MISO_PIN};
 
+constexpr size_t pdm_sample_size{8U};
+using AudioSampleType = audio::microphone::PdmSample<pdm_sample_size>;
+audio::microphone::PdmMicrophone<pdm_sample_size> pdm_mic;
+audio::AudioProcessor<audio::microphone::PdmMicrophone<pdm_sample_size>::SampleType> audio_processor{pdm_mic};
+
 static TaskHandle_t m_audio_task;
+static TaskHandle_t m_cli_logger_task;
 
 void latch_ldo_enable()
 {
@@ -76,10 +73,9 @@ int main()
     APP_ERROR_CHECK(err_code);
     nrf_drv_clock_lfclk_request(NULL);
 
-    log_init();
+    logger::log_init();
 
     bsp_board_init(BSP_INIT_LEDS);
-    timers_init();
 
     audio_processor.start();
 
@@ -87,64 +83,13 @@ int main()
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
+    if (pdPASS != xTaskCreate(logger::task_cli_logger, "CLI", 256, NULL, 1, &m_cli_logger_task))
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
 
     vTaskStartScheduler();
 
-}
-
-// Application helper functions
-
-uint32_t get_timestamp()
-{
-    return app_timer_cnt_get();
-}
-
-static void log_init()
-{
-    ret_code_t err_code = NRF_LOG_INIT(get_timestamp);
-    APP_ERROR_CHECK(err_code);
-
-    NRF_LOG_DEFAULT_BACKENDS_INIT();
-}
-
-static void idle_state_handle()
-{
-    NRF_LOG_PROCESS();
-}
-
-uint32_t get_timestamp_delta(uint32_t base)
-{
-    uint32_t now = app_timer_cnt_get();
-
-    if(base > now)
-        return 0;
-    else
-        return now - base;
-}
-
-// Expanding APP_TIMER_DEF macro, as it's not compatible with C++
-NRF_LOG_INSTANCE_REGISTER(APP_TIMER_LOG_NAME,
-                          timestamp_timer,
-                          APP_TIMER_CONFIG_INFO_COLOR,
-                          APP_TIMER_CONFIG_DEBUG_COLOR,
-                          APP_TIMER_CONFIG_INITIAL_LOG_LEVEL,
-                          APP_TIMER_CONFIG_LOG_ENABLED ? APP_TIMER_CONFIG_LOG_LEVEL
-                                                       : NRF_LOG_SEVERITY_NONE);
-
-static app_timer_t timestamp_timer_data = {
-    NRF_LOG_INSTANCE_PTR_INIT(p_log, APP_TIMER_LOG_NAME, timer_id)};
-static app_timer_id_t timestamp_timer;
-
-void timestamp_timer_timeout_handler(void* p_context) { }
-static void timers_init()
-{
-    timestamp_timer = &timestamp_timer_data;
-    // Initialize timer module, making it use the scheduler
-    ret_code_t err_code = app_timer_init();
-    APP_ERROR_CHECK(err_code);
-    app_timer_create(&timestamp_timer, APP_TIMER_MODE_REPEATED, timestamp_timer_timeout_handler);
-    err_code = app_timer_start(timestamp_timer, 32768, NULL);
-    APP_ERROR_CHECK(err_code);
 }
 
 void app_error_fault_handler(uint32_t id, uint32_t pc, uint32_t info)
