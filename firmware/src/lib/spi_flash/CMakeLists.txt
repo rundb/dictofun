@@ -14,6 +14,6 @@ target_link_libraries(spi_flash PRIVATE boards
 target_link_libraries(spi_flash PUBLIC nrf5_drv_spi)
 
 target_link_libraries(spi_flash PRIVATE 
-    nrf5_app_timer
+    nrf5_app_timer_v2
     nrf5_nrfx_spim
     )

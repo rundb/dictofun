@@ -1,13 +1,10 @@
 add_library(tasks STATIC
     battery_measurement.cpp  
-    battery_measurement.h  
     task_audio.cpp  
     task_led.cpp  
-    task_led.h  
     task_memory.cpp  
-    task_memory.h  
     task_state.cpp  
-    task_state.h
+    task_cli_logger.cpp
 )
 
 target_include_directories(tasks PUBLIC ./)
@@ -20,4 +17,7 @@ target_link_libraries(tasks PRIVATE spi_flash)
 target_link_libraries(tasks PUBLIC 
     application
     nrf5_freertos
+    nrf52_freertos_portable_gcc
+    nrf52_freertos_portable_cmsis
+    nrf5_freertos_portable_memmang_1
 )

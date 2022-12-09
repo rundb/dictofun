@@ -1,6 +1,6 @@
 # This file contains definitions that are specific for Dictofun target
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DNRF_DFU_SETTINGS_VERSION=2 -DAPP_TIMER_V2 -DAPP_TIMER_V2_RTC1_ENABLED")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DNRF_DFU_SETTINGS_VERSION=2 ")
 #set(CMAKE_TOOLCHAIN_FILE "${PROJECT_SOURCE_DIR}/cmake/arm-none-eabi.cmake")
 #set(NRF5_SDK_PATH "${PROJECT_SOURCE_DIR}/sdk/nRF5_SDK_17.1.0_ddde560")
 set(NRF5_BOARD "dictofun_v_1_1") 

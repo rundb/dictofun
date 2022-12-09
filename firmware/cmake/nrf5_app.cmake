@@ -202,10 +202,10 @@ list(APPEND NRF5_LIBRARY_NRF5_APP_TIMER_DEPENDENCIES
 # Application Timer V2
 add_library(nrf5_app_timer_v2 OBJECT EXCLUDE_FROM_ALL
   # TODO: consider parametrizing this build setup 
-  # "${NRF5_SDK_PATH}/components/libraries/timer/app_timer_freertos.c"
+  "${NRF5_SDK_PATH}/components/libraries/timer/app_timer_freertos.c"
   # "${NRF5_SDK_PATH}/components/libraries/timer/app_timer_rtx.c"
   # "${NRF5_SDK_PATH}/components/libraries/timer/app_timer.c"
-  "${NRF5_SDK_PATH}/components/libraries/timer/app_timer2.c"
+  # "${NRF5_SDK_PATH}/components/libraries/timer/app_timer2.c"
   "${NRF5_SDK_PATH}/components/libraries/timer/drv_rtc.c"
 )
 target_include_directories(nrf5_app_timer_v2 PUBLIC
@@ -218,6 +218,7 @@ target_link_libraries(nrf5_app_timer_v2 PUBLIC
   nrf5_atfifo
   nrf5_delay
   nrf5_nrfx_hal
+  nrf5_freertos
 )
 target_compile_options(nrf5_app_timer_v2 PUBLIC
   "$<$<OR:$<COMPILE_LANGUAGE:CXX>,$<COMPILE_LANGUAGE:C>>:-DAPP_TIMER_V2>"

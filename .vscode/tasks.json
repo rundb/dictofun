@@ -41,7 +41,7 @@
         {
             "type": "shell",
             "label": "Flash",
-            "command": "nrfjprog --reset --program ./src/targets/dictofun/Dictofun.hex  --family NRF52 --verify",
+            "command": "nrfjprog --reset --program ./src/targets/dictofun/Dictofun.hex --sectorerase  --family NRF52 --verify",
             "options": {
                 "cwd": "${workspaceFolder}/firmware/build"
             },
