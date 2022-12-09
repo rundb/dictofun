@@ -5,9 +5,12 @@ add_library(tasks STATIC
     task_memory.cpp  
     task_state.cpp  
     task_cli_logger.cpp
+    cli/cli_commands.c
 )
 
 target_include_directories(tasks PUBLIC ./)
+
+target_include_directories(tasks PRIVATE cli)
 
 target_link_libraries(tasks PUBLIC ble_fts)
 target_link_libraries(tasks PUBLIC drv_pdm)
@@ -20,4 +23,7 @@ target_link_libraries(tasks PUBLIC
     nrf52_freertos_portable_gcc
     nrf52_freertos_portable_cmsis
     nrf5_freertos_portable_memmang_1
+    nrf5_cli
+    nrf5_cli_uart
+    nrf5_queue
 )

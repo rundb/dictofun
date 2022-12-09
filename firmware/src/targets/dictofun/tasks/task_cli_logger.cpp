@@ -7,10 +7,13 @@
 
 #include "FreeRTOS.h"
 #include "task.h"
+#include "boards.h"
 
 #include <nrf_log.h>
 #include <nrf_log_ctrl.h>
 #include <nrf_log_default_backends.h>
+
+#include "cli_commands.h"
 
 namespace logger
 {
@@ -25,7 +28,9 @@ void log_init()
     ret_code_t err_code = NRF_LOG_INIT(get_timestamp);
     APP_ERROR_CHECK(err_code);
 
-    NRF_LOG_DEFAULT_BACKENDS_INIT();
+    // NRF_LOG_DEFAULT_BACKENDS_INIT();
+
+    cli_init();
 }
 
 void task_cli_logger(void *)
@@ -35,6 +40,7 @@ void task_cli_logger(void *)
     {
         vTaskDelay(10);
         NRF_LOG_PROCESS();
+        cli_process();
     }
 }
 
