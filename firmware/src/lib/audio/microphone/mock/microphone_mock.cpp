@@ -1,3 +1,7 @@
+// SPDX-License-Identifier:  Apache-2.0
+/*
+ * Copyright (c) 2022, Roman Turkin
+ */
 #include "microphone_mock.h"
 
 namespace audio

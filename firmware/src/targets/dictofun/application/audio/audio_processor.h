@@ -13,7 +13,7 @@ namespace audio
 /// - control of microphone
 /// - memory management for microphone buffers
 /// - control over usage of a codec
-template <typename MicrophoneSample /*, typename CodecOutput*/>
+template <typename MicrophoneSample>
 class AudioProcessor
 {
 public:
@@ -22,7 +22,6 @@ public:
     {
 
     }
-                   //Codec<MicrophoneSample, CodecOutput>& codec);
 
     void start();
 
@@ -33,7 +32,6 @@ public:
     AudioProcessor(const AudioProcessor&&) = delete;
 private:
     Microphone<MicrophoneSample>& microphone_;
-    // Codec<MicrophoneSample, CodecOutput>& codec;
 };
 
 }
