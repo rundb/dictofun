@@ -27,9 +27,6 @@ void log_init()
 {
     ret_code_t err_code = NRF_LOG_INIT(get_timestamp);
     APP_ERROR_CHECK(err_code);
-
-    // NRF_LOG_DEFAULT_BACKENDS_INIT();
-
     cli_init();
 }
 

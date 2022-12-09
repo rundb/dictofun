@@ -3,6 +3,8 @@
  * Copyright (c) 2022, Roman Turkin
  */
 
+// Note: unfortunately, this functionality has to be compiled with a C compiler due to a bug in Nordic SDK. 
+
 #include "cli_commands.h"
 
 #include "nrf_cli.h"

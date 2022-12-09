@@ -21,15 +21,11 @@ uint32_t start_time, end_time, frames_count, total_data, written_data;
 uint32_t valid_writes_counter = 0;
 uint32_t invalid_writes_counter = 0;
 
-
-int dummy_cnt{0};
 void task_audio(void *)
 {
     NRF_LOG_INFO("task audio: initialized");
     while (1)
     {
-        // vTaskSuspend(NULL); // Suspend myself
-        ++dummy_cnt;
         vTaskDelay(1000);
     }
 }
