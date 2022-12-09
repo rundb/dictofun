@@ -29,7 +29,9 @@ elseif("${BUILD_TARGET}" STREQUAL "unit-test")
     enable_testing()
     include(GoogleTest)
 
+    add_subdirectory(src/lib/common)
     add_subdirectory(src/lib/dummy_module)
+    add_subdirectory(src/lib/audio)
 endif()
 
 

@@ -27,6 +27,9 @@
 #include <task_led.h>
 #include <task_state.h>
 
+#include "audio_processor.h"
+#include "microphone_pdm.h"
+
 static void log_init();
 static void idle_state_handle();
 static void timers_init();
@@ -36,6 +39,11 @@ spi::Spi flashSpi(0, SPI_FLASH_CS_PIN);
 flash::SpiFlash flashMemory(flashSpi);
 flash::SpiFlash& getSpiFlash() { return flashMemory;}
 
+constexpr size_t pdm_sample_size{8U};
+using AudioSampleType = audio::microphone::PdmSample<pdm_sample_size>;
+audio::microphone::PdmMicrophone<pdm_sample_size> pdm_mic;
+audio::AudioProcessor<audio::microphone::PdmMicrophone<pdm_sample_size>::SampleType> audio_processor{pdm_mic};
+
 static const spi::Spi::Configuration flash_spi_config{NRF_DRV_SPI_FREQ_2M,
                                                       NRF_DRV_SPI_MODE_0,
                                                       NRF_DRV_SPI_BIT_ORDER_MSB_FIRST,
@@ -43,12 +51,10 @@ static const spi::Spi::Configuration flash_spi_config{NRF_DRV_SPI_FREQ_2M,
                                                       SPI_FLASH_MOSI_PIN,
                                                       SPI_FLASH_MISO_PIN};
 
-int main()
-{
-    const auto err_code = nrf_drv_clock_init();
-    APP_ERROR_CHECK(err_code);
-    nrf_drv_clock_lfclk_request(NULL);
+static TaskHandle_t m_audio_task;
 
+void latch_ldo_enable()
+{
     nrf_gpio_cfg_output(LDO_EN_PIN);
     nrf_gpio_cfg_input(BUTTON_PIN, NRF_GPIO_PIN_PULLDOWN);
     nrf_gpio_pin_set(LDO_EN_PIN);
@@ -59,30 +65,31 @@ int main()
                  NRF_GPIO_PIN_PULLDOWN,
                  NRF_GPIO_PIN_H0S1,
                  NRF_GPIO_PIN_NOSENSE);
+}
+
+// TODO: reintegrate system elements after designing them in a test-driven way
+int main()
+{
+    latch_ldo_enable();
+
+    const auto err_code = nrf_drv_clock_init();
+    APP_ERROR_CHECK(err_code);
+    nrf_drv_clock_lfclk_request(NULL);
 
     log_init();
 
     bsp_board_init(BSP_INIT_LEDS);
     timers_init();
-    flashSpi.init(flash_spi_config);
-    flashMemory.init();
-    flashMemory.reset();
-    integration::init_filesystem(&flashMemory);
 
-    bleSystem.init();
+    audio_processor.start();
 
-    audio_init();
-    application::application_init();
-    led::task_led_init();
-
-    for(;;)
+    if (pdPASS != xTaskCreate(task_audio, "AUDIO", 256, NULL, 1, &m_audio_task))
     {
-        bleSystem.cyclic();
-        audio_frame_handle();
-        application::application_cyclic();
-        led::task_led_cyclic();
-        idle_state_handle();
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
+
+    vTaskStartScheduler();
+
 }
 
 // Application helper functions

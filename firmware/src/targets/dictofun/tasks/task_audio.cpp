@@ -8,6 +8,9 @@
 #include "nrf_log.h"
 #include "simple_fs.h"
 
+#include "FreeRTOS.h"
+#include "task.h"
+
 #include "app_timer.h"
 
 drv_audio_frame_t * pending_frame = NULL;
@@ -17,6 +20,15 @@ filesystem::File * _current_audio_file{nullptr};
 uint32_t start_time, end_time, frames_count, total_data, written_data;
 uint32_t valid_writes_counter = 0;
 uint32_t invalid_writes_counter = 0;
+
+
+void task_audio(void *)
+{
+    while (1)
+    {
+        vTaskSuspend(NULL); // Suspend myself
+    }
+}
 
 void audio_init()
 {
