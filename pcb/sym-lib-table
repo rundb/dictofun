@@ -3,5 +3,4 @@
   (lib (name "custom")(type "Legacy")(uri "${KIPRJMOD}/components/custom.lib")(options "")(descr ""))
   (lib (name "_bq")(type "Legacy")(uri "${KIPRJMOD}/components/BQ24078RGTR.lib")(options "")(descr ""))
   (lib (name "_button")(type "Legacy")(uri "${KIPRJMOD}/components/KMR221GLFS.lib")(options "")(descr ""))
-  (lib (name "nRF52832_qfaa-rescue")(type "Legacy")(uri "${KIPRJMOD}/nRF52832_qfaa-rescue.lib")(options "")(descr ""))
 )
