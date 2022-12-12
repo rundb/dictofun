@@ -4939,6 +4939,12 @@
     (path "/00000000-0000-0000-0000-000061764c1f/3f0e9313-2b7c-4fee-8f71-a996df15de9a"
       (reference "#GND0110") (unit 1) (value "GND") (footprint "")
     )
+    (path "/00000000-0000-0000-0000-000061764c1f/23e9be46-91ed-4399-b161-1dabe42616a1"
+      (reference "#GND0111") (unit 1) (value "GND") (footprint "")
+    )
+    (path "/00000000-0000-0000-0000-000061764c1f/9726bcdd-9468-443d-8b64-3593882cf5c0"
+      (reference "#GND0112") (unit 1) (value "GND") (footprint "")
+    )
     (path "/00000000-0000-0000-0000-0000617ce189"
       (reference "#PWR01") (unit 1) (value "VSS") (footprint "")
     )
@@ -5104,6 +5110,9 @@
     (path "/00000000-0000-0000-0000-000061764c1f/3a4e60ab-01c7-4940-a9bb-c88b9381877f"
       (reference "C26") (unit 1) (value "1uF") (footprint "Capacitor_SMD:C_0402_1005Metric")
     )
+    (path "/00000000-0000-0000-0000-000061764c1f/628beb26-1f89-4427-a6ca-1c0c3c74689a"
+      (reference "C27") (unit 1) (value "100nF") (footprint "Capacitor_SMD:C_0402_1005Metric")
+    )
     (path "/00000000-0000-0000-0000-00006129b1cc"
       (reference "D1") (unit 1) (value "ASMB-LTC2-0A335") (footprint "nRF52832_qfaa:LED_Cree-PLCC4_2x2mm_CW")
     )
@@ -5182,6 +5191,12 @@
     (path "/00000000-0000-0000-0000-000061764c1f/ca46b015-cab0-41fb-ac64-f2b11a962393"
       (reference "R17") (unit 1) (value "1.6K") (footprint "Resistor_SMD:R_0402_1005Metric")
     )
+    (path "/00000000-0000-0000-0000-000061764c1f/c79cfa94-0dad-4df7-97e2-1280753d6600"
+      (reference "R18") (unit 1) (value "100K") (footprint "Resistor_SMD:R_0402_1005Metric")
+    )
+    (path "/00000000-0000-0000-0000-000061764c1f/1d60e626-9015-4f26-beda-de02dbcf1d3f"
+      (reference "R19") (unit 1) (value "100K") (footprint "Resistor_SMD:R_0402_1005Metric")
+    )
     (path "/00000000-0000-0000-0000-0000612a6127"
       (reference "RN1") (unit 1) (value "R_Pack04") (footprint "Resistor_SMD:R_Array_Convex_4x0402")
     )
@@ -5220,6 +5235,12 @@
     )
     (path "/c47e431d-5604-485b-a250-e3286c973457"
       (reference "TP11") (unit 1) (value "TestPoint") (footprint "TestPoint:TestPoint_Pad_D1.0mm")
+    )
+    (path "/00000000-0000-0000-0000-000061764c1f/5b5266e2-b9a0-4205-80ad-a67c11f055be"
+      (reference "TP12") (unit 1) (value "TestPoint") (footprint "TestPoint:TestPoint_Pad_D1.0mm")
+    )
+    (path "/00000000-0000-0000-0000-000061764c1f/d05a6309-25df-49f3-8e41-7bc2cd14296a"
+      (reference "TP13") (unit 1) (value "TestPoint") (footprint "TestPoint:TestPoint_Pad_D1.0mm")
     )
     (path "/00000000-0000-0000-0000-000061764c1f/19aff919-b110-420e-b0cb-34e0bd118740"
       (reference "TP16") (unit 1) (value "TestPoint") (footprint "TestPoint:TestPoint_Pad_D1.0mm")
