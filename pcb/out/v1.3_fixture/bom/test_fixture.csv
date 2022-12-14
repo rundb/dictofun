@@ -1,25 +1,14 @@
 Comment,Designator,Footprint,LCSC
-" ","BATT+1,BUTTON1,DEC_CAP1,FF_CLK1,FF_D1,FF_Q1,GND1,PDM_CLK1,PDM_DATA1,GND2,I2C_CLK1,I2C_SDA1,P3.3V1","TestPoint:TestPoint_Pad_D1.5mm",""
-"1u","C1,C2,C3,C4","Resistor_SMD:R_1206_3216Metric","C14445"
-"22u","C10","Capacitor_SMD:C_1206_3216Metric","C92818"
-"100n","C5,C6,C7,C8","Resistor_SMD:R_1206_3216Metric","C113894"
-"10u","C9","Resistor_SMD:R_1206_3216Metric","C165101"
-"Outer PCB Mount","H3,H4,H5,H6","MountingHole:MountingHole_2.1mm",""
-"Stand Mount","H7,H8,H9,H10","MountingHole:MountingHole_2.1mm",""
-"UART","J1","Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical",""
-"Conn_ARM_JTAG_SWD_10","J3","Connector_PinHeader_1.27mm:PinHeader_2x05_P1.27mm_Vertical_SMD",""
-"GND","J5,J6","fixture:POGO",""
-"Jumper_2_Bridged","JP1,JP3,JP5,JP6","Jumper:SolderJumper-2_P1.3mm_Bridged2Bar_Pad1.0x1.5mm",""
-"Jumper_2_Open","JP2,JP4,JP7,JP8","Jumper:SolderJumper-2_P1.3mm_Open_RoundedPad1.0x1.5mm",""
-"pogo","POGO1,POGO2,POGO3,POGO4,POGO5,POGO6,POGO7,POGO8,POGO10,POGO11,POGO12,POGO13,POGO14,POGO15,POGO16,POGO17,POGO18,POGO19,POGO20,POGO21,POGO22,POGO23,POGO24,POGO25","fixture:POGO",""
-"415","R1","Resistor_SMD:R_0603_1608Metric","C114669"
-"187","R2","Resistor_SMD:R_0603_1608Metric","C22828"
-"0.04","R3","Resistor_SMD:R_Shunt_Vishay_WSR2_WSR3_KelvinConnection","C499537"
-"0.01","R4","Resistor_SMD:R_Shunt_Vishay_WSR2_WSR3_KelvinConnection","C499494"
-"100K","R5,R6","Resistor_SMD:R_0603_1608Metric","C122538"
-"200K","R7","Resistor_SMD:R_0603_1608Metric","C118142"
-"300K","R8","Resistor_SMD:R_0603_1608Metric","C103526"
-"1K","R9","Resistor_SMD:R_0603_1608Metric",""
-"SC0915","U1","MODULE_SC0915",""
-"MIC29302WU","U2","Package_TO_SOT_SMD:TO-263-5_TabPin3","C11149"
-"INA186A5IDCKR","U3,U4","SOT65P210X110-6N","C2057934"
+1u,"C1,C2,C3,C4",Resistor_SMD:R_1206_3216Metric,C13832
+22u,C10,Capacitor_SMD:C_1206_3216Metric,C92818
+100n,"C5,C6,C7,C8",Resistor_SMD:R_1206_3216Metric,C113894
+10u,C9,Resistor_SMD:R_1206_3216Metric,C165101
+415,R1,Resistor_SMD:R_0603_1608Metric,C114669
+187,R2,Resistor_SMD:R_0603_1608Metric,C22828
+0.04,R3,Resistor_SMD:R_Shunt_Vishay_WSR2_WSR3_KelvinConnection,C499537
+0.01,R4,Resistor_SMD:R_Shunt_Vishay_WSR2_WSR3_KelvinConnection,C499494
+100K,"R5,R6",Resistor_SMD:R_0603_1608Metric,C122538
+200K,R7,Resistor_SMD:R_0603_1608Metric,C118142
+300K,R8,Resistor_SMD:R_0603_1608Metric,C103526
+MIC29302WU,U2,Package_TO_SOT_SMD:TO-263-5_TabPin3,C11149
+INA186A5IDCKR,"U3,U4",SOT65P210X110-6N,C2057934
