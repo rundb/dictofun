@@ -558,6 +558,11 @@
       (net 18 "+5V") (pinfunction "VSYS") (pintype "power_in") (zone_connect 0) (tstamp 6f0ed0cd-a825-4948-bef7-039d91fede75))
     (pad "40" thru_hole circle (at 8.84 -24.13 90) (size 1.6 1.6) (drill 1) (layers *.Cu *.Mask)
       (net 33 "unconnected-(U1-Pad40)") (pinfunction "VBUS") (pintype "power_in") (zone_connect 0) (tstamp 0d36ad6b-7403-42a8-bcf6-f5865b022135))
+    (model "/home/roman/programming/dictofun/pcb/lib/SC0915.step"
+      (offset (xyz 0 0 0))
+      (scale (xyz 1 1 1))
+      (rotate (xyz -90 0 0))
+    )
   )
 
   (footprint "TestPoint:TestPoint_Pad_D1.5mm" (layer "F.Cu")
