@@ -1,0 +1,3 @@
+(sym_lib_table
+  (lib (name "fixture")(type "KiCad")(uri "${KIPRJMOD}/fixture.kicad_sym")(options "")(descr ""))
+)

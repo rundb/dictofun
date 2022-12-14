@@ -5242,6 +5242,9 @@
     (path "/00000000-0000-0000-0000-000061764c1f/d05a6309-25df-49f3-8e41-7bc2cd14296a"
       (reference "TP13") (unit 1) (value "TestPoint") (footprint "TestPoint:TestPoint_Pad_D1.0mm")
     )
+    (path "/00000000-0000-0000-0000-000061764c1f/47f77640-498a-4431-9bf2-486fcc82e8fa"
+      (reference "TP14") (unit 1) (value "TestPoint") (footprint "TestPoint:TestPoint_Pad_D1.0mm")
+    )
     (path "/00000000-0000-0000-0000-000061764c1f/19aff919-b110-420e-b0cb-34e0bd118740"
       (reference "TP16") (unit 1) (value "TestPoint") (footprint "TestPoint:TestPoint_Pad_D1.0mm")
     )
