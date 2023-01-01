@@ -3,7 +3,6 @@
  * Copyright (c) 2022, Roman Turkin
  */
 #include "task_audio.h"
-#include "task_state.h"
 #include <nrfx.h>
 #include "nrf_log.h"
 #include "simple_fs.h"
@@ -12,7 +11,31 @@
 #include "task.h"
 
 #include "app_timer.h"
+#include "microphone_pdm.h"
+#include "audio_processor.h"
 
+namespace audio
+{
+
+constexpr size_t pdm_sample_size{8U};
+using AudioSampleType = audio::microphone::PdmSample<pdm_sample_size>;
+audio::microphone::PdmMicrophone<pdm_sample_size> pdm_mic;
+audio::AudioProcessor<audio::microphone::PdmMicrophone<pdm_sample_size>::SampleType> audio_processor{pdm_mic};
+
+void task_audio(void *)
+{
+    NRF_LOG_INFO("task audio: initialized");
+    audio_processor.start();
+    while (1)
+    {
+        vTaskDelay(1000);
+    }
+}
+
+// =======================================================================================
+// This is a leftover legacy from the old implementation. Use it only as a reference,
+// eventually it has to be wiped out
+// =======================================================================================
 drv_audio_frame_t * pending_frame = NULL;
 #define SPI_XFER_DATA_STEP 0x100
 
@@ -21,14 +44,6 @@ uint32_t start_time, end_time, frames_count, total_data, written_data;
 uint32_t valid_writes_counter = 0;
 uint32_t invalid_writes_counter = 0;
 
-void task_audio(void *)
-{
-    NRF_LOG_INFO("task audio: initialized");
-    while (1)
-    {
-        vTaskDelay(1000);
-    }
-}
 
 void audio_init()
 {
@@ -70,7 +85,7 @@ void audio_frame_handle()
     {
         const int data_size = pending_frame->buffer_occupied;
         NRFX_ASSERT(data_size <= SPI_XFER_DATA_STEP);
-        NRFX_ASSERT(application::getApplicationState() == application::AppSmState::RECORD);
+        // NRFX_ASSERT(application::getApplicationState() == application::AppSmState::RECORD);
         
         const auto res = filesystem::write(*_current_audio_file, pending_frame->buffer, data_size);
         if (res != result::Result::OK)
@@ -107,4 +122,6 @@ void audio_frame_cb(drv_audio_frame_t * frame)
     }
     frame_counter++;
     pending_frame = frame;
+}
+
 }

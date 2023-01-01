@@ -7,13 +7,25 @@
 #include "BleSystem.h"
 #include "block_device_api.h"
 #include "spi_flash.h"
-#include "task_audio.h"
-#include "task_led.h"
-#include "task_memory.h"
+
 #include <app_timer.h>
 #include <nrf_gpio.h>
 #include <nrf_log.h>
 #include "battery_measurement.h"
+
+#include <FreeRTOS.h>
+#include <task.h>
+
+namespace systemstate
+{
+void task_system_state(void *)
+{
+    while(1)
+    {
+        vTaskDelay(10);
+    }
+}   
+}
 
 namespace application
 {
@@ -325,7 +337,7 @@ CompletionStatus do_init()
     // pull LDO EN high
     nrf_gpio_pin_set(LDO_EN_PIN);
 
-    led::task_led_set_indication_state(led::PREPARING);
+    // led::task_led_set_indication_state(led::PREPARING);
 
     return CompletionStatus::DONE;
 }
@@ -383,10 +395,10 @@ CompletionStatus do_prepare()
 CompletionStatus do_record_start()
 {
     // trigger start of PDM
-    audio_start_record(_currentFile);
+    // audio::audio_start_record(_currentFile);
 
     NRF_LOG_INFO("Record: saving data into a file");
-    led::task_led_set_indication_state(led::RECORDING);
+    // led::task_led_set_indication_state(led::RECORDING);
 
     return CompletionStatus::DONE;
 }
@@ -398,11 +410,11 @@ CompletionStatus do_record()
     const auto isButtonPressed = isRecordButtonPressed();
     if(!isButtonPressed)
     {
-        const auto result = audio_stop_record();
-        if(result == result::Result::OK)
-        {
-            return CompletionStatus::DONE;
-        }
+        // const auto result = audio::audio_stop_record();
+        // if(result == result::Result::OK)
+        // {
+        //     return CompletionStatus::DONE;
+        // }
         _context.is_unrecoverable_error_detected = true;
         _context.state = InternalFsmState::DONE;
         return CompletionStatus::ERROR;
@@ -486,7 +498,7 @@ CompletionStatus do_connect()
     {
         ble::BleSystem::getInstance().start();
 
-        led::task_led_set_indication_state(led::CONNECTING);
+        // led::task_led_set_indication_state(led::CONNECTING);
 
     }
 
@@ -516,7 +528,7 @@ CompletionStatus do_connect()
 
 CompletionStatus do_transfer()
 {
-    led::task_led_set_indication_state(led::SENDING);
+    // led::task_led_set_indication_state(led::SENDING);
 
     // transfer the data to the phone
     if(ble::BleSystem::getInstance().getServices().isFileTransmissionComplete())
@@ -580,7 +592,7 @@ CompletionStatus do_finalize()
         auto& flashmem = flash::SpiFlash::getInstance();
         if(!_context.is_unrecoverable_error_detected)
         {
-            led::task_led_set_indication_state(led::SHUTTING_DOWN);
+            // led::task_led_set_indication_state(led::SHUTTING_DOWN);
             NRF_LOG_INFO("Finalize: unmounting the FS");
             filesystem::FilesCount files_stats;
             const auto files_stats_result = filesystem::get_files_count(files_stats);
@@ -637,7 +649,7 @@ CompletionStatus do_shutdown()
 {
     if(_context.state == InternalFsmState::DONE)
     {
-        led::task_led_set_indication_state(led::INDICATION_OFF);
+        // led::task_led_set_indication_state(led::INDICATION_OFF);
         // start finalization preparation.
         // downcount ~100-200 ms to let logger print data
         _context.counter = SHUTDOWN_COUNTER_INIT_VALUE;

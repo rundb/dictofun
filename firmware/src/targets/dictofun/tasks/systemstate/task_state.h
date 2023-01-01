@@ -6,6 +6,11 @@
 
 #include "boards.h"
 
+namespace systemstate
+{
+void task_system_state(void *);
+}
+
 namespace application
 {
 

@@ -1,11 +1,5 @@
 add_library(tasks STATIC
-    battery_measurement.cpp  
-    task_audio.cpp  
-    task_led.cpp  
-    task_memory.cpp  
-    task_state.cpp  
-    task_cli_logger.cpp
-    cli/cli_commands.c
+    battery_measurement.cpp
 )
 
 target_include_directories(tasks PUBLIC ./)
@@ -15,7 +9,9 @@ target_include_directories(tasks PRIVATE cli)
 target_link_libraries(tasks PUBLIC ble_fts)
 target_link_libraries(tasks PUBLIC drv_pdm)
 target_link_libraries(tasks PUBLIC nrf5_nrfx_saadc)
-target_link_libraries(tasks PRIVATE spi_flash)
+target_link_libraries(tasks PRIVATE 
+    spi_flash
+)
 
 target_link_libraries(tasks PUBLIC 
     application
@@ -27,3 +23,9 @@ target_link_libraries(tasks PUBLIC
     nrf5_cli_uart
     nrf5_queue
 )
+
+add_subdirectory(audio)
+add_subdirectory(cli)
+add_subdirectory(memory)
+add_subdirectory(systemstate)
+add_subdirectory(led)
