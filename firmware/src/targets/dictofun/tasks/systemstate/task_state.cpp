@@ -20,6 +20,7 @@ namespace systemstate
 {
 void task_system_state(void *)
 {
+    NRF_LOG_INFO("task state: initialized");
     while(1)
     {
         vTaskDelay(10);

@@ -11,6 +11,8 @@
 #include "nrf_cli_uart.h"
 #include "boards.h"
 
+#include <string.h>
+
 NRF_CLI_UART_DEF(m_cli_uart_transport, 0, 64, 16);
 NRF_CLI_DEF(m_cli_uart, "> ", &m_cli_uart_transport.transport, '\r', CLI_LOG_QUEUE_SIZE);
 
@@ -64,3 +66,55 @@ NRF_CLI_CMD_REGISTER(version,
                      NULL,
                      "Display software version",
                      cmd_version);
+
+/// @brief Launch a record of fixed length. Command accepts 2 arguments: duration in seconds and 
+///        1 if record should be saved to storage, 0 if not (by default it's not saved)
+static void cmd_record(nrf_cli_t const * p_cli, const size_t argc, char ** argv)
+{
+    if ((1 == argc) || (argc > 3))
+    {
+        nrf_cli_fprintf(p_cli,
+            NRF_CLI_ERROR,
+            "Wrong command syntax\n", argc);
+        return;
+    }
+
+    const int duration = atoi(argv[1]);
+    if (duration <= 0)
+    {
+        nrf_cli_fprintf(p_cli,
+            NRF_CLI_ERROR,
+            "Wrong record duration\n", argc);
+        return;
+    }
+
+    bool should_record_be_stored = false;
+    if (3 == argc)
+    {
+        if ((argv[2][0] == '1') && (atoi(argv[2]) == 1))
+        {
+            should_record_be_stored = true;
+        }
+        else if ((argv[2][0] == '0') && (atoi(argv[2]) == 0))
+        {
+            // do nothing here
+        }
+        else
+        {
+            nrf_cli_fprintf(p_cli,
+                NRF_CLI_ERROR,
+                "Wrong storage flag (must be 0 or 1)\n", argc);
+            return;
+        }
+    }
+
+    nrf_cli_fprintf(p_cli,
+        NRF_CLI_NORMAL,
+        "Record launch. Args: %d, %d\n", duration, (int)should_record_be_stored);
+
+}
+
+NRF_CLI_CMD_REGISTER(record,
+                     NULL,
+                     "Launch record",
+                     cmd_record);

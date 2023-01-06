@@ -21,15 +21,26 @@
 
 #include <stdint.h>
 
-constexpr size_t audio_task_stack_size{256};
-static StackType_t audio_task_stack[audio_task_stack_size] {0UL};
-static StaticTask_t m_audio_task;
-TaskHandle_t audio_task_handle{nullptr};
+// clang-format off
+constexpr size_t        audio_task_stack_size                   {256};
+StackType_t             audio_task_stack[audio_task_stack_size] {0UL};
+StaticTask_t            m_audio_task;
+TaskHandle_t            audio_task_handle{nullptr};
+UBaseType_t             audio_task_priority{1U};
 
-constexpr size_t log_task_stack_size{256};
-static StackType_t log_task_stack[log_task_stack_size] {0UL};
-static StaticTask_t m_log_task;
-TaskHandle_t log_task_handle{nullptr};
+
+constexpr size_t        log_task_stack_size{256};
+StackType_t             log_task_stack[log_task_stack_size] {0UL};
+StaticTask_t            m_log_task;
+TaskHandle_t            log_task_handle{nullptr};
+UBaseType_t             log_task_priority{1U};
+
+constexpr size_t        system_state_task_stack_size{256};
+StackType_t             system_state_task_stack[log_task_stack_size] {0UL};
+StaticTask_t            system_state_task;
+TaskHandle_t            system_state_task_handle{nullptr};
+UBaseType_t             system_state_task_priority{2U};
+// clang-format on
 
 void latch_ldo_enable()
 {
@@ -58,14 +69,42 @@ int main()
 
     bsp_board_init(BSP_INIT_LEDS);
 
-    audio_task_handle = xTaskCreateStatic(audio::task_audio, "AUDIO", 256, NULL, 1, audio_task_stack, &m_audio_task);
+    audio_task_handle = xTaskCreateStatic(
+        audio::task_audio,
+        "AUDIO",
+        audio_task_stack_size,
+        NULL,
+        audio_task_priority,
+        audio_task_stack,
+        &m_audio_task);
     if (nullptr == audio_task_handle)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
-    log_task_handle = xTaskCreateStatic(logger::task_cli_logger, "CLI", 256, NULL, 1, log_task_stack, &m_log_task);
+    log_task_handle = xTaskCreateStatic(
+        logger::task_cli_logger,
+        "CLI",
+        log_task_stack_size,
+        NULL,
+        log_task_priority,
+        log_task_stack,
+        &m_log_task);
     if (nullptr == log_task_handle)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
+    system_state_task_handle = xTaskCreateStatic(
+        systemstate::task_system_state,
+        "STATE",
+        system_state_task_stack_size,
+        NULL,
+        system_state_task_priority,
+        system_state_task_stack,
+        &system_state_task);
+
+    if (nullptr == system_state_task_handle)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
