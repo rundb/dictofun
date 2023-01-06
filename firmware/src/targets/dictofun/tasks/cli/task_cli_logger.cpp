@@ -39,9 +39,10 @@ void log_init()
     cli_init();
 }
 
-void task_cli_logger(void *)
+void task_cli_logger(void * cli_context)
 {
     NRF_LOG_INFO("task logger: initialized");
+    CliContext& context = *(reinterpret_cast<CliContext *>(cli_context));
     register_record_launch_callback(record_launch_callback);
     while (1)
     {
@@ -51,8 +52,23 @@ void task_cli_logger(void *)
         if (_record_launch_command.is_active)
         {
             _record_launch_command.is_active = false;
-            // TODO: using a queue, send this command to the task_state
-            NRF_LOG_INFO("launching record");
+
+            CliCommandQueueElement cmd{
+                CliCommand::RECORD, 
+                {
+                    static_cast<uint32_t>(_record_launch_command.duration), 
+                    static_cast<uint32_t>(_record_launch_command.should_be_stored)
+                }
+            };
+            const auto send_result = xQueueSend(context.cli_commands_handle, &cmd, 0U);
+            if (pdPASS != send_result)
+            {
+                NRF_LOG_WARNING("Failed to queue record operation");
+            }
+            else
+            {
+                NRF_LOG_INFO("Record launch operation has been queued");
+            }
         }
     }
 }

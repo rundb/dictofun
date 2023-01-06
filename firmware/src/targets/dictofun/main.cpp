@@ -14,6 +14,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "timers.h"
+#include "queue.h"
 
 #include <task_state.h>
 #include "task_audio.h"
@@ -22,6 +23,7 @@
 #include <stdint.h>
 
 // clang-format off
+// ============================= Tasks ======================================
 constexpr size_t        audio_task_stack_size                   {256};
 StackType_t             audio_task_stack[audio_task_stack_size] {0UL};
 StaticTask_t            m_audio_task;
@@ -40,6 +42,22 @@ StackType_t             system_state_task_stack[log_task_stack_size] {0UL};
 StaticTask_t            system_state_task;
 TaskHandle_t            system_state_task_handle{nullptr};
 UBaseType_t             system_state_task_priority{2U};
+
+// ============================= Queues =====================================
+StaticQueue_t           cli_commands_queue;
+constexpr size_t        cli_commands_queue_size{1};
+constexpr size_t        cli_command_size_bytes{sizeof(logger::CliCommandQueueElement)};
+uint8_t                 cli_commands_queue_buffer[cli_commands_queue_size * cli_command_size_bytes];
+QueueHandle_t           cli_commands_handle{nullptr};
+
+StaticQueue_t           cli_status_queue;
+constexpr size_t        cli_status_queue_size{1};
+constexpr size_t        cli_status_size_bytes{sizeof(logger::CliStatusQueueElement)};
+uint8_t                 cli_status_queue_buffer[cli_status_queue_size * cli_status_size_bytes];
+QueueHandle_t           cli_status_handle{nullptr};
+
+logger::CliContext cli_context{nullptr, nullptr};
+
 // clang-format on
 
 void latch_ldo_enable()
@@ -69,6 +87,31 @@ int main()
 
     bsp_board_init(BSP_INIT_LEDS);
 
+    // Queues' initialization
+    cli_commands_handle = xQueueCreateStatic(
+        cli_commands_queue_size, 
+        cli_command_size_bytes, 
+        cli_commands_queue_buffer, 
+        &cli_commands_queue);
+    if (nullptr == cli_commands_handle)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
+    cli_status_handle = xQueueCreateStatic(
+        cli_status_queue_size, 
+        cli_command_size_bytes, 
+        cli_status_queue_buffer, 
+        &cli_status_queue);
+    if (nullptr == cli_status_handle)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
+    cli_context.cli_commands_handle = cli_commands_handle;
+    cli_context.cli_status_handle = cli_status_handle;
+
+    // Tasks' initialization
     audio_task_handle = xTaskCreateStatic(
         audio::task_audio,
         "AUDIO",
@@ -86,7 +129,7 @@ int main()
         logger::task_cli_logger,
         "CLI",
         log_task_stack_size,
-        NULL,
+        &cli_context,
         log_task_priority,
         log_task_stack,
         &m_log_task);
