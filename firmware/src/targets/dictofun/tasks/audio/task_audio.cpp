@@ -32,7 +32,7 @@ void task_audio(void * context_ptr)
     audio_processor.start();
     while (1)
     {
-        vTaskDelay(100);
+        vTaskDelay(10);
         const auto audio_queue_receive_status = xQueueReceive(
             context.commands_queue,
             reinterpret_cast<void *>(&audio_command_buffer),
@@ -40,7 +40,14 @@ void task_audio(void * context_ptr)
         );
         if (pdPASS == audio_queue_receive_status)
         {
-            NRF_LOG_INFO("audio: received record_start command");
+            if (audio_command_buffer.command_id == Command::RECORD_START)
+            {
+                NRF_LOG_INFO("audio: received record_start command");
+            }
+            if (audio_command_buffer.command_id == Command::RECORD_STOP)
+            {
+                NRF_LOG_INFO("audio: received record_stop command");
+            }
         }
     }
 }

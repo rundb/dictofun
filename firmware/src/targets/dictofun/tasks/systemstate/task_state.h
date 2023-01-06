@@ -7,6 +7,7 @@
 #include "boards.h"
 #include "FreeRTOS.h"
 #include "queue.h"
+#include "timers.h"
 
 namespace systemstate
 {
@@ -19,7 +20,13 @@ struct Context
     // TODO: extend with rest of command queues controlled by SystemState
     QueueHandle_t audio_commands_handle{nullptr};
     QueueHandle_t audio_status_handle{nullptr};
+
+    TimerHandle_t record_timer_handle{nullptr};
+
+    bool is_record_active{false};
 };
+
+void record_end_callback(TimerHandle_t timer);
 
 }
 

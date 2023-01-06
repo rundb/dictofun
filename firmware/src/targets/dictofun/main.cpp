@@ -38,6 +38,11 @@ application::QueueDescriptor<logger::CliStatusQueueElement, 1>   cli_status_queu
 application::QueueDescriptor<audio::CommandQueueElement, 1>      audio_commands_queue;
 application::QueueDescriptor<audio::StatusQueueElement, 1>       audio_status_queue;
 
+// ============================= Timers =====================================
+
+StaticTimer_t record_timer_buffer;
+TimerHandle_t record_timer_handle{nullptr};
+
 // ============================ Contexts ====================================
 logger::CliContext      cli_context;
 systemstate::Context    systemstate_context;
@@ -97,6 +102,13 @@ int main()
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
+    // Timers' initialization
+    record_timer_handle = xTimerCreateStatic("AUDIO", 1, pdFALSE, nullptr, systemstate::record_end_callback, &record_timer_buffer);
+    if (nullptr == record_timer_handle)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
     // Tasks' initialization
     audio_context.commands_queue = audio_commands_queue.handle;
     audio_context.status_queue = audio_status_queue.handle;
@@ -120,6 +132,7 @@ int main()
     systemstate_context.cli_status_handle = cli_status_queue.handle;
     systemstate_context.audio_commands_handle = audio_commands_queue.handle;
     systemstate_context.audio_status_handle = audio_status_queue.handle;
+    systemstate_context.record_timer_handle = record_timer_handle;
 
     const auto systemstate_task_init_result = systemstate_task.init(
         systemstate::task_system_state, 
