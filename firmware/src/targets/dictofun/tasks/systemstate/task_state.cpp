@@ -14,6 +14,7 @@
 #include "battery_measurement.h"
 
 #include "task_cli_logger.h"
+#include "task_audio.h"
 
 #include <FreeRTOS.h>
 #include <task.h>
@@ -22,8 +23,15 @@ namespace systemstate
 {
 
 logger::CliCommandQueueElement cli_command_buffer;
+
 constexpr TickType_t cli_command_wait_ticks_type{10};
     
+bool is_record_start_by_cli_allowed()
+{
+    // TODO: replace with an additional check
+    return true;
+}
+
 void task_system_state(void * context_ptr)
 {
     NRF_LOG_INFO("task state: initialized");
@@ -37,7 +45,21 @@ void task_system_state(void * context_ptr)
         );
         if (pdPASS == cli_queue_receive_status)
         {
-            NRF_LOG_INFO("task state: received command from CLI");
+            NRF_LOG_INFO("task: received command from CLI");
+            if (is_record_start_by_cli_allowed())
+            {
+                audio::CommandQueueElement cmd{audio::Command::RECORD_START};
+                const auto record_start_status = xQueueSend(
+                    context.audio_commands_handle,
+                    reinterpret_cast<void *>(&cmd), 
+                    0);
+                if (record_start_status != pdPASS)
+                {
+                    NRF_LOG_ERROR("task state: failed to queue start_record command");
+                    continue;
+                }
+                // TODO: add a software timer launch record stop
+            }
         }
     }
 }   

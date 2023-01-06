@@ -33,12 +33,15 @@ application::TaskDescriptor<256, 2> systemstate_task;
 
 // ============================= Queues =====================================
 
-application::QueueDescriptor<logger::CliCommandQueueElement, 1> cli_commands_queue;
-application::QueueDescriptor<logger::CliStatusQueueElement, 1> cli_status_queue;
+application::QueueDescriptor<logger::CliCommandQueueElement, 1>  cli_commands_queue;
+application::QueueDescriptor<logger::CliStatusQueueElement, 1>   cli_status_queue; // This thing is under a big doubt, I don't think it's needed
+application::QueueDescriptor<audio::CommandQueueElement, 1>      audio_commands_queue;
+application::QueueDescriptor<audio::StatusQueueElement, 1>       audio_status_queue;
 
 // ============================ Contexts ====================================
 logger::CliContext      cli_context;
 systemstate::Context    systemstate_context;
+audio::Context          audio_context;
 
 // clang-format on
 
@@ -82,15 +85,30 @@ int main()
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
-    cli_context.cli_commands_handle = cli_commands_queue.handle;
-    cli_context.cli_status_handle = cli_status_queue.handle;
+    const auto audio_commands_init_result = audio_commands_queue.init();
+    if (result::Result::OK != audio_commands_init_result)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
+    const auto audio_status_init_result = audio_status_queue.init();
+    if (result::Result::OK != audio_status_init_result)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
 
     // Tasks' initialization
-    const auto audio_task_init_result = audio_task.init(audio::task_audio, "AUDIO", nullptr);
+    audio_context.commands_queue = audio_commands_queue.handle;
+    audio_context.status_queue = audio_status_queue.handle;
+
+    const auto audio_task_init_result = audio_task.init(audio::task_audio, "AUDIO", &audio_context);
     if (result::Result::OK != audio_task_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
+
+    cli_context.cli_commands_handle = cli_commands_queue.handle;
+    cli_context.cli_status_handle = cli_status_queue.handle;
 
     const auto log_task_init_result = log_task.init(logger::task_cli_logger, "CLI", &cli_context);
     if (result::Result::OK != log_task_init_result)
@@ -100,6 +118,8 @@ int main()
 
     systemstate_context.cli_commands_handle = cli_commands_queue.handle;
     systemstate_context.cli_status_handle = cli_status_queue.handle;
+    systemstate_context.audio_commands_handle = audio_commands_queue.handle;
+    systemstate_context.audio_status_handle = audio_status_queue.handle;
 
     const auto systemstate_task_init_result = systemstate_task.init(
         systemstate::task_system_state, 

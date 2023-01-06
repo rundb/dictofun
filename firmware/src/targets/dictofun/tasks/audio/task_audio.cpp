@@ -17,18 +17,31 @@
 namespace audio
 {
 
+CommandQueueElement audio_command_buffer;
+constexpr TickType_t audio_command_wait_ticks{10};
+
 constexpr size_t pdm_sample_size{8U};
 using AudioSampleType = audio::microphone::PdmSample<pdm_sample_size>;
 audio::microphone::PdmMicrophone<pdm_sample_size> pdm_mic;
 audio::AudioProcessor<audio::microphone::PdmMicrophone<pdm_sample_size>::SampleType> audio_processor{pdm_mic};
 
-void task_audio(void *)
+void task_audio(void * context_ptr)
 {
     NRF_LOG_INFO("task audio: initialized");
+    Context& context = *(reinterpret_cast<Context *>(context_ptr));
     audio_processor.start();
     while (1)
     {
-        vTaskDelay(1000);
+        vTaskDelay(100);
+        const auto audio_queue_receive_status = xQueueReceive(
+            context.commands_queue,
+            reinterpret_cast<void *>(&audio_command_buffer),
+            audio_command_wait_ticks
+        );
+        if (pdPASS == audio_queue_receive_status)
+        {
+            NRF_LOG_INFO("audio: received record_start command");
+        }
     }
 }
 

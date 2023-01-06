@@ -17,6 +17,8 @@ struct Context
     QueueHandle_t cli_commands_handle{nullptr};
     QueueHandle_t cli_status_handle{nullptr};
     // TODO: extend with rest of command queues controlled by SystemState
+    QueueHandle_t audio_commands_handle{nullptr};
+    QueueHandle_t audio_status_handle{nullptr};
 };
 
 }

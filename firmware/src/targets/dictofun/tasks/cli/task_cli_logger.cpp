@@ -63,11 +63,11 @@ void task_cli_logger(void * cli_context)
             const auto send_result = xQueueSend(context.cli_commands_handle, &cmd, 0U);
             if (pdPASS != send_result)
             {
-                NRF_LOG_WARNING("Failed to queue record operation");
+                NRF_LOG_WARNING("cli: failed to queue record operation");
             }
             else
             {
-                NRF_LOG_INFO("Record launch operation has been queued");
+                NRF_LOG_INFO("cli: record launch operation has been queued");
             }
         }
     }
