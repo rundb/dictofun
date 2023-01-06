@@ -24,38 +24,65 @@
 
 // clang-format off
 // ============================= Tasks ======================================
-constexpr size_t        audio_task_stack_size                   {256};
-StackType_t             audio_task_stack[audio_task_stack_size] {0UL};
-StaticTask_t            m_audio_task;
-TaskHandle_t            audio_task_handle{nullptr};
-UBaseType_t             audio_task_priority{1U};
+template<size_t stack_size_, UBaseType_t priority_>
+struct TaskDescriptor
+{
+    static constexpr size_t stack_size{stack_size_};
+    static constexpr UBaseType_t priority{priority_};
+    StackType_t stack[stack_size] {0UL};
+    StaticTask_t task;
+    TaskHandle_t handle{nullptr};
 
+    result::Result init(TaskFunction_t function, const char * task_name, void * task_parameters)
+    {
+        handle = xTaskCreateStatic(
+            function,
+            task_name,
+            stack_size,
+            task_parameters,
+            priority,
+            stack,
+            &task);
+        if (nullptr == handle)
+        {
+            return result::Result::ERROR_GENERAL;
+        }
+ 
+        return result::Result::OK;
+    }
+};
 
-constexpr size_t        log_task_stack_size{256};
-StackType_t             log_task_stack[log_task_stack_size] {0UL};
-StaticTask_t            m_log_task;
-TaskHandle_t            log_task_handle{nullptr};
-UBaseType_t             log_task_priority{1U};
-
-constexpr size_t        system_state_task_stack_size{256};
-StackType_t             system_state_task_stack[log_task_stack_size] {0UL};
-StaticTask_t            system_state_task;
-TaskHandle_t            system_state_task_handle{nullptr};
-UBaseType_t             system_state_task_priority{2U};
+TaskDescriptor<256, 1> audio_task;
+TaskDescriptor<256, 1> log_task;
+TaskDescriptor<256, 2> systemstate_task;
 
 // ============================= Queues =====================================
-StaticQueue_t           cli_commands_queue;
-constexpr size_t        cli_commands_queue_size{1};
-constexpr size_t        cli_command_size_bytes{sizeof(logger::CliCommandQueueElement)};
-uint8_t                 cli_commands_queue_buffer[cli_commands_queue_size * cli_command_size_bytes];
-QueueHandle_t           cli_commands_handle{nullptr};
+template<typename T, size_t N>
+struct QueueDescriptor
+{
+    using type = T;
+    static constexpr size_t element_size{sizeof(T)};
+    static constexpr size_t depth{N};
 
-StaticQueue_t           cli_status_queue;
-constexpr size_t        cli_status_queue_size{1};
-constexpr size_t        cli_status_size_bytes{sizeof(logger::CliStatusQueueElement)};
-uint8_t                 cli_status_queue_buffer[cli_status_queue_size * cli_status_size_bytes];
-QueueHandle_t           cli_status_handle{nullptr};
+    StaticQueue_t queue;
+    uint8_t buffer[N * sizeof(T)];
+    QueueHandle_t handle{nullptr};
 
+    result::Result init()
+    {
+        handle = xQueueCreateStatic( depth, element_size, buffer, &queue);
+        if (nullptr == handle)
+        {
+            return result::Result::ERROR_GENERAL;
+        }
+        return result::Result::OK;
+    }
+};
+
+QueueDescriptor<logger::CliCommandQueueElement, 1> cli_commands_queue;
+QueueDescriptor<logger::CliStatusQueueElement, 1> cli_status_queue;
+
+// ============================ Contexts ====================================
 logger::CliContext      cli_context;
 systemstate::Context    systemstate_context;
 
@@ -89,69 +116,42 @@ int main()
     bsp_board_init(BSP_INIT_LEDS);
 
     // Queues' initialization
-    cli_commands_handle = xQueueCreateStatic(
-        cli_commands_queue_size, 
-        cli_command_size_bytes, 
-        cli_commands_queue_buffer, 
-        &cli_commands_queue);
-    if (nullptr == cli_commands_handle)
+    const auto cli_commands_init_result = cli_commands_queue.init();
+    if (result::Result::OK != cli_commands_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
-    cli_status_handle = xQueueCreateStatic(
-        cli_status_queue_size, 
-        cli_command_size_bytes, 
-        cli_status_queue_buffer, 
-        &cli_status_queue);
-    if (nullptr == cli_status_handle)
+    const auto cli_status_init_result = cli_status_queue.init();
+    if (result::Result::OK != cli_status_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
-    cli_context.cli_commands_handle = cli_commands_handle;
-    cli_context.cli_status_handle = cli_status_handle;
+    cli_context.cli_commands_handle = cli_commands_queue.handle;
+    cli_context.cli_status_handle = cli_status_queue.handle;
 
     // Tasks' initialization
-    audio_task_handle = xTaskCreateStatic(
-        audio::task_audio,
-        "AUDIO",
-        audio_task_stack_size,
-        NULL,
-        audio_task_priority,
-        audio_task_stack,
-        &m_audio_task);
-    if (nullptr == audio_task_handle)
+    const auto audio_task_init_result = audio_task.init(audio::task_audio, "AUDIO", nullptr);
+    if (result::Result::OK != audio_task_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
-    log_task_handle = xTaskCreateStatic(
-        logger::task_cli_logger,
-        "CLI",
-        log_task_stack_size,
-        &cli_context,
-        log_task_priority,
-        log_task_stack,
-        &m_log_task);
-    if (nullptr == log_task_handle)
+    const auto log_task_init_result = log_task.init(logger::task_cli_logger, "CLI", &cli_context);
+    if (result::Result::OK != log_task_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
-    systemstate_context.cli_commands_handle = cli_commands_handle;
-    systemstate_context.cli_status_handle = cli_status_handle;
+    systemstate_context.cli_commands_handle = cli_commands_queue.handle;
+    systemstate_context.cli_status_handle = cli_status_queue.handle;
 
-    system_state_task_handle = xTaskCreateStatic(
-        systemstate::task_system_state,
-        "STATE",
-        system_state_task_stack_size,
-        &systemstate_context,
-        system_state_task_priority,
-        system_state_task_stack,
-        &system_state_task);
-
-    if (nullptr == system_state_task_handle)
+    const auto systemstate_task_init_result = systemstate_task.init(
+        systemstate::task_system_state, 
+        "STATE", 
+        &systemstate_context);
+    if (result::Result::OK != systemstate_task_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
