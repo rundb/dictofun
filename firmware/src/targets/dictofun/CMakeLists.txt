@@ -1,5 +1,8 @@
 add_executable(dictofun_main 
-    main.cpp)
+    main.cpp
+    freertos_memory_allocation.c
+    app_error_handler.cpp
+)
 
 add_subdirectory(tasks)
 add_subdirectory(config)
@@ -9,6 +12,11 @@ nrf5_target(dictofun_main)
 
 target_link_libraries(dictofun_main PRIVATE 
     tasks
+    task_audio
+    task_cli_logger
+    task_memory
+    task_system_state
+    task_led
     spi_flash
     boards
     nrf5_app_error

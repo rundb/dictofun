@@ -43,3 +43,19 @@ After the download one can open a corresponding Segger SES Project with SES. Lat
 * install `cmake` 3.22 or newer
 * install `make`
 * run script `firmware/sdk/download_nordic_sdk.sh`
+
+## Flashing
+
+`nrfjprog` is required to flash firmware into the device. Following command performs flashing (without changing the SoftDevice)
+
+```
+nrfjprog --reset --program ./build/src/targets/dictofun/Dictofun.hex --sectorerase --family NRF52 --verify
+```
+
+If SoftDevice is not flashed, it should be flashed using the following command:
+
+```
+nrfjprog --reset --program ./sdk/nRF5_SDK_17.1.0_ddde560/components/softdevice/s132/hex/s132_nrf52_7.2.0_softdevice.hex  --family NRF52 --sectorerase --verify
+```
+
+Both commands should be executed from folder `firmware` in the project structure.

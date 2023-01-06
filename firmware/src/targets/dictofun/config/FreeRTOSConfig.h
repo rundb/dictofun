@@ -61,7 +61,7 @@
 #define configUSE_TICKLESS_IDLE_SIMPLE_DEBUG                                      1 /* See into vPortSuppressTicksAndSleep source code for explanation */
 #define configCPU_CLOCK_HZ                                                        ( SystemCoreClock )
 #define configTICK_RATE_HZ                                                        1024
-#define configMAX_PRIORITIES                                                      ( 3 )
+#define configMAX_PRIORITIES                                                      ( 4 )
 #define configMINIMAL_STACK_SIZE                                                  ( 60 )
 #define configTOTAL_HEAP_SIZE                                                     ( 4096 )
 #define configMAX_TASK_NAME_LEN                                                   ( 4 )
@@ -76,6 +76,9 @@
 #define configUSE_TIME_SLICING                                                    0
 #define configUSE_NEWLIB_REENTRANT                                                0
 #define configENABLE_BACKWARD_COMPATIBILITY                                       1
+
+#define configSUPPORT_STATIC_ALLOCATION                                           1
+#define configSUPPORT_DYNAMIC_ALLOCATION                                          1
 
 /* Hook function related definitions. */
 #define configUSE_IDLE_HOOK                                                       0

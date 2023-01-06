@@ -5,15 +5,8 @@
 
 #include "app_error.h"
 
-#include "nrf_sdm.h"
-#include "BleSystem.h"
-#include "ble_dfu.h"
-#include "spi.h"
-#include "spi_flash.h"
 #include <boards.h>
 #include <nrf_gpio.h>
-#include "simple_fs.h"
-#include "block_device_api.h"
 #include "nrf_drv_clock.h"
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
@@ -21,34 +14,41 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "timers.h"
+#include "queue.h"
 
-#include <task_led.h>
 #include <task_state.h>
 #include "task_audio.h"
 #include "task_cli_logger.h"
 
-#include "audio_processor.h"
-#include "microphone_pdm.h"
+#include <stdint.h>
 
-ble::BleSystem bleSystem{};
-spi::Spi flashSpi(0, SPI_FLASH_CS_PIN);
-flash::SpiFlash flashMemory(flashSpi);
-flash::SpiFlash& getSpiFlash() { return flashMemory;}
+#include "freertos_wrappers.hpp"
 
-static const spi::Spi::Configuration flash_spi_config{NRF_DRV_SPI_FREQ_2M,
-                                                      NRF_DRV_SPI_MODE_0,
-                                                      NRF_DRV_SPI_BIT_ORDER_MSB_FIRST,
-                                                      SPI_FLASH_SCK_PIN,
-                                                      SPI_FLASH_MOSI_PIN,
-                                                      SPI_FLASH_MISO_PIN};
+// clang-format off
+// ============================= Tasks ======================================
 
-constexpr size_t pdm_sample_size{8U};
-using AudioSampleType = audio::microphone::PdmSample<pdm_sample_size>;
-audio::microphone::PdmMicrophone<pdm_sample_size> pdm_mic;
-audio::AudioProcessor<audio::microphone::PdmMicrophone<pdm_sample_size>::SampleType> audio_processor{pdm_mic};
+application::TaskDescriptor<256, 1> audio_task;
+application::TaskDescriptor<256, 1> log_task;
+application::TaskDescriptor<256, 2> systemstate_task;
 
-static TaskHandle_t m_audio_task;
-static TaskHandle_t m_cli_logger_task;
+// ============================= Queues =====================================
+
+application::QueueDescriptor<logger::CliCommandQueueElement, 1>  cli_commands_queue;
+application::QueueDescriptor<logger::CliStatusQueueElement, 1>   cli_status_queue; // This thing is under a big doubt, I don't think it's needed
+application::QueueDescriptor<audio::CommandQueueElement, 1>      audio_commands_queue;
+application::QueueDescriptor<audio::StatusQueueElement, 1>       audio_status_queue;
+
+// ============================= Timers =====================================
+
+StaticTimer_t record_timer_buffer;
+TimerHandle_t record_timer_handle{nullptr};
+
+// ============================ Contexts ====================================
+logger::CliContext      cli_context;
+systemstate::Context    systemstate_context;
+audio::Context          audio_context;
+
+// clang-format on
 
 void latch_ldo_enable()
 {
@@ -77,67 +77,72 @@ int main()
 
     bsp_board_init(BSP_INIT_LEDS);
 
-    audio_processor.start();
-
-    if (pdPASS != xTaskCreate(task_audio, "AUDIO", 256, NULL, 1, &m_audio_task))
+    // Queues' initialization
+    const auto cli_commands_init_result = cli_commands_queue.init();
+    if (result::Result::OK != cli_commands_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
-    if (pdPASS != xTaskCreate(logger::task_cli_logger, "CLI", 256, NULL, 1, &m_cli_logger_task))
+
+    const auto cli_status_init_result = cli_status_queue.init();
+    if (result::Result::OK != cli_status_init_result)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
+    const auto audio_commands_init_result = audio_commands_queue.init();
+    if (result::Result::OK != audio_commands_init_result)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
+    const auto audio_status_init_result = audio_status_queue.init();
+    if (result::Result::OK != audio_status_init_result)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
+    // Timers' initialization
+    record_timer_handle = xTimerCreateStatic("AUDIO", 1, pdFALSE, nullptr, systemstate::record_end_callback, &record_timer_buffer);
+    if (nullptr == record_timer_handle)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
+    // Tasks' initialization
+    audio_context.commands_queue = audio_commands_queue.handle;
+    audio_context.status_queue = audio_status_queue.handle;
+
+    const auto audio_task_init_result = audio_task.init(audio::task_audio, "AUDIO", &audio_context);
+    if (result::Result::OK != audio_task_init_result)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
+    cli_context.cli_commands_handle = cli_commands_queue.handle;
+    cli_context.cli_status_handle = cli_status_queue.handle;
+
+    const auto log_task_init_result = log_task.init(logger::task_cli_logger, "CLI", &cli_context);
+    if (result::Result::OK != log_task_init_result)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
+    systemstate_context.cli_commands_handle = cli_commands_queue.handle;
+    systemstate_context.cli_status_handle = cli_status_queue.handle;
+    systemstate_context.audio_commands_handle = audio_commands_queue.handle;
+    systemstate_context.audio_status_handle = audio_status_queue.handle;
+    systemstate_context.record_timer_handle = record_timer_handle;
+
+    const auto systemstate_task_init_result = systemstate_task.init(
+        systemstate::task_system_state, 
+        "STATE", 
+        &systemstate_context);
+    if (result::Result::OK != systemstate_task_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
     vTaskStartScheduler();
 
-}
-
-void app_error_fault_handler(uint32_t id, uint32_t pc, uint32_t info)
-{
-    __disable_irq();
-    NRF_LOG_FINAL_FLUSH();
-
-#ifndef DEBUG
-    NRF_LOG_ERROR("Fatal error");
-#else
-    switch (id)
-    {
-#if defined(SOFTDEVICE_PRESENT) && SOFTDEVICE_PRESENT
-        case NRF_FAULT_ID_SD_ASSERT:
-            NRF_LOG_ERROR("SOFTDEVICE: ASSERTION FAILED");
-            break;
-        case NRF_FAULT_ID_APP_MEMACC:
-            NRF_LOG_ERROR("SOFTDEVICE: INVALID MEMORY ACCESS");
-            break;
-#endif
-        case NRF_FAULT_ID_SDK_ASSERT:
-        {
-            assert_info_t * p_info = (assert_info_t *)info;
-            NRF_LOG_ERROR("ASSERTION FAILED at %s:%u",
-                          p_info->p_file_name,
-                          p_info->line_num);
-            break;
-        }
-        case NRF_FAULT_ID_SDK_ERROR:
-        {
-            error_info_t * p_info = (error_info_t *)info;
-            NRF_LOG_ERROR("ERROR %u [%s] at %s:%u\r\nPC at: 0x%08x",
-                          p_info->err_code,
-                          nrf_strerror_get(p_info->err_code),
-                          p_info->p_file_name,
-                          p_info->line_num,
-                          pc);
-             NRF_LOG_ERROR("End of error report");
-            break;
-        }
-        default:
-            NRF_LOG_ERROR("UNKNOWN FAULT at 0x%08X", pc);
-            break;
-    }
-#endif
-
-    NRF_BREAKPOINT_COND;
-    // On assert, the system can only recover with a reset.
-
-    nrf_gpio_pin_clear(LDO_EN_PIN);
 }
