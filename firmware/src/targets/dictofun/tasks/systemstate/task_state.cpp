@@ -13,17 +13,32 @@
 #include <nrf_log.h>
 #include "battery_measurement.h"
 
+#include "task_cli_logger.h"
+
 #include <FreeRTOS.h>
 #include <task.h>
 
 namespace systemstate
 {
-void task_system_state(void *)
+
+logger::CliCommandQueueElement cli_command_buffer;
+constexpr TickType_t cli_command_wait_ticks_type{10};
+    
+void task_system_state(void * context_ptr)
 {
     NRF_LOG_INFO("task state: initialized");
+    Context& context = *(reinterpret_cast<Context *>(context_ptr));
     while(1)
     {
-        vTaskDelay(10);
+        const auto cli_queue_receive_status = xQueueReceive(
+            context.cli_commands_handle,
+            reinterpret_cast<void *>(&cli_command_buffer),
+            cli_command_wait_ticks_type
+        );
+        if (pdPASS == cli_queue_receive_status)
+        {
+            NRF_LOG_INFO("task state: received command from CLI");
+        }
     }
 }   
 }

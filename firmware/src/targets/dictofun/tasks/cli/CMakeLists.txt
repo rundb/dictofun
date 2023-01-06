@@ -17,3 +17,6 @@ target_link_libraries(task_cli_logger PUBLIC
     nrf52_freertos_portable_cmsis
     nrf5_freertos_portable_memmang_1
 )
+
+add_library(task_cli_logger_interface INTERFACE)
+target_include_directories(task_cli_logger_interface INTERFACE ./)

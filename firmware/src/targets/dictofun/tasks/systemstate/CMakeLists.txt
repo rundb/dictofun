@@ -14,4 +14,5 @@ target_link_libraries(task_system_state PUBLIC
     nrf52_freertos_portable_gcc
     nrf52_freertos_portable_cmsis
     nrf5_freertos_portable_memmang_1
+    task_cli_logger_interface
 )

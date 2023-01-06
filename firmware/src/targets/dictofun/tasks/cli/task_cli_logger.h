@@ -19,8 +19,8 @@ void task_cli_logger(void * cli_context);
 
 struct CliContext
 {
-    QueueHandle_t cli_commands_handle;
-    QueueHandle_t cli_status_handle;
+    QueueHandle_t cli_commands_handle{nullptr};
+    QueueHandle_t cli_status_handle{nullptr};
 };
 
 struct RecordLaunchCommand

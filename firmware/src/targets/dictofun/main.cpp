@@ -56,7 +56,8 @@ constexpr size_t        cli_status_size_bytes{sizeof(logger::CliStatusQueueEleme
 uint8_t                 cli_status_queue_buffer[cli_status_queue_size * cli_status_size_bytes];
 QueueHandle_t           cli_status_handle{nullptr};
 
-logger::CliContext cli_context{nullptr, nullptr};
+logger::CliContext      cli_context;
+systemstate::Context    systemstate_context;
 
 // clang-format on
 
@@ -138,11 +139,14 @@ int main()
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
+    systemstate_context.cli_commands_handle = cli_commands_handle;
+    systemstate_context.cli_status_handle = cli_status_handle;
+
     system_state_task_handle = xTaskCreateStatic(
         systemstate::task_system_state,
         "STATE",
         system_state_task_stack_size,
-        NULL,
+        &systemstate_context,
         system_state_task_priority,
         system_state_task_stack,
         &system_state_task);

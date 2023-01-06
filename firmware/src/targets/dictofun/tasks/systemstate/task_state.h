@@ -5,10 +5,20 @@
 #pragma once
 
 #include "boards.h"
+#include "FreeRTOS.h"
+#include "queue.h"
 
 namespace systemstate
 {
-void task_system_state(void *);
+void task_system_state(void * context);
+
+struct Context
+{
+    QueueHandle_t cli_commands_handle{nullptr};
+    QueueHandle_t cli_status_handle{nullptr};
+    // TODO: extend with rest of command queues controlled by SystemState
+};
+
 }
 
 namespace application
