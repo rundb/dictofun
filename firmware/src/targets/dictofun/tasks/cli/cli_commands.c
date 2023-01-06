@@ -62,10 +62,7 @@ static void cmd_version(nrf_cli_t const * p_cli, size_t argc, char ** argv)
 
 }
 
-NRF_CLI_CMD_REGISTER(version,
-                     NULL,
-                     "Display software version",
-                     cmd_version);
+NRF_CLI_CMD_REGISTER(version, NULL, "Display software version", cmd_version);
 
 
 static record_launch_callback _record_launch_callback = NULL;
@@ -126,7 +123,4 @@ static void cmd_record(nrf_cli_t const * p_cli, const size_t argc, char ** argv)
     }
 }
 
-NRF_CLI_CMD_REGISTER(record,
-                     NULL,
-                     "Launch record",
-                     cmd_record);
+NRF_CLI_CMD_REGISTER(record, NULL, "Launch record", cmd_record);

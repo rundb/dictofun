@@ -14,7 +14,9 @@
 
 namespace audio
 {
-void task_audio(void *);
+/// @brief Function that implements audio task
+/// @param context_ptr pointer to struct Context, passed from the main.cpp
+void task_audio(void * context_ptr);
 
 enum class Command
 {
