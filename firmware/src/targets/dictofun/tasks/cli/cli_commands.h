@@ -15,6 +15,9 @@ extern "C" {
 void cli_init();
 void cli_process();
 
+typedef void (*record_launch_callback)(int, bool) ;
+void register_record_launch_callback(record_launch_callback callback);
+
 #ifdef __cplusplus
 }
 #endif
