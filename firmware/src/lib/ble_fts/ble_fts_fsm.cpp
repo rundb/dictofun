@@ -1,7 +1,6 @@
 #include "ble_fts_fsm.h"
 #include <nrf_log.h>
 #include "simple_fs.h"
-#include "drv_audio.h"
 
 const char* stateNames[] = {
         "invld",
@@ -242,7 +241,7 @@ void FtsStateMachine::process_command(const BleCommands command)
             }
 
             // exceptional case when read_size at first run is less than WAV header is not considerd.
-            drv_audio_wav_header_apply(_context.read_buffer, _context.current_file_size);
+            //drv_audio_wav_header_apply(_context.read_buffer, _context.current_file_size);
             send_data(_context, read_size);
             _context.transferred_data_size = read_size;
             

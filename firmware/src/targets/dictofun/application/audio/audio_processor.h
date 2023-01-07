@@ -19,19 +19,22 @@ class AudioProcessor
 public:
     explicit AudioProcessor(Microphone<MicrophoneSample>& microphone)
     : microphone_(microphone)
-    {
+    {}
 
-    }
-
+    void init();
     void start();
+    void stop();
 
     AudioProcessor() = delete;
     AudioProcessor(AudioProcessor&) = delete;
     AudioProcessor(const AudioProcessor&) = delete;
     AudioProcessor(AudioProcessor&&) = delete;
     AudioProcessor(const AudioProcessor&&) = delete;
+
+    int pdm_interrupt_calls_{0};
 private:
     Microphone<MicrophoneSample>& microphone_;
+    void microphone_data_ready_callback();
 };
 
 }

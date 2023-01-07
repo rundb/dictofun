@@ -5,7 +5,6 @@
 
 #include "BleServices.h"
 
-#include "drv_audio.h"
 #include <nrf_ble_qwr.h>
 #include <ble_file_transfer_service.h>
 #include <ble_lbs.h>

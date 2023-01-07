@@ -17,6 +17,7 @@ template<typename SamplesType>
 class Microphone
 {
 public:
+    virtual void init() = 0;
     virtual void start_recording() = 0;
     virtual void stop_recording() = 0;
 

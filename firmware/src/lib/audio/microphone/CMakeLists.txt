@@ -27,7 +27,16 @@ if (${is_unit_test})
 
     gtest_discover_tests(test_microphone)
 else()
-    add_library(microphone_pdm INTERFACE)
-    target_include_directories(microphone_pdm INTERFACE src)
-    target_link_libraries(microphone_pdm INTERFACE microphone_interface)
+    add_library(microphone_pdm STATIC
+        src/dummy.c
+    )
+    
+    target_include_directories(microphone_pdm PUBLIC src)
+    target_link_libraries(microphone_pdm PUBLIC 
+        microphone_interface
+    )
+    target_link_libraries(microphone_pdm PUBLIC
+        nrf5_nrfx_pdm
+        nrf5_nrfx_hal
+    )
 endif()
