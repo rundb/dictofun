@@ -13,6 +13,7 @@ nrf5_target(dictofun_main)
 target_link_libraries(dictofun_main PRIVATE 
     tasks
     task_audio
+    task_audio_tester
     task_cli_logger
     task_memory
     task_system_state

@@ -21,6 +21,7 @@
 
 #include <task_state.h>
 #include "task_audio.h"
+#include "task_audio_tester.h"
 #include "task_cli_logger.h"
 
 #include <stdint.h>
@@ -31,6 +32,7 @@
 // ============================= Tasks ======================================
 
 application::TaskDescriptor<256, 1> audio_task;
+application::TaskDescriptor<256, 1> audio_tester_task;
 application::TaskDescriptor<256, 1> log_task;
 application::TaskDescriptor<256, 2> systemstate_task;
 
@@ -52,6 +54,7 @@ TimerHandle_t record_timer_handle{nullptr};
 logger::CliContext      cli_context;
 systemstate::Context    systemstate_context;
 audio::Context          audio_context;
+audio::tester::Context  audio_tester_context;
 
 // clang-format on
 
@@ -127,6 +130,17 @@ int main()
 
     const auto audio_task_init_result = audio_task.init(audio::task_audio, "AUDIO", &audio_context);
     if (result::Result::OK != audio_task_init_result)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
+    audio_tester_context.data_queue = audio_data_queue.handle;
+
+    const auto audio_tester_task_init_result = audio_tester_task.init(
+        audio::tester::task_audio_tester, 
+        "AUTEST", 
+        &audio_tester_context);
+    if (result::Result::OK != audio_tester_task_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }

@@ -24,6 +24,7 @@ target_link_libraries(tasks PUBLIC
 )
 
 add_subdirectory(audio)
+add_subdirectory(audio_tester)
 add_subdirectory(cli)
 add_subdirectory(memory)
 add_subdirectory(systemstate)
