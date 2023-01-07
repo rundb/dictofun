@@ -63,9 +63,10 @@ void PdmMicrophone<SampleBufferSize>::stop_recording()
 }
 
 template <size_t SampleBufferSize>
-result::Result PdmMicrophone<SampleBufferSize>::get_samples(SampleType& samples) 
+result::Result PdmMicrophone<SampleBufferSize>::get_samples(SampleType& sample) 
 {
-    return result::Result::ERROR_NOT_IMPLEMENTED;
+    memcpy(&sample, buffers_[previous_buffer_index_], SampleBufferSize);
+    return result::Result::OK;
 }
 
 template <size_t SampleBufferSize>

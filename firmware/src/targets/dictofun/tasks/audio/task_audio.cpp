@@ -19,7 +19,8 @@ namespace audio
 {
 
 CommandQueueElement audio_command_buffer;
-constexpr TickType_t audio_command_wait_ticks{10};
+constexpr TickType_t audio_command_wait_passive_ticks{10};
+constexpr TickType_t audio_command_wait_active_ticks{0};
 
 constexpr size_t pdm_sample_size{64};
 using AudioSampleType = audio::microphone::PdmSample<pdm_sample_size>;
@@ -38,11 +39,12 @@ void task_audio(void * context_ptr)
     audio_processor.init();
     while (1)
     {
-        vTaskDelay(10);
         const auto audio_queue_receive_status = xQueueReceive(
             context.commands_queue,
             reinterpret_cast<void *>(&audio_command_buffer),
-            audio_command_wait_ticks
+            ((context.is_recording_active) ? 
+                audio_command_wait_active_ticks : 
+                audio_command_wait_passive_ticks)
         );
         if (pdPASS == audio_queue_receive_status)
         {
@@ -50,13 +52,16 @@ void task_audio(void * context_ptr)
             {
                 NRF_LOG_INFO("audio: received record_start command");
                 audio_processor.start();
+                context.is_recording_active = true;
             }
             if (audio_command_buffer.command_id == Command::RECORD_STOP)
             {
-                NRF_LOG_INFO("audio: received record_stop command");
+                context.is_recording_active = false;
                 audio_processor.stop();
+                NRF_LOG_INFO("audio: received record_stop command");
             }
         }
+        audio_processor.cyclic();
     }
 }
 

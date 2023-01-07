@@ -25,16 +25,22 @@ public:
     void start();
     void stop();
 
+    // This function should be periodically called from the OS context.
+    // TODO: define minimal call period depending on sample size
+    void cyclic();
+
     AudioProcessor() = delete;
     AudioProcessor(AudioProcessor&) = delete;
     AudioProcessor(const AudioProcessor&) = delete;
     AudioProcessor(AudioProcessor&&) = delete;
     AudioProcessor(const AudioProcessor&&) = delete;
 
-    int pdm_interrupt_calls_{0};
 private:
     Microphone<MicrophoneSample>& microphone_;
+    MicrophoneSample sample_;
     void microphone_data_ready_callback();
+    volatile bool is_data_frame_pending_{false};
+
 };
 
 }

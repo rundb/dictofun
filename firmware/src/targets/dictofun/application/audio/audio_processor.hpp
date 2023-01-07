@@ -11,7 +11,8 @@ template <typename MicrophoneSample>
 void AudioProcessor<MicrophoneSample>::init()
 {
     microphone_.init();
-    microphone_.register_data_ready_callback(std::bind(&AudioProcessor<MicrophoneSample>::microphone_data_ready_callback, this));
+    microphone_.register_data_ready_callback(
+        std::bind(&AudioProcessor<MicrophoneSample>::microphone_data_ready_callback, this));
 }
 
 template <typename MicrophoneSample>
@@ -24,15 +25,27 @@ template <typename MicrophoneSample>
 void AudioProcessor<MicrophoneSample>::stop()
 {
     microphone_.stop_recording();
+}
 
-    NRF_LOG_INFO("pdm: interrupt was called %d times", pdm_interrupt_calls_);
+template <typename MicrophoneSample>
+void AudioProcessor<MicrophoneSample>::cyclic()
+{
+    if (is_data_frame_pending_)
+    {
+        is_data_frame_pending_ = false;
+        const auto result = microphone_.get_samples(sample_);
+        if (result::Result::OK != result)
+        {
+            // TODO: define an appropriate action
+            return;
+        }
+    }
 }
 
 template <typename MicrophoneSample>
 void AudioProcessor<MicrophoneSample>::microphone_data_ready_callback()
 {
-    // TODO: signal the class user that data is ready for use. 
-    pdm_interrupt_calls_++;
+    is_data_frame_pending_ = true;
 }
 
 }

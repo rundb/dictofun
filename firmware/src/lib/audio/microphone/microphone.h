@@ -13,7 +13,7 @@ namespace audio
 
 /// @brief Microphone class abstracts implementation of a particular microphone media. 
 /// Microphone works in the following way:
-template<typename SamplesType>
+template<typename SampleType>
 class Microphone
 {
 public:
@@ -23,11 +23,11 @@ public:
 
     /// @brief This method should provide the pointer to the SamplesType structure containing
     /// last acquired audio sample.
-    /// @param samples - pointer to the data structure where the last collected samples should  be placed
+    /// @param sample - pointer to the data structure where the last collected samples should  be placed
     /// @return OK, if correct samples have been provided, Error code otherwise.
     /// @note data should be acquired within a certain time limit after the data_ready callback. If delay
     /// is too long, the microphone class is allowed to invalidate the data, error can be returned in this case. 
-    virtual result::Result get_samples(SamplesType& samples) = 0;
+    virtual result::Result get_samples(SampleType& sample) = 0;
     
     /// TODO: replace with a callable (check if std::function<..> is available for this purpose).
     using DataReadyCallback = std::function<void()>;

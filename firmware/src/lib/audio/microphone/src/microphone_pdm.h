@@ -39,7 +39,7 @@ public:
     void start_recording() override;
     void stop_recording() override;
 
-    result::Result get_samples(SampleType& samples) override;
+    result::Result get_samples(SampleType& sample) override;
 
     using PdmDataReadyCallback = std::function<void()>;
     void register_data_ready_callback(PdmDataReadyCallback callback) override;

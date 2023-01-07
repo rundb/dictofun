@@ -42,6 +42,8 @@ struct StatusQueueElement
 
 struct Context
 {
+    bool is_recording_active{false};
+    
     QueueHandle_t commands_queue{nullptr};
     QueueHandle_t status_queue{nullptr};
     // TODO: add data queue as well
