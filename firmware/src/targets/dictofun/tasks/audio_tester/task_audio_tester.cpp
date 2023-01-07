@@ -5,31 +5,65 @@ namespace audio
 {
 namespace tester
 {
+
+float calculate_average(uint8_t * buffer, size_t size)
+{
+    int sum{0};
+    for (size_t i = 0; i < size; ++i)
+    {
+        sum += static_cast<int>(buffer[i]);
+    }
+    return sum / size;
+}
+
+float calculate_deviation(float average, uint8_t * buffer, size_t size)
+{
+    float deviation_accum{0.0};
+    for (size_t i = 0; i < size; ++i)
+    {
+        float v = static_cast<float>(buffer[i]);
+        deviation_accum += (v - average) * (v - average);
+    }
+    return deviation_accum / (size - 1);
+}
+
 void task_audio_tester(void * context_ptr)
 {
     Context& context{*(reinterpret_cast<Context *>(context_ptr))};
-    uint8_t buffer[64]{0};
-    NRF_LOG_INFO("audio tester: initialized");
-    size_t ticks_counter{0};
+    constexpr size_t buffer_size{128}; // TODO: derive this size from the application configuration
+    uint8_t buffer[buffer_size]{0};
+    ControlQueueElement command;
+
     size_t received_samples_count{0};
+    float last_sample_average{0.0};
+    float last_sample_deviation{0.0};
+    bool is_tester_active{false};
     while(1)
     {
-        // TODO: add a suspension for the case when storage task is actually active 
-        const auto result = xQueueReceive(
-            context.data_queue,
-            reinterpret_cast<void *>(buffer),
-            10);
-        if (pdPASS == result)
+        if (is_tester_active)
         {
-            received_samples_count++;
+            const auto data_result = xQueueReceive(context.data_queue, reinterpret_cast<void *>(buffer), 10);
+            if (pdPASS == data_result)
+            {
+                received_samples_count++;
+                last_sample_average = calculate_average(buffer, buffer_size);
+                last_sample_deviation = calculate_deviation(last_sample_average, buffer, buffer_size);
+            }
         }
 
-        ticks_counter += 10;
-        if (ticks_counter % 10000 == 0)
+        const auto commands_result = xQueueReceive(context.commands_queue, reinterpret_cast<void *>(&command), 1);
+        if (pdPASS == commands_result)
         {
-            NRF_LOG_INFO("autest: received %d samples", received_samples_count);
+            is_tester_active = command.should_enable_tester;
+            if (!command.should_enable_tester)
+            {
+                NRF_LOG_INFO("autest: received %d samples, E=%d, sigma^2=%d", 
+                    received_samples_count, 
+                    static_cast<int>(last_sample_average),
+                    static_cast<int>(last_sample_deviation)
+                );
+            }
         }
-
     }
 }
 }

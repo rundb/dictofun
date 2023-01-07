@@ -13,3 +13,6 @@ target_link_libraries(task_audio_tester PUBLIC
     nrf52_freertos_portable_cmsis
     nrf5_freertos_portable_memmang_1
 )
+
+add_library(task_audio_tester_interface INTERFACE)
+target_include_directories(task_audio_tester_interface INTERFACE ./)

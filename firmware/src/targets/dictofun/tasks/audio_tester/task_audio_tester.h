@@ -9,9 +9,15 @@ namespace tester
 {
 void task_audio_tester(void * context_ptr);
 
+struct ControlQueueElement
+{
+    bool should_enable_tester;
+};
+
 struct Context
 {
-    QueueHandle_t data_queue;
+    QueueHandle_t data_queue{nullptr};
+    QueueHandle_t commands_queue{nullptr};
 };
 
 }

@@ -38,12 +38,15 @@ application::TaskDescriptor<256, 2> systemstate_task;
 
 // ============================= Queues =====================================
 
-application::QueueDescriptor<logger::CliCommandQueueElement, 1>  cli_commands_queue;
-application::QueueDescriptor<logger::CliStatusQueueElement, 1>   cli_status_queue; // This thing is under a big doubt, I don't think it's needed
-application::QueueDescriptor<audio::CommandQueueElement, 1>      audio_commands_queue;
-application::QueueDescriptor<audio::StatusQueueElement, 1>       audio_status_queue;
+application::QueueDescriptor<logger::CliCommandQueueElement, 1>      cli_commands_queue;
+application::QueueDescriptor<logger::CliStatusQueueElement, 1>       cli_status_queue; // This thing is under a big doubt, I don't think it's needed
+application::QueueDescriptor<audio::CommandQueueElement, 1>          audio_commands_queue;
+application::QueueDescriptor<audio::StatusQueueElement, 1>           audio_status_queue;
+application::QueueDescriptor<audio::tester::ControlQueueElement, 1>  audio_tester_commands_queue;
 
 application::QueueDescriptor<audio::microphone::PdmMicrophone<audio::pdm_sample_size>::SampleType, 3>          audio_data_queue;
+
+
 
 // ============================= Timers =====================================
 
@@ -116,6 +119,12 @@ int main()
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
+    const auto audio_tester_command_init_result = audio_tester_commands_queue.init();
+    if (result::Result::OK != audio_tester_command_init_result)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
     // Timers' initialization
     record_timer_handle = xTimerCreateStatic("AUDIO", 1, pdFALSE, nullptr, systemstate::record_end_callback, &record_timer_buffer);
     if (nullptr == record_timer_handle)
@@ -135,6 +144,7 @@ int main()
     }
 
     audio_tester_context.data_queue = audio_data_queue.handle;
+    audio_tester_context.commands_queue = audio_tester_commands_queue.handle;
 
     const auto audio_tester_task_init_result = audio_tester_task.init(
         audio::tester::task_audio_tester, 
@@ -159,6 +169,7 @@ int main()
     systemstate_context.audio_commands_handle = audio_commands_queue.handle;
     systemstate_context.audio_status_handle = audio_status_queue.handle;
     systemstate_context.record_timer_handle = record_timer_handle;
+    systemstate_context.audio_tester_commands_handle = audio_tester_commands_queue.handle;
 
     const auto systemstate_task_init_result = systemstate_task.init(
         systemstate::task_system_state, 
