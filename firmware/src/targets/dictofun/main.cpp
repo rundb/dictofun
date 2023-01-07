@@ -16,6 +16,9 @@
 #include "timers.h"
 #include "queue.h"
 
+// TODO: this dependency here is really bad
+#include "microphone_pdm.h"
+
 #include <task_state.h>
 #include "task_audio.h"
 #include "task_cli_logger.h"
@@ -37,6 +40,8 @@ application::QueueDescriptor<logger::CliCommandQueueElement, 1>  cli_commands_qu
 application::QueueDescriptor<logger::CliStatusQueueElement, 1>   cli_status_queue; // This thing is under a big doubt, I don't think it's needed
 application::QueueDescriptor<audio::CommandQueueElement, 1>      audio_commands_queue;
 application::QueueDescriptor<audio::StatusQueueElement, 1>       audio_status_queue;
+
+application::QueueDescriptor<audio::microphone::PdmMicrophone<audio::pdm_sample_size>::SampleType, 3>          audio_data_queue;
 
 // ============================= Timers =====================================
 
@@ -96,6 +101,12 @@ int main()
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
+    const auto audio_data_init_result = audio_data_queue.init();
+    if (result::Result::OK != audio_data_init_result)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
     const auto audio_status_init_result = audio_status_queue.init();
     if (result::Result::OK != audio_status_init_result)
     {
@@ -112,6 +123,7 @@ int main()
     // Tasks' initialization
     audio_context.commands_queue = audio_commands_queue.handle;
     audio_context.status_queue = audio_status_queue.handle;
+    audio_context.data_queue = audio_data_queue.handle;
 
     const auto audio_task_init_result = audio_task.init(audio::task_audio, "AUDIO", &audio_context);
     if (result::Result::OK != audio_task_init_result)

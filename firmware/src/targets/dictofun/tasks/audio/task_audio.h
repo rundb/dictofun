@@ -13,6 +13,10 @@
 
 namespace audio
 {
+
+// TODO: find a more appropriate location for this configuration parameter 
+constexpr size_t pdm_sample_size{64};
+
 /// @brief Function that implements audio task
 /// @param context_ptr pointer to struct Context, passed from the main.cpp
 void task_audio(void * context_ptr);
@@ -46,7 +50,8 @@ struct Context
     
     QueueHandle_t commands_queue{nullptr};
     QueueHandle_t status_queue{nullptr};
-    // TODO: add data queue as well
+
+    QueueHandle_t data_queue{nullptr};
 };
 
 }

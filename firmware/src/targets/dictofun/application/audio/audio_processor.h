@@ -36,7 +36,8 @@ public:
     // TODO: define minimal call period depending on sample size
     CyclicCallStatus cyclic();
 
-    MicrophoneSample& get_sample() { return sample_; }
+    // TODO: replace this sample with after-codec one when it's available
+    MicrophoneSample& get_last_sample() { return sample_; }
 
     AudioProcessor() = delete;
     AudioProcessor(AudioProcessor&) = delete;

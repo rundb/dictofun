@@ -22,8 +22,6 @@ CommandQueueElement audio_command_buffer;
 constexpr TickType_t audio_command_wait_passive_ticks{10};
 constexpr TickType_t audio_command_wait_active_ticks{0};
 
-constexpr size_t pdm_sample_size{64};
-using AudioSampleType = audio::microphone::PdmSample<pdm_sample_size>;
 audio::microphone::PdmMicrophone<pdm_sample_size> pdm_mic{CONFIG_IO_PDM_CLK, CONFIG_IO_PDM_DATA};
 audio::AudioProcessor<audio::microphone::PdmMicrophone<pdm_sample_size>::SampleType> audio_processor{pdm_mic};
 
@@ -64,8 +62,17 @@ void task_audio(void * context_ptr)
         const auto cyclic_call_result = audio_processor.cyclic();
         if (CyclicCallStatus::DATA_READY == cyclic_call_result)
         {
-            auto& sample = audio_processor.get_sample();
+            auto& sample = audio_processor.get_last_sample();
             // TODO: push this item to the data queue
+            const auto data_queue_send_result = xQueueSend(
+                context.data_queue,
+                reinterpret_cast<void *>(&sample),
+                0);
+            if (pdPASS != data_queue_send_result)
+            {
+                NRF_LOG_ERROR("audio: data queue send has failed");
+                // TODO: it may be needed to abort the whole record process here.
+            }
         }
     }
 }
