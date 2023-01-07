@@ -28,7 +28,7 @@ void AudioProcessor<MicrophoneSample>::stop()
 }
 
 template <typename MicrophoneSample>
-void AudioProcessor<MicrophoneSample>::cyclic()
+CyclicCallStatus AudioProcessor<MicrophoneSample>::cyclic()
 {
     if (is_data_frame_pending_)
     {
@@ -37,9 +37,14 @@ void AudioProcessor<MicrophoneSample>::cyclic()
         if (result::Result::OK != result)
         {
             // TODO: define an appropriate action
-            return;
+            // - early option: propagate the data to the application for the microphone operation check
+            // - the good option: run the data through the codec and then push the compressed data to the application
+            return CyclicCallStatus::ERROR;
         }
+        return CyclicCallStatus::DATA_READY;
     }
+
+    return CyclicCallStatus::NO_ACTION;
 }
 
 template <typename MicrophoneSample>

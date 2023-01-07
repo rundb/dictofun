@@ -61,7 +61,12 @@ void task_audio(void * context_ptr)
                 NRF_LOG_INFO("audio: received record_stop command");
             }
         }
-        audio_processor.cyclic();
+        const auto cyclic_call_result = audio_processor.cyclic();
+        if (CyclicCallStatus::DATA_READY == cyclic_call_result)
+        {
+            auto& sample = audio_processor.get_sample();
+            // TODO: push this item to the data queue
+        }
     }
 }
 
