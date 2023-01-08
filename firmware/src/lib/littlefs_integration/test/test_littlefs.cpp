@@ -4,13 +4,10 @@
  */
 
 #include "spi_flash_simulation_api.h"
-#include <iostream>
 
 #include <gtest/gtest.h>
 
 #include "lfs.h"
-
-using namespace std;
 
 namespace
 {
@@ -59,7 +56,7 @@ TEST(LittleFsTest, BasicFormat)
     {
         lfs_file_open(&lfs, &file, "rec0", LFS_O_WRONLY | LFS_O_CREAT);
         constexpr size_t single_frame_size{64};
-        constexpr size_t target_file_size{1024*1024}; // ~20kB
+        constexpr size_t target_file_size{1024*1024}; // ~1Mb
         uint8_t test_data[64];
         memset(test_data, 0xEF, sizeof(test_data));
         for (auto i = 0; i < target_file_size / single_frame_size; ++i)
@@ -81,10 +78,6 @@ TEST(LittleFsTest, BasicFormat)
         }
         lfs_file_close(&lfs, &file);
     }
-
-    memory::blockdevice::sim::display();
-    cout.flush();
-    EXPECT_TRUE(1 == 0);
 }
 
 }
