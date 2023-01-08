@@ -59,30 +59,46 @@ TEST(LittleFsTest, BasicFormat)
     err = lfs_mount(&lfs, &lfs_configuration);
     EXPECT_EQ(err, 0);
 
-    {
-        lfs_file_open(&lfs, &file, "rec0", LFS_O_WRONLY | LFS_O_CREAT);
-        constexpr size_t single_frame_size{64};
-        constexpr size_t target_file_size{1024*1024}; // ~1Mb
-        uint8_t test_data[64];
-        memset(test_data, 0xEF, sizeof(test_data));
-        for (auto i = 0; i < target_file_size / single_frame_size; ++i)
-        {
-            lfs_file_write(&lfs, &file, test_data, sizeof(test_data));
-        }
-        lfs_file_close(&lfs, &file);
-    }
+    // {
+    //     lfs_file_open(&lfs, &file, "rec0", LFS_O_WRONLY | LFS_O_CREAT);
+    //     constexpr size_t single_frame_size{64};
+    //     constexpr size_t target_file_size{1024*1024}; // ~1Mb
+    //     uint8_t test_data[64];
+    //     memset(test_data, 0xEF, sizeof(test_data));
+    //     for (auto i = 0; i < target_file_size / single_frame_size; ++i)
+    //     {
+    //         lfs_file_write(&lfs, &file, test_data, sizeof(test_data));
+    //     }
+    //     lfs_file_close(&lfs, &file);
+    // }
 
     {
-        lfs_file_open(&lfs, &file, "rec1", LFS_O_WRONLY | LFS_O_CREAT);
-        constexpr size_t single_frame_size{64};
-        constexpr size_t target_file_size{1024*1024}; 
-        uint8_t test_data[64];
-        memset(test_data, 0xEF, sizeof(test_data));
-        for (auto i = 0; i < target_file_size / single_frame_size; ++i)
+        const auto create_result = lfs_file_open(&lfs, &file, "rec0", LFS_O_WRONLY | LFS_O_CREAT);
+        EXPECT_EQ(create_result, 0);
+
+        constexpr size_t test_data_size{16};
+        uint8_t test_data[test_data_size];
+        for (int i = 0; i < test_data_size; ++i)
         {
-            lfs_file_write(&lfs, &file, test_data, sizeof(test_data));
+            test_data[i] = i;
         }
-        lfs_file_close(&lfs, &file);
+        const auto write_result = lfs_file_write(&lfs, &file, test_data, sizeof(test_data));
+        EXPECT_EQ(write_result, test_data_size);
+
+        const auto close_result_1 = lfs_file_close(&lfs, &file);
+        EXPECT_EQ(close_result_1, 0);
+
+        memset(test_data, 0, test_data_size);
+        const auto open_to_read_result = lfs_file_open(&lfs, &file, "rec0", LFS_O_RDONLY);
+        EXPECT_EQ(open_to_read_result, 0);
+        const auto read_result = lfs_file_read(&lfs, &file, test_data, sizeof(test_data));
+        EXPECT_EQ(read_result, test_data_size);
+        const auto close_result_2 = lfs_file_close(&lfs, &file);
+        EXPECT_EQ(close_result_2, 0);
+
+        EXPECT_EQ(test_data[1], 1);
+        EXPECT_EQ(test_data[8], 8);
+        EXPECT_EQ(test_data[15], 15);
     }
 }
 
