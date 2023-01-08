@@ -4,6 +4,7 @@
  */
 
 #include "spi_flash_simulation_api.h"
+#include "block_api.h"
 
 #include <gtest/gtest.h>
 
@@ -24,10 +25,10 @@ static uint8_t lookahead_buffer[CACHE_SIZE];
 // configuration of the filesystem is provided by this struct
 const struct lfs_config lfs_configuration = {
     // block device operations
-    .read  = memory::blockdevice::sim::read,
-    .prog  = memory::blockdevice::sim::program,
-    .erase = memory::blockdevice::sim::erase,
-    .sync  = memory::blockdevice::sim::sync,
+    .read  = memory::block_device::read,
+    .prog  = memory::block_device::program,
+    .erase = memory::block_device::erase,
+    .sync  = memory::block_device::sync,
 
     // block device configuration
     .read_size = 16,
@@ -45,9 +46,14 @@ const struct lfs_config lfs_configuration = {
 lfs_t lfs;
 lfs_file_t file;
 
+constexpr size_t sim_sector_size{4096};
+constexpr size_t sim_page_size{256};
+constexpr size_t sim_total_size{16*1024*1024};
+
 TEST(LittleFsTest, BasicFormat)
 {
-    memory::blockdevice::sim::reset();
+    memory::block_device::sim::InRamFlash inram_flash{sim_sector_size, sim_page_size, sim_total_size};
+    memory::block_device::register_flash_device(&inram_flash, sim_sector_size, sim_page_size, sim_total_size);
     
     int err = lfs_format(&lfs, &lfs_configuration);
     err = lfs_mount(&lfs, &lfs_configuration);

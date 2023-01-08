@@ -5,26 +5,31 @@
 
 #pragma once
 
-#include "lfs.h"
+#include "spi_flash_if.h"
 
 // LittleFS integration process suggests implementation of methods that are used to access the flash memory.
 namespace memory 
 {
-namespace blockdevice 
+namespace block_device 
 {
 namespace sim 
 {
 
-constexpr size_t page_size{256};
-constexpr size_t sector_size{4096};
+class InRamFlash : public SpiNorFlashIf
+{
+public:
+    InRamFlash(size_t sector_size, size_t page_size, size_t total_size);
+    ~InRamFlash();
 
-void reset();
-void display();
-
-int read(const struct lfs_config *c, lfs_block_t block, lfs_off_t off, void *buffer, lfs_size_t size);
-int program(const struct lfs_config *c, lfs_block_t block, lfs_off_t off, const void *buffer, lfs_size_t size);
-int erase(const struct lfs_config *c, lfs_block_t block);
-int sync(const struct lfs_config *c);
+    Result read(uint32_t address, uint8_t* data, uint32_t size) override;
+    Result program(uint32_t address, const uint8_t * const data, uint32_t size) override;
+    Result erase(uint32_t address, uint32_t size) override;
+private:
+    size_t sector_size_;
+    size_t page_size_;
+    size_t total_size_;
+    uint8_t * memory_{nullptr};
+};
 
 }
 }
