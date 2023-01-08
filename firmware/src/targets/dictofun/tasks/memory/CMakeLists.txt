@@ -15,3 +15,7 @@ target_link_libraries(task_memory PUBLIC
     nrf52_freertos_portable_cmsis
     nrf5_freertos_portable_memmang_1
 )
+
+add_library(task_memory_interface INTERFACE)
+
+target_include_directories(task_memory_interface INTERFACE ./)
