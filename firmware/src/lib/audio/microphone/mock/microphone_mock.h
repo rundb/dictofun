@@ -19,6 +19,7 @@ struct MockAudioSample
 class MicrophoneMock: public Microphone<MockAudioSample>
 {
 public:
+    void init() override;
     void start_recording() override;
     void stop_recording() override;
     result::Result get_samples(MockAudioSample& samples) override;

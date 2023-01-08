@@ -6,7 +6,12 @@
 
 namespace audio
 {
-    
+
+void MicrophoneMock::init()
+{
+
+}
+
 void MicrophoneMock::start_recording()
 {
     
