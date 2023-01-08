@@ -1,3 +1,7 @@
+// SPDX-License-Identifier:  Apache-2.0
+/*
+ * Copyright (c) 2023, Roman Turkin
+ */
 #include "task_audio_tester.h"
 #include "nrf_log.h"
 
