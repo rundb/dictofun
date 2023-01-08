@@ -4,10 +4,13 @@
  */
 
 #include "spi_flash_simulation_api.h"
+#include <iostream>
 
 #include <gtest/gtest.h>
 
 #include "lfs.h"
+
+using namespace std;
 
 namespace
 {
@@ -42,9 +45,46 @@ const struct lfs_config lfs_configuration = {
     .lookahead_buffer = lookahead_buffer,
 };
 
-TEST(LittleFsTest, Dummy)
-{
+lfs_t lfs;
+lfs_file_t file;
 
+TEST(LittleFsTest, BasicFormat)
+{
+    memory::blockdevice::sim::reset();
+    
+    int err = lfs_format(&lfs, &lfs_configuration);
+    err = lfs_mount(&lfs, &lfs_configuration);
+    EXPECT_EQ(err, 0);
+
+    {
+        lfs_file_open(&lfs, &file, "rec0", LFS_O_WRONLY | LFS_O_CREAT);
+        constexpr size_t single_frame_size{64};
+        constexpr size_t target_file_size{1024*1024}; // ~20kB
+        uint8_t test_data[64];
+        memset(test_data, 0xEF, sizeof(test_data));
+        for (auto i = 0; i < target_file_size / single_frame_size; ++i)
+        {
+            lfs_file_write(&lfs, &file, test_data, sizeof(test_data));
+        }
+        lfs_file_close(&lfs, &file);
+    }
+
+    {
+        lfs_file_open(&lfs, &file, "rec1", LFS_O_WRONLY | LFS_O_CREAT);
+        constexpr size_t single_frame_size{64};
+        constexpr size_t target_file_size{1024*1024}; 
+        uint8_t test_data[64];
+        memset(test_data, 0xEF, sizeof(test_data));
+        for (auto i = 0; i < target_file_size / single_frame_size; ++i)
+        {
+            lfs_file_write(&lfs, &file, test_data, sizeof(test_data));
+        }
+        lfs_file_close(&lfs, &file);
+    }
+
+    memory::blockdevice::sim::display();
+    cout.flush();
+    EXPECT_TRUE(1 == 0);
 }
 
 }

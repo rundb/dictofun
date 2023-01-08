@@ -15,21 +15,14 @@ namespace blockdevice
 namespace sim 
 {
 
-int read(
-    const struct lfs_config *c, 
-    lfs_block_t block,
-    lfs_off_t off, 
-    void *buffer, 
-    lfs_size_t size
-);
+constexpr size_t page_size{256};
+constexpr size_t sector_size{4096};
 
-int program(
-    const struct lfs_config *c, 
-    lfs_block_t block,
-    lfs_off_t off, 
-    const void *buffer, 
-    lfs_size_t size);
+void reset();
+void display();
 
+int read(const struct lfs_config *c, lfs_block_t block, lfs_off_t off, void *buffer, lfs_size_t size);
+int program(const struct lfs_config *c, lfs_block_t block, lfs_off_t off, const void *buffer, lfs_size_t size);
 int erase(const struct lfs_config *c, lfs_block_t block);
 int sync(const struct lfs_config *c);
 
