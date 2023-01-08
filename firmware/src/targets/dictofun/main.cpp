@@ -16,8 +16,12 @@
 #include "timers.h"
 #include "queue.h"
 
+// TODO: this dependency here is really bad
+#include "microphone_pdm.h"
+
 #include <task_state.h>
 #include "task_audio.h"
+#include "task_audio_tester.h"
 #include "task_cli_logger.h"
 
 #include <stdint.h>
@@ -28,15 +32,21 @@
 // ============================= Tasks ======================================
 
 application::TaskDescriptor<256, 1> audio_task;
+application::TaskDescriptor<256, 1> audio_tester_task;
 application::TaskDescriptor<256, 1> log_task;
 application::TaskDescriptor<256, 2> systemstate_task;
 
 // ============================= Queues =====================================
 
-application::QueueDescriptor<logger::CliCommandQueueElement, 1>  cli_commands_queue;
-application::QueueDescriptor<logger::CliStatusQueueElement, 1>   cli_status_queue; // This thing is under a big doubt, I don't think it's needed
-application::QueueDescriptor<audio::CommandQueueElement, 1>      audio_commands_queue;
-application::QueueDescriptor<audio::StatusQueueElement, 1>       audio_status_queue;
+application::QueueDescriptor<logger::CliCommandQueueElement, 1>      cli_commands_queue;
+application::QueueDescriptor<logger::CliStatusQueueElement, 1>       cli_status_queue; // This thing is under a big doubt, I don't think it's needed
+application::QueueDescriptor<audio::CommandQueueElement, 1>          audio_commands_queue;
+application::QueueDescriptor<audio::StatusQueueElement, 1>           audio_status_queue;
+application::QueueDescriptor<audio::tester::ControlQueueElement, 1>  audio_tester_commands_queue;
+
+application::QueueDescriptor<audio::microphone::PdmMicrophone<audio::pdm_sample_size>::SampleType, 3>          audio_data_queue;
+
+
 
 // ============================= Timers =====================================
 
@@ -47,6 +57,7 @@ TimerHandle_t record_timer_handle{nullptr};
 logger::CliContext      cli_context;
 systemstate::Context    systemstate_context;
 audio::Context          audio_context;
+audio::tester::Context  audio_tester_context;
 
 // clang-format on
 
@@ -96,8 +107,20 @@ int main()
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
+    const auto audio_data_init_result = audio_data_queue.init();
+    if (result::Result::OK != audio_data_init_result)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
     const auto audio_status_init_result = audio_status_queue.init();
     if (result::Result::OK != audio_status_init_result)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
+    const auto audio_tester_command_init_result = audio_tester_commands_queue.init();
+    if (result::Result::OK != audio_tester_command_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
@@ -112,9 +135,22 @@ int main()
     // Tasks' initialization
     audio_context.commands_queue = audio_commands_queue.handle;
     audio_context.status_queue = audio_status_queue.handle;
+    audio_context.data_queue = audio_data_queue.handle;
 
     const auto audio_task_init_result = audio_task.init(audio::task_audio, "AUDIO", &audio_context);
     if (result::Result::OK != audio_task_init_result)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
+    audio_tester_context.data_queue = audio_data_queue.handle;
+    audio_tester_context.commands_queue = audio_tester_commands_queue.handle;
+
+    const auto audio_tester_task_init_result = audio_tester_task.init(
+        audio::tester::task_audio_tester, 
+        "AUTEST", 
+        &audio_tester_context);
+    if (result::Result::OK != audio_tester_task_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
@@ -133,6 +169,7 @@ int main()
     systemstate_context.audio_commands_handle = audio_commands_queue.handle;
     systemstate_context.audio_status_handle = audio_status_queue.handle;
     systemstate_context.record_timer_handle = record_timer_handle;
+    systemstate_context.audio_tester_commands_handle = audio_tester_commands_queue.handle;
 
     const auto systemstate_task_init_result = systemstate_task.init(
         systemstate::task_system_state, 

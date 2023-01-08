@@ -8,9 +8,49 @@ namespace audio
 {
 
 template <typename MicrophoneSample>
+void AudioProcessor<MicrophoneSample>::init()
+{
+    microphone_.init();
+    microphone_.register_data_ready_callback(
+        std::bind(&AudioProcessor<MicrophoneSample>::microphone_data_ready_callback, this));
+}
+
+template <typename MicrophoneSample>
 void AudioProcessor<MicrophoneSample>::start()
 {
     microphone_.start_recording();
+}
+
+template <typename MicrophoneSample>
+void AudioProcessor<MicrophoneSample>::stop()
+{
+    microphone_.stop_recording();
+}
+
+template <typename MicrophoneSample>
+CyclicCallStatus AudioProcessor<MicrophoneSample>::cyclic()
+{
+    if (is_data_frame_pending_)
+    {
+        is_data_frame_pending_ = false;
+        const auto result = microphone_.get_samples(sample_);
+        if (result::Result::OK != result)
+        {
+            // TODO: define an appropriate action
+            // - early option: propagate the data to the application for the microphone operation check
+            // - the good option: run the data through the codec and then push the compressed data to the application
+            return CyclicCallStatus::ERROR;
+        }
+        return CyclicCallStatus::DATA_READY;
+    }
+
+    return CyclicCallStatus::NO_ACTION;
+}
+
+template <typename MicrophoneSample>
+void AudioProcessor<MicrophoneSample>::microphone_data_ready_callback()
+{
+    is_data_frame_pending_ = true;
 }
 
 }

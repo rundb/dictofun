@@ -9,6 +9,13 @@
 namespace audio
 {
 
+enum class CyclicCallStatus
+{
+    NO_ACTION,
+    DATA_READY,
+    ERROR,
+};
+
 /// @brief This class is responsible for:
 /// - control of microphone
 /// - memory management for microphone buffers
@@ -19,19 +26,31 @@ class AudioProcessor
 public:
     explicit AudioProcessor(Microphone<MicrophoneSample>& microphone)
     : microphone_(microphone)
-    {
+    {}
 
-    }
-
+    void init();
     void start();
+    void stop();
+
+    // This function should be periodically called from the OS context.
+    // TODO: define minimal call period depending on sample size
+    CyclicCallStatus cyclic();
+
+    // TODO: replace this sample with after-codec one when it's available
+    MicrophoneSample& get_last_sample() { return sample_; }
 
     AudioProcessor() = delete;
     AudioProcessor(AudioProcessor&) = delete;
     AudioProcessor(const AudioProcessor&) = delete;
     AudioProcessor(AudioProcessor&&) = delete;
     AudioProcessor(const AudioProcessor&&) = delete;
+
 private:
     Microphone<MicrophoneSample>& microphone_;
+    MicrophoneSample sample_;
+    void microphone_data_ready_callback();
+    volatile bool is_data_frame_pending_{false};
+
 };
 
 }

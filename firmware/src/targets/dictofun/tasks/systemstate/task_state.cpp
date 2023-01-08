@@ -16,6 +16,7 @@
 
 #include "task_cli_logger.h"
 #include "task_audio.h"
+#include "task_audio_tester.h"
 
 #include <FreeRTOS.h>
 #include <task.h>
@@ -48,6 +49,13 @@ void record_end_callback(TimerHandle_t timer)
     const auto record_stop_status = xQueueSend(
         context->audio_commands_handle,
         reinterpret_cast<void *>(&cmd), 
+        0);
+
+    audio::tester::ControlQueueElement tester_cmd;
+    tester_cmd.should_enable_tester = false;
+    const auto tester_start_status = xQueueSend(
+        context->audio_tester_commands_handle,
+        reinterpret_cast<void *>(&tester_cmd), 
         0);
 }
 
@@ -98,6 +106,22 @@ void task_system_state(void * context_ptr)
                 {
                     NRF_LOG_ERROR("task state: failed to queue start_record command");
                     continue;
+                }
+
+                // record in mode without storage, so audio tester should be enabled
+                if (cli_command_buffer.args[1] == 0)
+                {
+                    NRF_LOG_INFO("task state: enabling audio tester")
+                    audio::tester::ControlQueueElement cmd;
+                    cmd.should_enable_tester = true;
+                    const auto tester_start_status = xQueueSend(
+                        context->audio_tester_commands_handle,
+                        reinterpret_cast<void *>(&cmd), 
+                        0);
+                }
+                else
+                {
+                    // enable the storage module, if necessary
                 }
                 
                 constexpr TickType_t ticks_per_second{1000};

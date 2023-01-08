@@ -4,7 +4,6 @@
  */
 #pragma once
 
-#include "drv_audio.h"
 #include <stdint.h>
 #include "simple_fs.h"
 #include "result.h"
@@ -14,6 +13,10 @@
 
 namespace audio
 {
+
+// TODO: find a more appropriate location for this configuration parameter 
+constexpr size_t pdm_sample_size{64};
+
 /// @brief Function that implements audio task
 /// @param context_ptr pointer to struct Context, passed from the main.cpp
 void task_audio(void * context_ptr);
@@ -43,14 +46,12 @@ struct StatusQueueElement
 
 struct Context
 {
+    bool is_recording_active{false};
+    
     QueueHandle_t commands_queue{nullptr};
     QueueHandle_t status_queue{nullptr};
-    // TODO: add data queue as well
+
+    QueueHandle_t data_queue{nullptr};
 };
 
-void audio_init();
-void audio_start_record(filesystem::File& file);
-result::Result audio_stop_record();
-void audio_frame_handle();
-void audio_frame_cb(drv_audio_frame_t * frame);
 }

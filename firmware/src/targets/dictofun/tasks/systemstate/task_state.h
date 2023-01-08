@@ -21,6 +21,8 @@ struct Context
     QueueHandle_t audio_commands_handle{nullptr};
     QueueHandle_t audio_status_handle{nullptr};
 
+    QueueHandle_t audio_tester_commands_handle{nullptr};
+
     TimerHandle_t record_timer_handle{nullptr};
 
     bool is_record_active{false};

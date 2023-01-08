@@ -7,7 +7,6 @@ target_include_directories(tasks PUBLIC ./)
 target_include_directories(tasks PRIVATE cli)
 
 target_link_libraries(tasks PUBLIC ble_fts)
-target_link_libraries(tasks PUBLIC drv_pdm)
 target_link_libraries(tasks PUBLIC nrf5_nrfx_saadc)
 target_link_libraries(tasks PRIVATE 
     spi_flash
@@ -25,6 +24,7 @@ target_link_libraries(tasks PUBLIC
 )
 
 add_subdirectory(audio)
+add_subdirectory(audio_tester)
 add_subdirectory(cli)
 add_subdirectory(memory)
 add_subdirectory(systemstate)
