@@ -32,6 +32,7 @@ elseif("${BUILD_TARGET}" STREQUAL "unit-test")
     add_subdirectory(src/lib/common)
     add_subdirectory(src/lib/dummy_module)
     add_subdirectory(src/lib/audio)
+    add_subdirectory(src/lib/littlefs_integration/test)
 endif()
 
 
