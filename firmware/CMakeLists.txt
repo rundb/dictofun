@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
+include("cmake/littlefs.cmake")
 # This conditional selection is designed for build selection between dictofun builds and unit test builds.
 if ("${BUILD_TARGET}" STREQUAL "dictofun")
     project(Dictofun LANGUAGES C CXX ASM)

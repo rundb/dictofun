@@ -7,4 +7,4 @@ fi
 
 rm -rf ./*
 
-cmake -S .. -B . -DBUILD_TARGET:STRING=unit-test && cmake --build . && ctest
+cmake -S .. -B . -DBUILD_TARGET:STRING=unit-test -DTHIRD_PARTY_PATH=./src/lib/third_party && cmake --build . && ctest
