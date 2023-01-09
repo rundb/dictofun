@@ -19,6 +19,7 @@ target_link_libraries(dictofun_main PRIVATE
     task_system_state
     task_led
     spi_flash
+    littlefs
     boards
     nrf5_app_error
     nrf5_drv_clock

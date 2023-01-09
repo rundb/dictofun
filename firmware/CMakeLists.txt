@@ -8,12 +8,11 @@ if ("${BUILD_TARGET}" STREQUAL "dictofun")
 
     include("cmake/dictofun.cmake")
     include("cmake/nrf5.cmake")
+    include("cmake/littlefs.cmake")
 
     add_subdirectory(src)
 elseif("${BUILD_TARGET}" STREQUAL "unit-test")
     project(dictofun_ut LANGUAGES C CXX)
-
-    include("cmake/littlefs.cmake")
     
     set(CMAKE_CXX_STANDARD 14)
 

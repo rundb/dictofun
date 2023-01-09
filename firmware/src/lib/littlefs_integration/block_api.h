@@ -5,8 +5,8 @@
 
 #pragma once
 
-#include "spi_flash_if.h"
 #include "lfs.h"
+#include "spi_flash_if.h"
 
 // Set of methods that implement block level API to be used in LittleFS on top of Winbond NOR SPI Flash
 // Main feature introduced by this class: last sector contains bitmap of erased state for each of the sectors
