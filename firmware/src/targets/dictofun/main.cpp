@@ -186,6 +186,8 @@ int main()
     systemstate_context.audio_status_handle = audio_status_queue.handle;
     systemstate_context.record_timer_handle = record_timer_handle;
     systemstate_context.audio_tester_commands_handle = audio_tester_commands_queue.handle;
+    systemstate_context.memory_commands_handle = memory_commands_queue.handle;
+    systemstate_context.memory_status_handle = memory_status_queue.handle;
 
     const auto systemstate_task_init_result = systemstate_task.init(
         systemstate::task_system_state, 
@@ -196,6 +198,8 @@ int main()
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
+    memory_context.command_queue = memory_commands_queue.handle;
+    memory_context.status_queue = memory_status_queue.handle;
     const auto memory_task_init_result = memory_task.init(
         memory::task_memory,
         "MEM",

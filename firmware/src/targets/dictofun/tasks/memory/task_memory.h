@@ -16,7 +16,9 @@ void task_memory(void * context_ptr);
 
 enum class Command
 {
-    FORMAT_STORAGE,
+    LAUNCH_TEST_1,
+    LAUNCH_TEST_2,
+    LAUNCH_TEST_3,
     FORMAT_CONFIG,
     OPEN_FILE_FOR_WRITE,
     CLOSE_FILE_FOR_WRITE,
@@ -48,8 +50,8 @@ struct StatusQueueElement
 struct Context
 {
     QueueHandle_t audio_data_queue {nullptr};
-    QueueHandle_t storage_command_queue {nullptr};
-    QueueHandle_t storage_status_queue {nullptr};
+    QueueHandle_t command_queue {nullptr};
+    QueueHandle_t status_queue {nullptr};
 };
 
 }

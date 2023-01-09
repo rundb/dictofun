@@ -16,6 +16,7 @@
 #include "task_cli_logger.h"
 #include "task_audio.h"
 #include "task_audio_tester.h"
+#include "task_memory.h"
 
 #include <FreeRTOS.h>
 #include <task.h>
@@ -162,6 +163,21 @@ void launch_cli_command_record(const uint32_t duration, bool should_store_the_re
 void launch_cli_command_memory_test(const uint32_t test_id)
 {
     NRF_LOG_INFO("task state: launching memory test %d", test_id);
+    const memory::Command command_id = 
+        (test_id == 3) ? memory::Command::LAUNCH_TEST_3 :
+        (test_id == 2) ? memory::Command::LAUNCH_TEST_2 :
+        memory::Command::LAUNCH_TEST_1;
+    memory::CommandQueueElement cmd{command_id, {0,0}};
+    const auto memtest_status = xQueueSend(
+        context->memory_commands_handle,
+        reinterpret_cast<void *>(&cmd), 
+        0);
+    if (memtest_status != pdPASS)
+    {
+        NRF_LOG_ERROR("task state: failed to queue memtest command");
+        return;
+    }
+
 }
 
 }

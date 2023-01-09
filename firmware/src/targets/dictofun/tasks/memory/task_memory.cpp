@@ -28,18 +28,27 @@ static const spi::Spi::Configuration flash_spi_config{NRF_DRV_SPI_FREQ_2M,
 
 flash::SpiFlash flash{flash_spi, vTaskDelay};
 
+constexpr uint32_t cmd_wait_ticks{10};
 
 void task_memory(void * context_ptr)
 {
     NRF_LOG_INFO("task memory: initialized");
     Context& context = *(reinterpret_cast<Context *>(context_ptr));
+    CommandQueueElement command;
 
     flash_spi.init(flash_spi_config);
     flash.init();
     
     while(1)
     {
-        vTaskDelay(1000);
+        const auto cmd_queue_receive_status = xQueueReceive(
+            context.command_queue,
+            reinterpret_cast<void *>(&command),
+            cmd_wait_ticks);
+        if (pdPASS == cmd_queue_receive_status)
+        {
+            NRF_LOG_INFO("task memory: received command %d", command.command_id);
+        }
     }
 }
 

@@ -19,5 +19,4 @@ target_link_libraries(task_memory PUBLIC
 )
 
 add_library(task_memory_interface INTERFACE)
-
 target_include_directories(task_memory_interface INTERFACE ./)
