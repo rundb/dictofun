@@ -18,6 +18,9 @@ void cli_process();
 typedef void (*record_launch_callback)(int, bool) ;
 void register_record_launch_callback(record_launch_callback callback);
 
+typedef void (*memory_test_callback)(int) ;
+void register_memory_test_callback(memory_test_callback callback);
+
 #ifdef __cplusplus
 }
 #endif
