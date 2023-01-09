@@ -19,6 +19,8 @@ public:
         ERROR_ALIGNMENT,
         ERROR_BUSY,
         ERROR_GENERAL,
+        ERROR_INPUT,
+        ERROR_TIMEOUT,
     };
 
     /// @brief Perform a synchronous read access to NOR SPI Flash memory
