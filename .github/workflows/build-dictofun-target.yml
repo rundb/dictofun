@@ -6,8 +6,7 @@ jobs:
     runs-on: [self-hosted, linux]
     steps:
       - uses: actions/checkout@v3
-      - name: Checkout submodules
-        uses: textbook/git-checkout-submodule-action@master
+      - run: git submodule update --init --recursive
       - run: cd firmware/ci && docker build -t dictofun_builder --build-arg HOST_ARCHITECTURE="arm" .
   run-cmake-target-build:
     runs-on: [self-hosted, linux]
