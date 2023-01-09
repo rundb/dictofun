@@ -144,7 +144,7 @@ SpiFlash::Result SpiFlash::eraseSector(uint32_t address)
 
     writeEnable(true);
     _isSpiOperationPending = true;
-    uint8_t tx_data[] = {0x02,
+    uint8_t tx_data[] = {0x20,
                          static_cast<uint8_t>((address >> 16) & 0xFF),
                          static_cast<uint8_t>((address >> 8) & 0xFF),
                          static_cast<uint8_t>((address)&0xFF)};
