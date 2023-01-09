@@ -23,22 +23,23 @@ static uint8_t read_buffer[CACHE_SIZE];
 static uint8_t lookahead_buffer[CACHE_SIZE];
 
 const struct lfs_config lfs_configuration = {
-    .read  = memory::block_device::read,
-    .prog  = memory::block_device::program,
-    .erase = memory::block_device::erase,
-    .sync  = memory::block_device::sync,
+    nullptr,
+    memory::block_device::read,
+    memory::block_device::program,
+    memory::block_device::erase,
+    memory::block_device::sync,
 
     // block device configuration
-    .read_size = 16,
-    .prog_size = BLOCK_SIZE,
-    .block_size = SECTOR_SIZE,
-    .block_count = 4096,
-    .block_cycles = 500,
-    .cache_size = BLOCK_SIZE,
-    .lookahead_size = LOOKAHEAD_BUFFER_SIZE,
-    .read_buffer = read_buffer,
-    .prog_buffer = prog_buffer,
-    .lookahead_buffer = lookahead_buffer,
+    16,
+    BLOCK_SIZE,
+    SECTOR_SIZE,
+    4096,
+     500,
+    BLOCK_SIZE,
+    LOOKAHEAD_BUFFER_SIZE,
+    read_buffer,
+    prog_buffer,
+    lookahead_buffer,
 };
 
 lfs_t lfs;
