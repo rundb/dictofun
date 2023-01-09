@@ -80,6 +80,9 @@ private:
     static constexpr uint32_t short_delay_duration_ms{1};
     static constexpr uint32_t long_delay_duration_ms{200};
     static constexpr uint32_t max_wait_time_ms{5};
+    static constexpr uint32_t max_read_transaction_time_ms{5};
+    static constexpr uint32_t max_program_transaction_time_ms{10};
+    static constexpr uint32_t max_erase_duration_time_ms{200};
 
     Context _context;
     void writeEnable(bool shouldEnable);

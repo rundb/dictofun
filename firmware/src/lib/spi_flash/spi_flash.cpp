@@ -54,10 +54,22 @@ SpiFlash::Result SpiFlash::read(uint32_t address, uint8_t* data, uint32_t size)
     // 2. start the transaction
     _spi.xfer(_txBuffer, _rxBuffer, size + 4, spiOperationCallback);
     _isSpiOperationPending = true;
+
     _context.operation = Operation::READ;
     _context.data = data;
     _context.address = address;
     _context.size = size;
+
+    uint32_t timeout{max_read_transaction_time_ms};
+    while (_isSpiOperationPending && timeout > 0)
+    {
+        _delay(short_delay_duration_ms);
+        --timeout;
+    }
+    if (0 == timeout)
+    {
+        // TODO: define appropriate actions for this case
+    }
     return Result::OK;
 }
 
@@ -97,6 +109,18 @@ SpiFlash::Result SpiFlash::program(uint32_t address, const uint8_t * const data,
     _context.data = (uint8_t *)data;
     _context.address = address;
     _context.size = size;
+
+    timeout = max_program_transaction_time_ms;
+    while (_isSpiOperationPending && timeout > 0)
+    {
+        _delay(short_delay_duration_ms);
+        --timeout;
+    }
+    if (0 == timeout)
+    {
+        // TODO: define appropriate actions for this case
+    }
+
     return Result::OK;
 }
 
@@ -161,7 +185,16 @@ SpiFlash::Result SpiFlash::erase(uint32_t address, uint32_t size)
             _context.operation = Operation::IDLE;
             return res;
         }
-        while(isBusy());
+        timeout = max_erase_duration_time_ms;
+        while(isBusy() && timeout > 0)
+        {
+            _delay(short_delay_duration_ms);
+            --timeout;
+        }
+        if (timeout == 0)
+        {
+            return Result::ERROR_TIMEOUT;
+        }
     }
     _context.operation = Operation::IDLE;
     return Result::OK;
