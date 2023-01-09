@@ -32,11 +32,11 @@
 // clang-format off
 // ============================= Tasks ======================================
 
-application::TaskDescriptor<256, 1> audio_task;
-application::TaskDescriptor<256, 1> audio_tester_task;
-application::TaskDescriptor<256, 1> log_task;
-application::TaskDescriptor<256, 2> systemstate_task;
-application::TaskDescriptor<512, 1> memory_task;
+application::TaskDescriptor<256,  1> audio_task;
+application::TaskDescriptor<256,  1> audio_tester_task;
+application::TaskDescriptor<256,  1> log_task;
+application::TaskDescriptor<256,  2> systemstate_task;
+application::TaskDescriptor<1024, 1> memory_task;
 
 // ============================= Queues =====================================
 

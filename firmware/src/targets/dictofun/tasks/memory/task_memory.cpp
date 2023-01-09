@@ -11,6 +11,7 @@
 
 #include "spi_flash.h"
 #include "boards.h"
+#include "block_api.h"
 
 #include "lfs.h"
 
@@ -27,6 +28,38 @@ static const spi::Spi::Configuration flash_spi_config{NRF_DRV_SPI_FREQ_2M,
                                                       SPI_FLASH_MISO_PIN};
 
 flash::SpiFlash flash{flash_spi, vTaskDelay};
+constexpr uint32_t flash_page_size{256};
+constexpr uint32_t flash_sector_size{4096};
+constexpr uint32_t flash_total_size{16*1024*1024-4096};
+constexpr uint32_t flash_sectors_count{flash_total_size / flash_sector_size};
+
+constexpr size_t CACHE_SIZE{2 * flash_page_size};
+constexpr size_t LOOKAHEAD_BUFFER_SIZE{16};
+uint8_t prog_buffer[CACHE_SIZE];
+uint8_t read_buffer[CACHE_SIZE];
+uint8_t lookahead_buffer[CACHE_SIZE];
+
+lfs_t lfs;
+
+const struct lfs_config lfs_configuration = {
+    .read  = memory::block_device::read,
+    .prog  = memory::block_device::program,
+    .erase = memory::block_device::erase,
+    .sync  = memory::block_device::sync,
+
+    // block device configuration
+    .read_size = 16,
+    .prog_size = flash_page_size,
+    .block_size = flash_sector_size,
+    .block_count = 4096,
+    .block_cycles = 500,
+    .cache_size = flash_page_size,
+    .lookahead_size = LOOKAHEAD_BUFFER_SIZE,
+    .read_buffer = read_buffer,
+    .prog_buffer = prog_buffer,
+    .lookahead_buffer = lookahead_buffer,
+};
+
 
 constexpr uint32_t cmd_wait_ticks{10};
 
@@ -47,6 +80,8 @@ void task_memory(void * context_ptr)
     flash.readJedecId(jedec_id);
     NRF_LOG_INFO("memory id: %x-%x-%x", jedec_id[0], jedec_id[1], jedec_id[2]);
     
+    memory::block_device::register_flash_device(&flash, flash_sector_size, flash_page_size, flash_total_size);
+
     while(1)
     {
         const auto cmd_queue_receive_status = xQueueReceive(
@@ -62,6 +97,10 @@ void task_memory(void * context_ptr)
             else if (command.command_id == Command::LAUNCH_TEST_2)
             {
                 launch_test_2();
+            }
+            else if (command.command_id == Command::LAUNCH_TEST_3)
+            {
+                launch_test_3();
             }
         }
     }
@@ -202,4 +241,102 @@ void launch_test_2()
     }
     NRF_LOG_INFO("read3 took %d ms", read_3_end_tick - read_3_start_tick);
 }
+
+void launch_test_3()
+{
+    const auto test_start_tick{xTaskGetTickCount()};
+    NRF_LOG_INFO("mem: launching simple LFS operation test");
+    // ============ Step 1: initialize the FS (and format it, if necessary)
+    auto err = lfs_mount(&lfs, &lfs_configuration);
+    if (err != 0)
+    {
+        NRF_LOG_INFO("mem: formatting FS");
+        err = lfs_format(&lfs, &lfs_configuration);
+        if (err != 0)
+        {
+            NRF_LOG_ERROR("mem: failed to format LFS");
+            return;
+        }
+        err = lfs_mount(&lfs, &lfs_configuration);
+        if (err != 0)
+        {
+            NRF_LOG_ERROR("mem: failed to mount LFS after formatting");
+            return;
+        }
+    }
+    // ============ Step 2: create a file and write content into it
+    lfs_file_t file;
+    const auto create_result = lfs_file_open(&lfs, &file, "rec0", LFS_O_WRONLY | LFS_O_CREAT);
+    if (create_result!= 0)
+    {
+        NRF_LOG_ERROR("lfs: failed to create a file (err=%d)", create_result);
+    }
+
+    constexpr size_t test_data_size{512};
+    uint8_t test_data[test_data_size];
+    for (size_t i = 0; i < test_data_size; ++i)
+    {
+        test_data[i] = i & 0xFF;
+    }
+    // Enforce overflow of a single sector size to provoke an erase operation
+    size_t written_data_size{0};
+    const auto write_start_tick{xTaskGetTickCount()};
+    for (int i = 0; i < 20; ++i)
+    {
+        const auto write_result = lfs_file_write(&lfs, &file, test_data, sizeof(test_data));
+        written_data_size += sizeof(test_data);
+        if (write_result!= sizeof(test_data))
+        {
+            NRF_LOG_ERROR("lfs: failed to write into a file");
+            return;
+        }
+    }
+    const auto write_end_tick{xTaskGetTickCount()};
+    
+    // ============ Step 3: close the file
+    const auto close_result_1 = lfs_file_close(&lfs, &file);
+    if (close_result_1!= 0)
+    {
+        NRF_LOG_ERROR("lfs: failed to close file after writing");
+        return;
+    }
+    memset(test_data, 0, test_data_size);
+    // ============ Step 4: open the file for read
+    const auto open_to_read_result = lfs_file_open(&lfs, &file, "rec0", LFS_O_RDONLY);
+    if (open_to_read_result!= 0)
+    {
+        NRF_LOG_ERROR("lfs: failed to open file for reading");
+        return;
+    }
+    const auto read_result = lfs_file_read(&lfs, &file, test_data, sizeof(test_data));
+    if (read_result != sizeof(test_data))
+    {
+        NRF_LOG_ERROR("lfs: failed to read file content");
+        return;
+    }
+
+    // ============ Step 5: close the file
+    const auto close_result_2 = lfs_file_close(&lfs, &file);
+    if (close_result_2 != 0)
+    {
+        NRF_LOG_ERROR("lfs: failed to close file after opening");
+        return;
+    }
+
+    // ============ Step 6: validate a portion of the file
+    if (test_data[1] != 1 || test_data[9] != 9 || test_data[15] != 15)
+    {
+        NRF_LOG_ERROR("lfs: failed to validate file content");
+        return;
+    }
+    lfs_unmount(&lfs);
+    const auto test_end_tick{xTaskGetTickCount()};
+    NRF_LOG_INFO("LFS test took %d ms", (test_end_tick - test_start_tick));
+    NRF_LOG_INFO("LFS write throughput: %d ms, %d bytes, %d bytes/ms", 
+        (write_end_tick - write_start_tick + 1),  
+        written_data_size,
+        written_data_size / (write_end_tick - write_start_tick + 1)
+        );
+}
+
 }
