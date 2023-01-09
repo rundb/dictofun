@@ -1,4 +1,4 @@
-add_library(littlefs OBJECT
+add_library(littlefs STATIC
     "${THIRD_PARTY_PATH}/littlefs/lfs.c"
     "${THIRD_PARTY_PATH}/littlefs/lfs_util.c"
 )

@@ -17,3 +17,5 @@ target_link_libraries(spi_flash PRIVATE
     nrf5_app_timer_v2
     nrf5_nrfx_spim
     )
+
+add_subdirectory(interface)

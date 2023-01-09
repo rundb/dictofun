@@ -22,9 +22,7 @@ static uint8_t prog_buffer[CACHE_SIZE];
 static uint8_t read_buffer[CACHE_SIZE];
 static uint8_t lookahead_buffer[CACHE_SIZE];
 
-// configuration of the filesystem is provided by this struct
 const struct lfs_config lfs_configuration = {
-    // block device operations
     .read  = memory::block_device::read,
     .prog  = memory::block_device::program,
     .erase = memory::block_device::erase,
@@ -58,19 +56,6 @@ TEST(LittleFsTest, BasicFormat)
     int err = lfs_format(&lfs, &lfs_configuration);
     err = lfs_mount(&lfs, &lfs_configuration);
     EXPECT_EQ(err, 0);
-
-    // {
-    //     lfs_file_open(&lfs, &file, "rec0", LFS_O_WRONLY | LFS_O_CREAT);
-    //     constexpr size_t single_frame_size{64};
-    //     constexpr size_t target_file_size{1024*1024}; // ~1Mb
-    //     uint8_t test_data[64];
-    //     memset(test_data, 0xEF, sizeof(test_data));
-    //     for (auto i = 0; i < target_file_size / single_frame_size; ++i)
-    //     {
-    //         lfs_file_write(&lfs, &file, test_data, sizeof(test_data));
-    //     }
-    //     lfs_file_close(&lfs, &file);
-    // }
 
     {
         const auto create_result = lfs_file_open(&lfs, &file, "rec0", LFS_O_WRONLY | LFS_O_CREAT);

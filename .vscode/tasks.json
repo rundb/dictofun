@@ -6,7 +6,7 @@
         {
             "type": "shell",
             "label": "Build Project",
-            "command": "cmake -S .. -B . -DCMAKE_BUILD_TYPE:STRING=Debug -DBUILD_TARGET:STRING=dictofun -DCMAKE_TOOLCHAIN_FILE=../cmake/arm-none-eabi.cmake -DNRF5_SDK_PATH=../sdk/nRF5_SDK_17.1.0_ddde560 -DTOOLCHAIN_PREFIX=/usr/share/gcc-arm-none-eabi-10.3-2021.10 -DTHIRD_PARTY_PATH=/src/lib/third_party && make -j",
+            "command": "cmake -S .. -B . -DCMAKE_BUILD_TYPE:STRING=Debug -DBUILD_TARGET:STRING=dictofun -DCMAKE_TOOLCHAIN_FILE=../cmake/arm-none-eabi.cmake -DNRF5_SDK_PATH=../sdk/nRF5_SDK_17.1.0_ddde560 -DTOOLCHAIN_PREFIX=/usr/share/gcc-arm-none-eabi-10.3-2021.10 -DTHIRD_PARTY_PATH=../src/lib/third_party && make -j",
             "options": {
                 "cwd": "${workspaceFolder}/firmware/build"
             },
