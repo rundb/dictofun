@@ -80,6 +80,9 @@ result::Result launch_record_timer(const TickType_t record_duration)
     return result::Result::OK;
 }
 
+void launch_cli_command_record(const uint32_t duration, bool should_store_the_record);
+void launch_cli_command_memory_test(const uint32_t test_id);
+
 void task_system_state(void * context_ptr)
 {
     NRF_LOG_INFO("task state: initialized");
@@ -93,49 +96,73 @@ void task_system_state(void * context_ptr)
         );
         if (pdPASS == cli_queue_receive_status)
         {
-            NRF_LOG_INFO("task: received command from CLI");
-            if (is_record_start_by_cli_allowed())
+            switch (cli_command_buffer.command_id) 
             {
-                audio::CommandQueueElement cmd{audio::Command::RECORD_START};
-                const auto record_start_status = xQueueSend(
-                    context->audio_commands_handle,
-                    reinterpret_cast<void *>(&cmd), 
-                    0);
-                if (record_start_status != pdPASS)
+                case logger::CliCommand::RECORD:
                 {
-                    NRF_LOG_ERROR("task state: failed to queue start_record command");
-                    continue;
+                    launch_cli_command_record(cli_command_buffer.args[0], cli_command_buffer.args[1] > 0);
+                    break;
                 }
-
-                // record in mode without storage, so audio tester should be enabled
-                if (cli_command_buffer.args[1] == 0)
+                case logger::CliCommand::MEMORY_TEST:
                 {
-                    NRF_LOG_INFO("task state: enabling audio tester")
-                    audio::tester::ControlQueueElement cmd;
-                    cmd.should_enable_tester = true;
-                    const auto tester_start_status = xQueueSend(
-                        context->audio_tester_commands_handle,
-                        reinterpret_cast<void *>(&cmd), 
-                        0);
+                    launch_cli_command_memory_test(cli_command_buffer.args[0]);
+                    break;
                 }
-                else
-                {
-                    // enable the storage module, if necessary
-                }
-                
-                constexpr TickType_t ticks_per_second{1000};
-                const TickType_t duration{cli_command_buffer.args[0] * ticks_per_second};
-                const auto timer_launch_result = launch_record_timer(duration);
-                if (result::Result::OK != timer_launch_result)
-                {
-                    NRF_LOG_ERROR("task state: failed to launch record stop timer");
-                }
-            }
-            else
-            {
-                NRF_LOG_ERROR("task_state: record start is not allowed. Aborting");
             }
         }
     }
 }   
+
+void launch_cli_command_record(const uint32_t duration, bool should_store_the_record)
+{
+    NRF_LOG_INFO("task: received command from CLI");
+    if (is_record_start_by_cli_allowed())
+    {
+        audio::CommandQueueElement cmd{audio::Command::RECORD_START};
+        const auto record_start_status = xQueueSend(
+            context->audio_commands_handle,
+            reinterpret_cast<void *>(&cmd), 
+            0);
+        if (record_start_status != pdPASS)
+        {
+            NRF_LOG_ERROR("task state: failed to queue start_record command");
+            return;
+        }
+
+        // record in mode without storage, so audio tester should be enabled
+        if (!should_store_the_record)
+        {
+            NRF_LOG_INFO("task state: enabling audio tester")
+            audio::tester::ControlQueueElement cmd;
+            cmd.should_enable_tester = true;
+            const auto tester_start_status = xQueueSend(
+                context->audio_tester_commands_handle,
+                reinterpret_cast<void *>(&cmd), 
+                0);
+        }
+        else
+        {
+            // enable the storage module, if necessary
+        }
+        
+        constexpr TickType_t ticks_per_second{1000};
+        const TickType_t duration_ticks{duration * ticks_per_second};
+        const auto timer_launch_result = launch_record_timer(duration_ticks);
+        if (result::Result::OK != timer_launch_result)
+        {
+            NRF_LOG_ERROR("task state: failed to launch record stop timer");
+        }
+    }
+    else
+    {
+        NRF_LOG_ERROR("task_state: record start is not allowed. Aborting");
+    }
 }
+
+void launch_cli_command_memory_test(const uint32_t test_id)
+{
+    NRF_LOG_INFO("task state: launching memory test %d", test_id);
+}
+
+}
+

@@ -30,9 +30,16 @@ struct RecordLaunchCommand
     bool should_be_stored{false};
 };
 
+struct MemoryTestCommand
+{
+    bool is_active{false};
+    uint32_t test_id{0};
+};
+
 enum class CliCommand
 {
     RECORD,
+    MEMORY_TEST,
 };
 
 enum class CliStatus
