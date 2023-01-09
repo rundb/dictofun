@@ -38,6 +38,10 @@ void task_memory(void * context_ptr)
 
     flash_spi.init(flash_spi_config);
     flash.init();
+    flash.reset();
+    uint8_t jedec_id[6];
+    flash.readJedecId(jedec_id);
+    NRF_LOG_INFO("memory id: %x-%x-%x", jedec_id[0], jedec_id[1], jedec_id[2]);
     
     while(1)
     {
@@ -47,7 +51,27 @@ void task_memory(void * context_ptr)
             cmd_wait_ticks);
         if (pdPASS == cmd_queue_receive_status)
         {
-            NRF_LOG_INFO("task memory: received command %d", command.command_id);
+            // NRF_LOG_INFO("task memory: received command %d", command.command_id);
+            if (command.command_id == Command::LAUNCH_TEST_1)
+            {
+                NRF_LOG_INFO("task memory: launching chip erase. Memory task shall not accept commands during the execution of this command.");
+                const auto start_tick = xTaskGetTickCount();
+                flash.eraseChip();
+                static constexpr uint32_t max_chip_erase_duration{50000};
+                while (flash.isBusy() && (xTaskGetTickCount() - start_tick) < max_chip_erase_duration)
+                {
+                    vTaskDelay(100);
+                }
+                const auto end_tick = xTaskGetTickCount();
+                if ((end_tick - start_tick) > max_chip_erase_duration)
+                {
+                    NRF_LOG_WARNING("task memory: chip erase timed out");
+                }
+                else
+                {
+                    NRF_LOG_INFO("task memory: chip erase took %d ms", end_tick - start_tick);
+                }
+            }
         }
     }
 }

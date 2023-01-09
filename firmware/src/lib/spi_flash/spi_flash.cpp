@@ -260,8 +260,11 @@ void SpiFlash::readJedecId(uint8_t* id)
     uint8_t rx_data[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     _spi.xfer(tx_data, rx_data, 6, spiOperationCallback);
 
-    timeout = MAX_SPI_WAIT_TIMEOUT;
-    while(_isSpiOperationPending && ((timeout--) > 0));
+    timeout = max_wait_time_ms;
+    while(_isSpiOperationPending && ((timeout--) > 0))
+    {
+        _delay(short_delay_duration_ms);
+    }
     memcpy(id, &rx_data[1], 4);
 }
 
