@@ -13,5 +13,4 @@ cmake -S .. -B . \
     -DCMAKE_TOOLCHAIN_FILE=../cmake/arm-none-eabi.cmake \
     -DTOOLCHAIN_PREFIX=/tools/gcc-arm-none-eabi-10.3-2021.10 \
     -DNRF5_SDK_PATH=/sdk/nRF5_SDK_17.1.0_ddde560 && \
-    -DTHIRD_PARTY_PATH=/src/lib/third_party && \
     make -j

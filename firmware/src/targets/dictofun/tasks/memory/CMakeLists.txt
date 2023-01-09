@@ -6,6 +6,8 @@ target_include_directories(task_memory PUBLIC ./)
 
 target_link_libraries(task_memory PRIVATE
     spi_flash
+    littlefs
+    littlefs_integration
 )
 
 target_link_libraries(task_memory PUBLIC 

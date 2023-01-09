@@ -9,6 +9,8 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
+#include "lfs.h"
+
 namespace memory
 {
 
