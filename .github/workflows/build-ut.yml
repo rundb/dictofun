@@ -5,9 +5,8 @@ jobs:
   checkout-the-repo:
     runs-on: [self-hosted, linux]
     steps:
-      - uses: actions/checkout@v3
-      - name: Checkout submodules
-        uses: textbook/git-checkout-submodule-action@master
+      - uses: actions/checkout@master
+      - uses: textbook/git-checkout-submodule-action@master
       - run: cd firmware/ci && docker build -t dictofun_builder --build-arg HOST_ARCHITECTURE="arm" .
   run-cmake-ut-build:
     runs-on: [self-hosted, linux]
