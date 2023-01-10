@@ -1,6 +1,4 @@
-add_subdirectory(ble_fts)
 add_subdirectory(common)
-add_subdirectory(simple_fs)
 add_subdirectory(spi_flash)
 add_subdirectory(dummy_module)
 add_subdirectory(audio)
