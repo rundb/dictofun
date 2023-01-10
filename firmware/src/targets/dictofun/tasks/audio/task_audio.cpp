@@ -11,7 +11,6 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-#include "app_timer.h"
 #include "microphone_pdm.h"
 #include "audio_processor.h"
 

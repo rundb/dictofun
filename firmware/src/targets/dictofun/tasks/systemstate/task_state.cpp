@@ -6,7 +6,6 @@
 #include "task_state.h"
 #include "result.h"
 
-#include <app_timer.h>
 #include <nrf_gpio.h>
 #include <nrf_log.h>
 
