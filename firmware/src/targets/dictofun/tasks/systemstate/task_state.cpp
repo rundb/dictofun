@@ -4,14 +4,11 @@
  */
 
 #include "task_state.h"
-#include "BleSystem.h"
-#include "spi_flash.h"
 #include "result.h"
 
 #include <app_timer.h>
 #include <nrf_gpio.h>
 #include <nrf_log.h>
-#include "battery_measurement.h"
 
 #include "task_cli_logger.h"
 #include "task_audio.h"

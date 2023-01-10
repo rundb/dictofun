@@ -51,21 +51,6 @@ target_link_libraries(dictofun_main PRIVATE
     nrf5_ext_fprintf
     nrf5_nrfx_prs
     nrf5_pwr_mgmt
-    nrf5_ble_peer_manager_handler
-    nrf5_ble_peer_manager
-    nrf5_fds
-    nrf5_ble_id_manager
-    nrf5_ble_security_manager
-    nrf5_ble_security_dispatcher
-    nrf5_ble_gatt_cache_manager
-    nrf5_ble_peer_data_storage
-    nrf5_ble_peer_database
-    nrf5_fstorage
-    nrf5_fstorage_sd
-    nrf5_atfifo
-    nrf5_ble_peer_id
-    nrf5_ble_pm_buffer
-    nrf5_atflags
     nrf5_sortlist
 )
 

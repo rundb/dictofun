@@ -5,7 +5,6 @@
 #pragma once
 
 #include <stdint.h>
-#include "simple_fs.h"
 #include "result.h"
 
 #include "FreeRTOS.h"
