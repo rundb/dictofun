@@ -23,16 +23,19 @@ void register_flash_device(memory::SpiNorFlashIf * flash, uint32_t sector_size, 
     memory_size_ = memory_size;
 }
 
+// TODO: this function should sooner or later be implemented, and file write throughput should be measured
 bool is_sector_erased(lfs_block_t block)
 {
     return false;
 }
 
+// TODO: this function should sooner or later be implemented, and file write throughput should be measured
 void mark_sector_as_erased(lfs_block_t block)
 {
 
 }
 
+// TODO: this function should sooner or later be implemented, and file write throughput should be measured
 void mark_sector_as_needs_erasure(lfs_block_t block)
 {
     
