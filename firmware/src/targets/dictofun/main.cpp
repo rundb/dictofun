@@ -24,6 +24,7 @@
 #include "task_audio_tester.h"
 #include "task_cli_logger.h"
 #include "task_memory.h"
+#include "task_ble.h"
 
 #include <stdint.h>
 
@@ -37,6 +38,7 @@ application::TaskDescriptor<256,  1> audio_tester_task;
 application::TaskDescriptor<256,  1> log_task;
 application::TaskDescriptor<256,  2> systemstate_task;
 application::TaskDescriptor<1024, 1> memory_task;
+application::TaskDescriptor<256,  1> ble_task;
 
 // ============================= Queues =====================================
 
@@ -45,11 +47,13 @@ application::QueueDescriptor<logger::CliStatusQueueElement, 1>       cli_status_
 application::QueueDescriptor<audio::CommandQueueElement, 1>          audio_commands_queue;
 application::QueueDescriptor<audio::StatusQueueElement, 1>           audio_status_queue;
 application::QueueDescriptor<audio::tester::ControlQueueElement, 1>  audio_tester_commands_queue;
+application::QueueDescriptor<audio::microphone::PdmMicrophone<audio::pdm_sample_size>::SampleType, 3>          audio_data_queue;
 
 application::QueueDescriptor<memory::CommandQueueElement, 1>         memory_commands_queue;
 application::QueueDescriptor<memory::StatusQueueElement, 1>          memory_status_queue; 
 
-application::QueueDescriptor<audio::microphone::PdmMicrophone<audio::pdm_sample_size>::SampleType, 3>          audio_data_queue;
+application::QueueDescriptor<ble::CommandQueueElement, 1>            ble_commands_queue;
+application::QueueDescriptor<ble::StatusQueueElement, 1>             ble_status_queue; 
 
 // ============================= Timers =====================================
 
@@ -62,6 +66,7 @@ systemstate::Context    systemstate_context;
 audio::Context          audio_context;
 audio::tester::Context  audio_tester_context;
 memory::Context         memory_context;
+ble::Context            ble_context;
 
 // clang-format on
 
@@ -141,6 +146,18 @@ int main()
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
+    const auto ble_commands_queue_init_result = ble_commands_queue.init();
+    if (result::Result::OK != ble_commands_queue_init_result)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
+    const auto ble_status_queue_init_result = ble_status_queue.init();
+    if (result::Result::OK != ble_status_queue_init_result)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
     // Timers' initialization
     record_timer_handle = xTimerCreateStatic("AUDIO", 1, pdFALSE, nullptr, systemstate::record_end_callback, &record_timer_buffer);
     if (nullptr == record_timer_handle)
@@ -206,6 +223,18 @@ int main()
         &memory_context);
 
     if (result::Result::OK != memory_task_init_result)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
+    ble_context.command_queue = ble_commands_queue.handle;
+    ble_context.status_queue = ble_status_queue.handle;
+    const auto ble_task_init_result = ble_task.init(
+        ble::task_ble,
+        "MEM",
+        &ble_context);
+
+    if (result::Result::OK != ble_task_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }

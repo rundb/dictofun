@@ -17,6 +17,7 @@ target_link_libraries(dictofun_main PRIVATE
     task_memory
     task_system_state
     task_led
+    task_ble
     spi_flash
     littlefs
     boards
