@@ -6,6 +6,8 @@ target_include_directories(task_memory PUBLIC ./)
 
 target_link_libraries(task_memory PRIVATE
     spi_flash
+    littlefs
+    littlefs_integration
 )
 
 target_link_libraries(task_memory PUBLIC 
@@ -15,3 +17,6 @@ target_link_libraries(task_memory PUBLIC
     nrf52_freertos_portable_cmsis
     nrf5_freertos_portable_memmang_1
 )
+
+add_library(task_memory_interface INTERFACE)
+target_include_directories(task_memory_interface INTERFACE ./)

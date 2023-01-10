@@ -1,23 +1,57 @@
+// SPDX-License-Identifier:  Apache-2.0
+/*
+ * Copyright (c) 2023, Roman Turkin
+ */
+
 #pragma once
 
-/*
- * Copyright (c) 2021 Roman Turkin 
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+#include "FreeRTOS.h"
+#include "queue.h"
 
 namespace memory
 {
 bool isMemoryErased();
+
+void task_memory(void * context_ptr);
+
+enum class Command
+{
+    LAUNCH_TEST_1,
+    LAUNCH_TEST_2,
+    LAUNCH_TEST_3,
+    FORMAT_CONFIG,
+    OPEN_FILE_FOR_WRITE,
+    CLOSE_FILE_FOR_WRITE,
+    OPEN_FILE_FOR_READ,
+    CLOSE_FILE_FOR_READ,
+    INVALIDATE_FILE,
+};
+
+enum class Status
+{
+    OK,
+    ERROR_BUSY,
+    ERROR_GENERAL,
+};
+
+struct CommandQueueElement
+{
+    Command command_id;
+    static constexpr size_t max_arguments{2};
+    uint32_t args[max_arguments];
+};
+
+struct StatusQueueElement
+{
+    Command command_id;
+    Status status;
+};
+
+struct Context
+{
+    QueueHandle_t audio_data_queue {nullptr};
+    QueueHandle_t command_queue {nullptr};
+    QueueHandle_t status_queue {nullptr};
+};
 
 }

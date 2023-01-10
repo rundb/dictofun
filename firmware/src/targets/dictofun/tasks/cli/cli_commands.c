@@ -66,7 +66,6 @@ NRF_CLI_CMD_REGISTER(version, NULL, "Display software version", cmd_version);
 
 
 static record_launch_callback _record_launch_callback = NULL;
-
 void register_record_launch_callback(record_launch_callback callback)
 {
     _record_launch_callback = callback;
@@ -124,3 +123,45 @@ static void cmd_record(nrf_cli_t const * p_cli, const size_t argc, char ** argv)
 }
 
 NRF_CLI_CMD_REGISTER(record, NULL, "Launch record", cmd_record);
+
+static memory_test_callback _memory_test_callback = NULL;
+void register_memory_test_callback(memory_test_callback callback)
+{
+    _memory_test_callback = callback;
+}
+
+/// @brief Launch a set of tests that check operation of storage subsystem.
+/// Syntax: memory N, where N is the test identifier
+/// Test 1: erase the whole flash chip and print a message when erase is completed
+/// Test 2: erase a sector in the end of flash memory (second from the end), write a page of data and read it back.
+///         Print test status and duration afterwards
+/// Test 3: test file system: create a file, write data into it, close it, open it for read back and validate the content. 
+static void cmd_test_memory(nrf_cli_t const * p_cli, const size_t argc, char ** argv)
+{
+    if (2 != argc)
+    {
+        nrf_cli_fprintf(p_cli, NRF_CLI_ERROR, "Wrong command syntax\n");
+        return;
+    }
+    const int test_id = atoi(argv[1]);
+    if (test_id < 1 || test_id > 3)
+    {
+        nrf_cli_fprintf(p_cli, NRF_CLI_ERROR, "Wrong test ID\n", argc);
+        return;
+    }
+    nrf_cli_fprintf(p_cli, NRF_CLI_NORMAL, "Memory test %d launch\n", test_id);
+
+    if (_memory_test_callback != NULL)
+    {
+        _memory_test_callback(test_id);
+        nrf_cli_fprintf(p_cli, NRF_CLI_NORMAL, "Memory test #%d is launched\n", test_id);
+    }
+    else
+    {
+        nrf_cli_fprintf(p_cli,
+            NRF_CLI_WARNING,
+            "No memory test launch function registered. Command shall not be launched\n");
+    }
+}
+
+NRF_CLI_CMD_REGISTER(memtest, NULL, "Launch memory test", cmd_test_memory);

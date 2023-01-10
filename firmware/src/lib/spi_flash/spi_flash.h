@@ -6,14 +6,26 @@
 
 #include "spi.h"
 #include <stdint.h>
+#include "spi_flash_if.h"
+#include <functional>
 
 namespace flash
 {
 
-class SpiFlash
+class SpiFlash: public memory::SpiNorFlashIf
 {
 public:
-    SpiFlash(spi::Spi& flashSpi);
+    using DelayFunction = std::function<void(uint32_t)>;
+    using Result = memory::SpiNorFlashIf::Result;
+    explicit SpiFlash(spi::Spi& flashSpi, DelayFunction delay_function);
+
+    SpiFlash() = delete;
+    SpiFlash(const SpiFlash&) = delete;
+    SpiFlash(SpiFlash&&) = delete;
+    SpiFlash& operator=(const SpiFlash&) = delete;
+    SpiFlash& operator=(SpiFlash&&) = delete;
+
+    ~SpiFlash() = default;
 
     void init();
 
@@ -22,17 +34,10 @@ public:
     void readJedecId(uint8_t* id);
     void reset();
 
-    enum class Result
-    {
-        OK,
-        ALIGNMENT_ERROR,
-        ETC_ERROR,
-    };
-
-    // Asynchronous subset
-    Result read(uint32_t address, uint8_t* data, uint32_t size);
-    Result program(uint32_t address, const uint8_t * const data, uint32_t size);
-    Result erase(uint32_t address, uint32_t size);
+    // Interface implementation
+    SpiNorFlashIf::Result read(uint32_t address, uint8_t* data, uint32_t size) override;
+    SpiNorFlashIf::Result program(uint32_t address, const uint8_t * const data, uint32_t size) override;
+    SpiNorFlashIf::Result erase(uint32_t address, uint32_t size) override;
 
     // These 2 calls are asynchronous
     Result eraseSector(uint32_t address);
@@ -45,6 +50,7 @@ public:
     static inline SpiFlash& getInstance() { return *_instance; }
 private:
     spi::Spi& _spi;
+    DelayFunction _delay;
     static SpiFlash * _instance;
     static const size_t MAX_TRANSACTION_SIZE = 265;
     uint8_t _txBuffer[MAX_TRANSACTION_SIZE];
@@ -70,6 +76,13 @@ private:
         uint8_t * data;
         size_t size;
     };
+
+    static constexpr uint32_t short_delay_duration_ms{1};
+    static constexpr uint32_t long_delay_duration_ms{200};
+    static constexpr uint32_t max_wait_time_ms{5};
+    static constexpr uint32_t max_read_transaction_time_ms{5};
+    static constexpr uint32_t max_program_transaction_time_ms{10};
+    static constexpr uint32_t max_erase_duration_time_ms{200};
 
     Context _context;
     void writeEnable(bool shouldEnable);

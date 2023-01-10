@@ -12,7 +12,7 @@ if ("${BUILD_TARGET}" STREQUAL "dictofun")
     add_subdirectory(src)
 elseif("${BUILD_TARGET}" STREQUAL "unit-test")
     project(dictofun_ut LANGUAGES C CXX)
-
+    
     set(CMAKE_CXX_STANDARD 14)
 
     set(is_unit_test true)
@@ -32,6 +32,10 @@ elseif("${BUILD_TARGET}" STREQUAL "unit-test")
     add_subdirectory(src/lib/common)
     add_subdirectory(src/lib/dummy_module)
     add_subdirectory(src/lib/audio)
+    add_subdirectory(src/lib/spi_flash/interface)
+    add_subdirectory(src/lib/third_party)
+    add_subdirectory(src/lib/littlefs_integration)
+    add_subdirectory(src/lib/littlefs_integration/test)
 endif()
 
 
