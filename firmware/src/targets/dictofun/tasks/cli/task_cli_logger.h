@@ -36,10 +36,17 @@ struct MemoryTestCommand
     uint32_t test_id{0};
 };
 
+struct BleOperationCommand
+{
+    bool is_active{false};
+    uint32_t command_id;
+};
+
 enum class CliCommand
 {
     RECORD,
     MEMORY_TEST,
+    BLE_COMMAND,
 };
 
 enum class CliStatus

@@ -35,6 +35,14 @@ void memory_test_callback(uint32_t test_id)
     _memory_test_command.is_active = true;
 }
 
+static BleOperationCommand _ble_operation_command;
+void ble_operation_callback(uint32_t command_id)
+{
+    if (_ble_operation_command.is_active) return;
+    _ble_operation_command.command_id = command_id;
+    _ble_operation_command.is_active = true;
+}
+
 uint32_t get_timestamp()
 {
     return xTaskGetTickCount();
@@ -53,6 +61,7 @@ void task_cli_logger(void * cli_context)
     CliContext& context = *(reinterpret_cast<CliContext *>(cli_context));
     register_record_launch_callback(record_launch_callback);
     register_memory_test_callback(memory_test_callback);
+    register_ble_control_callback(ble_operation_callback);
     while (1)
     {
         vTaskDelay(5);
@@ -95,6 +104,24 @@ void task_cli_logger(void * cli_context)
             else
             {
                 NRF_LOG_INFO("cli: memory test operation has been queued");
+            }
+        }
+
+        if (_ble_operation_command.is_active)
+        {
+            _ble_operation_command.is_active = false;
+            CliCommandQueueElement cmd{
+                CliCommand::BLE_COMMAND, 
+                { static_cast<uint32_t>(_ble_operation_command.command_id), 0 }
+            };
+            const auto send_result = xQueueSend(context.cli_commands_handle, &cmd, 0U);
+            if (pdPASS != send_result)
+            {
+                NRF_LOG_WARNING("cli: failed to launch BLE command");
+            }
+            else
+            {
+                NRF_LOG_INFO("cli: BLE command has been queued");
             }
         }
     }
