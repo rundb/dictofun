@@ -124,6 +124,7 @@ result::Result BleSystem::start()
 
 result::Result BleSystem::stop()
 {
+    // TODO: close existing connections, stop services and then stop advertising
     return result::Result::ERROR_NOT_IMPLEMENTED;
 }
 

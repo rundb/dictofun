@@ -13,6 +13,7 @@
 #include "task_audio.h"
 #include "task_audio_tester.h"
 #include "task_memory.h"
+#include "task_ble.h"
 
 #include <FreeRTOS.h>
 #include <task.h>
@@ -79,6 +80,7 @@ result::Result launch_record_timer(const TickType_t record_duration)
 
 void launch_cli_command_record(const uint32_t duration, bool should_store_the_record);
 void launch_cli_command_memory_test(const uint32_t test_id);
+void launch_cli_command_ble_operation(const uint32_t command_id);
 
 void task_system_state(void * context_ptr)
 {
@@ -103,6 +105,11 @@ void task_system_state(void * context_ptr)
                 case logger::CliCommand::MEMORY_TEST:
                 {
                     launch_cli_command_memory_test(cli_command_buffer.args[0]);
+                    break;
+                }
+                case logger::CliCommand::BLE_COMMAND:
+                {
+                    launch_cli_command_ble_operation(cli_command_buffer.args[0]);
                     break;
                 }
             }
@@ -173,7 +180,25 @@ void launch_cli_command_memory_test(const uint32_t test_id)
         NRF_LOG_ERROR("task state: failed to queue memtest command");
         return;
     }
+}
 
+void launch_cli_command_ble_operation(const uint32_t command_id)
+{
+    NRF_LOG_INFO("task state: launching BLE command %d", command_id);
+    const ble::Command command = 
+        (command_id == 3) ? ble::Command::RESET_PAIRING :
+        (command_id == 2) ? ble::Command::STOP :
+        ble::Command::START;
+    ble::CommandQueueElement cmd{command};
+    const auto ble_comm_status = xQueueSend(
+        context->ble_commands_handle,
+        reinterpret_cast<void *>(&cmd), 
+        0);
+    if (ble_comm_status != pdPASS)
+    {
+        NRF_LOG_ERROR("task state: failed to queue BLE operation");
+        return;
+    }
 }
 
 }

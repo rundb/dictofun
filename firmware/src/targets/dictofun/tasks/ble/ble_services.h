@@ -16,8 +16,6 @@ namespace ble
 {
 
 result::Result init_services();
-result::Result start_services();
-result::Result stop_services();
 
 nrf_ble_qwr_t& get_qwr_handle();
 

@@ -62,16 +62,6 @@ result::Result init_services()
     return result::Result::OK;
 }
 
-result::Result start_services()
-{
-    return result::Result::ERROR_NOT_IMPLEMENTED;
-}
-
-result::Result stop_services()
-{
-    return result::Result::ERROR_NOT_IMPLEMENTED;   
-}
-
 size_t get_services_uuids(ble_uuid_t * service_uuids, const size_t max_uuids)
 {
     if (nullptr == service_uuids)
@@ -84,6 +74,8 @@ size_t get_services_uuids(ble_uuid_t * service_uuids, const size_t max_uuids)
         NRF_LOG_ERROR("ble: not enough space for adv uuids");
         return 0;
     }
+    adv_uuids[0].type = m_lbs.uuid_type;
+
     memcpy(service_uuids, adv_uuids, sizeof(adv_uuids));
     return uuids_count;
 }

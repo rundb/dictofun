@@ -11,28 +11,28 @@ namespace helpers
 {
 constexpr std::size_t errors_count{20};
 
-const char error_texts[errors_count][33] =
+const char error_texts[errors_count][23] =
 {
     "NRF_SUCCESS",
-    "NRF_ERROR_SVC_HANDLER_MISSING",
-    "NRF_ERROR_SOFTDEVICE_NOT_ENABLED",
-    "NRF_ERROR_INTERNAL",
-    "NRF_ERROR_NO_MEM",
-    "NRF_ERROR_NOT_FOUND",
-    "NRF_ERROR_NOT_SUPPORTED",
-    "NRF_ERROR_INVALID_PARAM",
-    "NRF_ERROR_INVALID_STATE",
-    "NRF_ERROR_INVALID_LENGTH",
-    "NRF_ERROR_INVALID_FLAGS",
-    "NRF_ERROR_INVALID_DATA",
-    "NRF_ERROR_DATA_SIZE",
-    "NRF_ERROR_TIMEOUT",
-    "NRF_ERROR_NULL",
-    "NRF_ERROR_FORBIDDEN",
-    "NRF_ERROR_INVALID_ADDR",
-    "NRF_ERROR_BUSY",
-    "NRF_ERROR_CONN_COUNT",
-    "NRF_ERROR_RESOURCES",
+    "SVC_HANDLER_MISSING",
+    "SOFTDEVICE_NOT_ENABLED",
+    "INTERNAL",
+    "NO_MEM",
+    "NOT_FOUND",
+    "NOT_SUPPORTED",
+    "INVALID_PARAM",
+    "INVALID_STATE",
+    "INVALID_LENGTH",
+    "INVALID_FLAGS",
+    "INVALID_DATA",
+    "DATA_SIZE",
+    "TIMEOUT",
+    "NULL",
+    "FORBIDDEN",
+    "INVALID_ADDR",
+    "BUSY",
+    "CONN_COUNT",
+    "RESOURCES",
 };
 
 const char * decode_error(const int error_code)

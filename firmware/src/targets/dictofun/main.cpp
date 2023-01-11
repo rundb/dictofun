@@ -205,6 +205,8 @@ int main()
     systemstate_context.audio_tester_commands_handle = audio_tester_commands_queue.handle;
     systemstate_context.memory_commands_handle = memory_commands_queue.handle;
     systemstate_context.memory_status_handle = memory_status_queue.handle;
+    systemstate_context.ble_commands_handle = ble_commands_queue.handle;
+    systemstate_context.ble_status_handle = ble_status_queue.handle;
 
     const auto systemstate_task_init_result = systemstate_task.init(
         systemstate::task_system_state, 

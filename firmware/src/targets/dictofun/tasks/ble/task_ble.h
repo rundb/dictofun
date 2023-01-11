@@ -23,6 +23,7 @@ enum class Command
 {
     START,
     STOP,
+    RESET_PAIRING,
 };
 
 struct CommandQueueElement

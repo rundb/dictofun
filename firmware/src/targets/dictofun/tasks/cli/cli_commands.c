@@ -174,7 +174,9 @@ void register_ble_control_callback(ble_control_callback callback)
 
 /// @brief Set of CLI commands for control over BLE subsystem operation
 /// Following commands that are currently supported:
-/// 1. reset pairing - clears pairing information.
+/// 1. enable BLE operation
+/// 2. stop BLE operation
+/// 3. reset pairing - clears pairing information.
 static void cmd_ble_commands(nrf_cli_t const * p_cli, const size_t argc, char ** argv)
 {
     if (argc < 2 || argc > 4)
@@ -182,14 +184,15 @@ static void cmd_ble_commands(nrf_cli_t const * p_cli, const size_t argc, char **
         nrf_cli_fprintf(p_cli, NRF_CLI_ERROR, "Wrong command syntax\n");
         return;
     }
+    // TODO: add support for the second argument, if needed
     const int command_id = atoi(argv[1]);
-    if (command_id != 1)
+    if (command_id < 1 || command_id > 3)
     {
-        nrf_cli_fprintf(p_cli, NRF_CLI_ERROR, "Wrong test ID\n", argc);
+        nrf_cli_fprintf(p_cli, NRF_CLI_ERROR, "Wrong command ID\n", argc);
         return;
     }
-    nrf_cli_fprintf(p_cli, NRF_CLI_ERROR, "Launching BLE command\n");
-    if (_memory_test_callback != NULL)
+    nrf_cli_fprintf(p_cli, NRF_CLI_NORMAL, "Launching BLE command\n");
+    if (_ble_control_callback != NULL)
     {
         _ble_control_callback(command_id);
         nrf_cli_fprintf(p_cli, NRF_CLI_NORMAL, "BLE command #%d is launched\n", command_id);
