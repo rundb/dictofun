@@ -139,7 +139,10 @@ void BleSystem::ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             NRF_LOG_INFO("Connected");
             m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
             err_code = nrf_ble_qwr_conn_handle_assign(&(get_qwr_handle()), m_conn_handle);
-            APP_ERROR_CHECK(err_code);
+            if (NRF_SUCCESS != err_code)
+            {
+                NRF_LOG_ERROR("ble: evt conn error (%s)", helpers::decode_error(err_code));
+            }
             break;
 
         case BLE_GAP_EVT_DISCONNECTED:
@@ -177,13 +180,19 @@ void BleSystem::ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
                 .rx_phys = BLE_GAP_PHY_AUTO,
             };
             err_code = sd_ble_gap_phy_update(p_ble_evt->evt.gap_evt.conn_handle, &phys);
-            APP_ERROR_CHECK(err_code);
+            if (NRF_SUCCESS != err_code)
+            {
+                NRF_LOG_ERROR("ble: evt phy upd error (%s)", helpers::decode_error(err_code));
+            }
         } break;
 
         case BLE_GATTS_EVT_SYS_ATTR_MISSING:
             // No system attributes have been stored.
             err_code = sd_ble_gatts_sys_attr_set(m_conn_handle, NULL, 0, 0);
-            APP_ERROR_CHECK(err_code);
+            if (NRF_SUCCESS != err_code)
+            {
+                NRF_LOG_ERROR("ble: gatts sys attr error (%s)", helpers::decode_error(err_code));
+            }
             break;
 
         case BLE_GATTC_EVT_TIMEOUT:
@@ -191,7 +200,10 @@ void BleSystem::ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             NRF_LOG_DEBUG("GATT Client Timeout.");
             err_code = sd_ble_gap_disconnect(p_ble_evt->evt.gattc_evt.conn_handle,
                                              BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
-            APP_ERROR_CHECK(err_code);
+            if (NRF_SUCCESS != err_code)
+            {
+                NRF_LOG_ERROR("ble: gap disconn error (%s)", helpers::decode_error(err_code));
+            }
             break;
 
         case BLE_GATTS_EVT_TIMEOUT:
@@ -199,7 +211,10 @@ void BleSystem::ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             NRF_LOG_DEBUG("GATT Server Timeout.");
             err_code = sd_ble_gap_disconnect(p_ble_evt->evt.gatts_evt.conn_handle,
                                              BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
-            APP_ERROR_CHECK(err_code);
+            if (NRF_SUCCESS != err_code)
+            {
+                NRF_LOG_ERROR("ble: gap disconn error (%s)", helpers::decode_error(err_code));
+            }
             break;
 
         default:
