@@ -1,6 +1,8 @@
 add_library(task_ble STATIC
     task_ble.cpp
     ble_system.cpp
+    ble_services.cpp
+    nrf_error_decoder.cpp
 )
 
 target_include_directories(task_ble PUBLIC ./)
@@ -27,7 +29,8 @@ target_link_libraries(task_ble PRIVATE
     nrf5_ble_peer_id
     nrf5_ble_pm_buffer
     nrf5_atflags
-
+    nrf5_ble_advertising
+    nrf5_ble_srv_lbs
 )
 target_link_libraries(task_ble PUBLIC 
     nrf5_freertos

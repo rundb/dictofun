@@ -37,6 +37,8 @@ private:
     result::Result init_bonding();
     result::Result init_advertising();
 
+    result::Result start_advertising();
+
     static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context);
     static void pm_evt_handler(pm_evt_t const * p_evt);
     static void bonded_client_add(pm_evt_t const * p_evt);
