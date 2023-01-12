@@ -7,7 +7,7 @@
 #include "boards.h"
 #include "nrf_gpio.h"
 #include <cstring>
-#include "app_timer.h"
+#include "nrf_log.h"
 
 namespace flash
 {
@@ -27,6 +27,11 @@ SpiFlash::SpiFlash(spi::Spi& flashSpi, DelayFunction delay_function)
     {
         _instance = this;
     }
+    else
+    {
+        NRF_LOG_ERROR("spi: more than one instantiation in the system");
+        while(1) {_delay(100);}
+    }
 }
 
 void SpiFlash::init()
@@ -41,6 +46,11 @@ void SpiFlash::init()
 SpiFlash::Result SpiFlash::read(uint32_t address, uint8_t* data, uint32_t size)
 {
     if (data == nullptr)
+    {
+        return Result::ERROR_INPUT;
+    }
+
+    if (size > MAX_TRANSACTION_SIZE)
     {
         return Result::ERROR_INPUT;
     }
@@ -124,7 +134,7 @@ SpiFlash::Result SpiFlash::program(uint32_t address, const uint8_t * const data,
     return Result::OK;
 }
 
-SpiFlash::Result SpiFlash::eraseSector(uint32_t address)
+SpiFlash::Result SpiFlash::eraseSector(const uint32_t address)
 {
     if(address % SECTOR_SIZE != 0)
     {
@@ -144,12 +154,12 @@ SpiFlash::Result SpiFlash::eraseSector(uint32_t address)
 
     writeEnable(true);
     _isSpiOperationPending = true;
-    uint8_t tx_data[] = {0x20,
-                         static_cast<uint8_t>((address >> 16) & 0xFF),
-                         static_cast<uint8_t>((address >> 8) & 0xFF),
-                         static_cast<uint8_t>((address)&0xFF)};
-    uint8_t rx_data[] = {0, 0, 0, 0};
-    _spi.xfer(tx_data, rx_data, 4, spiOperationCallback);
+    _txBuffer[0] = 0x20;
+    _txBuffer[1] = static_cast<uint8_t>((address >> 16) & 0xFF);
+    _txBuffer[2] = static_cast<uint8_t>((address >> 8) & 0xFF);
+    _txBuffer[3] = static_cast<uint8_t>((address)&0xFF);
+    
+    _spi.xfer(_txBuffer, _rxBuffer, 4, spiOperationCallback);
     _context.operation = Operation::ERASE;
     return Result::OK;
 }
@@ -178,7 +188,7 @@ SpiFlash::Result SpiFlash::erase(uint32_t address, uint32_t size)
     }
     for(int i = 0; i < size / SECTOR_SIZE; ++i)
     {
-        uint32_t addr = address + i * SECTOR_SIZE;
+        uint32_t addr{address + i * SECTOR_SIZE};
         const auto res = eraseSector(addr);
         if (res != Result::OK)
         {

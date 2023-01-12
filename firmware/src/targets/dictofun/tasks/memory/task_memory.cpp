@@ -265,6 +265,7 @@ void launch_test_3()
         }
     }
     // ============ Step 2: create a file and write content into it
+    NRF_LOG_INFO("mem: creating file");
     lfs_file_t file;
     const auto create_result = lfs_file_open(&lfs, &file, "rec0", LFS_O_WRONLY | LFS_O_CREAT);
     if (create_result!= 0)
@@ -281,8 +282,8 @@ void launch_test_3()
     // Enforce overflow of a single sector size to provoke an erase operation
     size_t written_data_size{0};
     const auto write_start_tick{xTaskGetTickCount()};
-    for (int i = 0; i < 20; ++i)
-    {
+    // for (int i = 0; i < 20; ++i)
+    // {
         const auto write_result = lfs_file_write(&lfs, &file, test_data, sizeof(test_data));
         written_data_size += sizeof(test_data);
         if (write_result!= sizeof(test_data))
@@ -290,10 +291,11 @@ void launch_test_3()
             NRF_LOG_ERROR("lfs: failed to write into a file");
             return;
         }
-    }
+    // }
     const auto write_end_tick{xTaskGetTickCount()};
     
     // ============ Step 3: close the file
+    NRF_LOG_INFO("mem: closing file");
     const auto close_result_1 = lfs_file_close(&lfs, &file);
     if (close_result_1!= 0)
     {
@@ -302,6 +304,7 @@ void launch_test_3()
     }
     memset(test_data, 0, test_data_size);
     // ============ Step 4: open the file for read
+    NRF_LOG_INFO("mem: opening file for read");
     const auto open_to_read_result = lfs_file_open(&lfs, &file, "rec0", LFS_O_RDONLY);
     if (open_to_read_result!= 0)
     {
@@ -316,6 +319,7 @@ void launch_test_3()
     }
 
     // ============ Step 5: close the file
+    NRF_LOG_INFO("mem: closing file");
     const auto close_result_2 = lfs_file_close(&lfs, &file);
     if (close_result_2 != 0)
     {
