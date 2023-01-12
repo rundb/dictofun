@@ -41,20 +41,12 @@ void task_ble(void * context_ptr)
     if (result::Result::OK != configure_result)
     {
         NRF_LOG_ERROR("task ble: init has failed");
-        while(1) {vTaskDelay(100000);}
+        // Suspend the task 
+        vTaskSuspend(NULL);
     }
 
     NRF_LOG_INFO("task ble: initialized");
 
-    const auto start_result = ble_system.start();
-    if (result::Result::OK != start_result)
-    {
-        NRF_LOG_ERROR("task ble: start has failed");
-    }
-    else
-    {
-        NRF_LOG_INFO("task ble: start");
-    }
     while(1)
     {
         const auto command_receive_status = xQueueReceive(
