@@ -80,9 +80,9 @@ size_t get_services_uuids(ble_uuid_t * service_uuids, const size_t max_uuids)
     return uuids_count;
 }
 
-nrf_ble_qwr_t& get_qwr_handle()
+nrf_ble_qwr_t * get_qwr_handle()
 {
-    return m_qwr;
+    return &m_qwr;
 }
 
 }

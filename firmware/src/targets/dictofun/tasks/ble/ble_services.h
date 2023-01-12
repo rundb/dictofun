@@ -17,7 +17,7 @@ namespace ble
 
 result::Result init_services();
 
-nrf_ble_qwr_t& get_qwr_handle();
+nrf_ble_qwr_t * get_qwr_handle();
 
 size_t get_services_uuids(ble_uuid_t * service_uuids, size_t max_uuids);
 

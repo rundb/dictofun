@@ -11,6 +11,8 @@
   #include "custom_board.h"
 #elif defined(BOARD_DICTOFUN_1_1)
   #include "dictofun_1_1.h"
+#elif defined(BOARD_DICTOFUN_1_3)
+  #include "dictofun_1_3.h"
 #else
 #error "Board is not defined"
 #endif

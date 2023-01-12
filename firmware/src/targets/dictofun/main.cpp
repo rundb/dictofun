@@ -25,6 +25,7 @@
 #include "task_cli_logger.h"
 #include "task_memory.h"
 #include "task_ble.h"
+#include "task_led.h"
 
 #include <stdint.h>
 
@@ -38,7 +39,8 @@ application::TaskDescriptor<256,  1> audio_tester_task;
 application::TaskDescriptor<256,  1> log_task;
 application::TaskDescriptor<256,  3> systemstate_task;
 application::TaskDescriptor<1024, 2> memory_task;
-application::TaskDescriptor<256,  1> ble_task;
+application::TaskDescriptor<256,  2> ble_task;
+application::TaskDescriptor<96,  1>  led_task;
 
 // ============================= Queues =====================================
 
@@ -55,6 +57,8 @@ application::QueueDescriptor<memory::StatusQueueElement, 1>          memory_stat
 application::QueueDescriptor<ble::CommandQueueElement, 1>            ble_commands_queue;
 application::QueueDescriptor<ble::StatusQueueElement, 1>             ble_status_queue; 
 
+application::QueueDescriptor<led::CommandQueueElement, 1>            led_commands_queue;
+
 // ============================= Timers =====================================
 
 StaticTimer_t record_timer_buffer;
@@ -67,6 +71,7 @@ audio::Context          audio_context;
 audio::tester::Context  audio_tester_context;
 memory::Context         memory_context;
 ble::Context            ble_context;
+led::Context            led_context;
 
 // clang-format on
 
@@ -84,7 +89,6 @@ void latch_ldo_enable()
                  NRF_GPIO_PIN_NOSENSE);
 }
 
-// TODO: reintegrate system elements after designing them in a test-driven way
 int main()
 {
     latch_ldo_enable();
@@ -158,6 +162,12 @@ int main()
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
+    const auto led_commands_queue_init_result = led_commands_queue.init();
+    if (result::Result::OK != led_commands_queue_init_result)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
     // Timers' initialization
     record_timer_handle = xTimerCreateStatic("AUDIO", 1, pdFALSE, nullptr, systemstate::record_end_callback, &record_timer_buffer);
     if (nullptr == record_timer_handle)
@@ -207,6 +217,7 @@ int main()
     systemstate_context.memory_status_handle = memory_status_queue.handle;
     systemstate_context.ble_commands_handle = ble_commands_queue.handle;
     systemstate_context.ble_status_handle = ble_status_queue.handle;
+    systemstate_context.led_commands_handle = led_commands_queue.handle;
 
     const auto systemstate_task_init_result = systemstate_task.init(
         systemstate::task_system_state, 
@@ -233,10 +244,21 @@ int main()
     ble_context.status_queue = ble_status_queue.handle;
     const auto ble_task_init_result = ble_task.init(
         ble::task_ble,
-        "MEM",
+        "BLE",
         &ble_context);
 
     if (result::Result::OK != ble_task_init_result)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
+    led_context.commands_queue = led_commands_queue.handle;
+    const auto led_task_init_result = led_task.init(
+        led::task_led,
+        "LED",
+        &led_context);
+
+    if (result::Result::OK != led_task_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }

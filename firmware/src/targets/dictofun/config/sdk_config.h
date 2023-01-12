@@ -10355,7 +10355,7 @@
 // <4=> Debug 
 
 #ifndef NRF_SDH_BLE_LOG_LEVEL
-#define NRF_SDH_BLE_LOG_LEVEL 3
+#define NRF_SDH_BLE_LOG_LEVEL 4
 #endif
 
 // <o> NRF_SDH_BLE_INFO_COLOR  - ANSI escape code prefix.
@@ -12106,7 +12106,7 @@
 #endif
 
 #ifndef LOG_LEVEL_DEFAULT
-#define LOG_LEVEL_DEFAULT 2
+#define LOG_LEVEL_DEFAULT 4
 #endif
 
 #ifndef NRF_DFU_SETTINGS_COMPATIBILITY_MODE

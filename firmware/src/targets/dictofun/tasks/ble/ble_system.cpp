@@ -16,6 +16,7 @@
 #include "ble_advertising.h"
 #include "ble_services.h"
 #include "nrf_error_decoder.h"
+#include "ble_conn_params.h"
 
 namespace ble
 {
@@ -71,6 +72,12 @@ static ble_gap_adv_data_t m_adv_data =
 constexpr uint32_t APP_ADV_INTERVAL{200};                                      //  The advertising interval (in units of 0.625 ms)
 constexpr uint32_t APP_ADV_DURATION{BLE_GAP_ADV_TIMEOUT_GENERAL_UNLIMITED};    //< The advertising time-out (in units of seconds). When set to 0, we will never time out.
 
+// Connection parameters
+constexpr uint32_t FIRST_CONN_PARAMS_UPDATE_DELAY{20000};
+constexpr uint32_t NEXT_CONN_PARAMS_UPDATE_DELAY{5000};
+constexpr uint32_t MAX_CONN_PARAMS_UPDATE_COUNT{3};
+
+
 result::Result BleSystem::configure()
 {
     const auto sdh_init_result = init_sdh();
@@ -94,6 +101,13 @@ result::Result BleSystem::configure()
         return gatt_init_result;
     }
 
+    const auto bonding_init_result = init_bonding();
+    if (result::Result::OK != bonding_init_result)
+    {
+        NRF_LOG_ERROR("ble: bonding init failed");
+        return gatt_init_result;
+    }
+
     const auto services_init_result = init_services();
     if (result::Result::OK != services_init_result)
     {
@@ -106,6 +120,13 @@ result::Result BleSystem::configure()
     {
         NRF_LOG_ERROR("ble: adv init failed");
         return adv_init_result;
+    }
+
+    const auto conn_param_init_result = init_conn_params();
+    if (result::Result::OK != conn_param_init_result)
+    {
+        NRF_LOG_ERROR("ble: conn parameters setup failed");
+        return conn_param_init_result;
     }
 
     return result::Result::OK;
@@ -138,7 +159,7 @@ void BleSystem::ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
         case BLE_GAP_EVT_CONNECTED:
             NRF_LOG_INFO("Connected");
             m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
-            err_code = nrf_ble_qwr_conn_handle_assign(&(get_qwr_handle()), m_conn_handle);
+            err_code = nrf_ble_qwr_conn_handle_assign(get_qwr_handle(), m_conn_handle);
             if (NRF_SUCCESS != err_code)
             {
                 NRF_LOG_ERROR("ble: evt conn error (%s)", helpers::decode_error(err_code));
@@ -152,7 +173,7 @@ void BleSystem::ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             break;
 
         case BLE_GAP_EVT_SEC_PARAMS_REQUEST:
-            NRF_LOG_DEBUG("BLE_GAP_EVT_SEC_PARAMS_REQUEST");
+            NRF_LOG_INFO("BLE_GAP_EVT_SEC_PARAMS_REQUEST");
             break;
         
         case BLE_GAP_EVT_AUTH_KEY_REQUEST:
@@ -173,7 +194,7 @@ void BleSystem::ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 
         case BLE_GAP_EVT_PHY_UPDATE_REQUEST:
         {
-            NRF_LOG_DEBUG("PHY update request.");
+            NRF_LOG_INFO("PHY update request.");
             ble_gap_phys_t const phys =
             {
                 .tx_phys = BLE_GAP_PHY_AUTO,
@@ -197,7 +218,7 @@ void BleSystem::ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 
         case BLE_GATTC_EVT_TIMEOUT:
             // Disconnect on GATT Client timeout event.
-            NRF_LOG_DEBUG("GATT Client Timeout.");
+            NRF_LOG_INFO("GATT Client Timeout.");
             err_code = sd_ble_gap_disconnect(p_ble_evt->evt.gattc_evt.conn_handle,
                                              BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
             if (NRF_SUCCESS != err_code)
@@ -208,7 +229,7 @@ void BleSystem::ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 
         case BLE_GATTS_EVT_TIMEOUT:
             // Disconnect on GATT Server timeout event.
-            NRF_LOG_DEBUG("GATT Server Timeout.");
+            NRF_LOG_INFO("GATT Server Timeout.");
             err_code = sd_ble_gap_disconnect(p_ble_evt->evt.gatts_evt.conn_handle,
                                              BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
             if (NRF_SUCCESS != err_code)
@@ -398,11 +419,11 @@ result::Result BleSystem::init_advertising()
     advdata.name_type          = BLE_ADVDATA_FULL_NAME;
     advdata.include_appearance = true;
     advdata.flags              = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
-    advdata.uuids_complete.uuid_cnt = uuids_count;
-    advdata.uuids_complete.p_uuids = adv_uuids;
+    // advdata.uuids_complete.uuid_cnt = uuids_count;
+    // advdata.uuids_complete.p_uuids = adv_uuids;
 
     memset(&srdata, 0, sizeof(srdata));
-    srdata.uuids_complete.uuid_cnt = MAX_UUIDS_COUNT;
+    srdata.uuids_complete.uuid_cnt = uuids_count;
     srdata.uuids_complete.p_uuids  = adv_uuids;
 
     err_code = ble_advdata_encode(&advdata, m_adv_data.adv_data.p_data, &m_adv_data.adv_data.len);
@@ -448,6 +469,50 @@ result::Result BleSystem::start_advertising()
 
     if (err_code != 0)
     {
+        return result::Result::ERROR_GENERAL;
+    }
+    return result::Result::OK;
+}
+
+void on_conn_params_evt(ble_conn_params_evt_t * p_evt)
+{
+    ret_code_t err_code;
+
+    if (p_evt->evt_type == BLE_CONN_PARAMS_EVT_FAILED)
+    {
+        err_code = sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_CONN_INTERVAL_UNACCEPTABLE);
+        if (NRF_SUCCESS != err_code)
+        {
+            NRF_LOG_ERROR("ble: sd gap disconn (%s)", helpers::decode_error(err_code));
+        }
+    }
+}
+
+void conn_params_error_handler(uint32_t nrf_error)
+{
+    NRF_LOG_ERROR("ble: conn params error (%s)", helpers::decode_error(nrf_error));
+}
+
+result::Result BleSystem::init_conn_params()
+{
+    ret_code_t             err_code;
+    ble_conn_params_init_t cp_init;
+
+    memset(&cp_init, 0, sizeof(cp_init));
+
+    cp_init.p_conn_params                  = NULL;
+    cp_init.first_conn_params_update_delay = FIRST_CONN_PARAMS_UPDATE_DELAY;
+    cp_init.next_conn_params_update_delay  = NEXT_CONN_PARAMS_UPDATE_DELAY;
+    cp_init.max_conn_params_update_count   = MAX_CONN_PARAMS_UPDATE_COUNT;
+    cp_init.start_on_notify_cccd_handle    = BLE_GATT_HANDLE_INVALID;
+    cp_init.disconnect_on_fail             = false;
+    cp_init.evt_handler                    = on_conn_params_evt;
+    cp_init.error_handler                  = conn_params_error_handler;
+
+    err_code = ble_conn_params_init(&cp_init);
+    if (NRF_SUCCESS != err_code)
+    {
+        NRF_LOG_ERROR("ble: conn params init (%s)", helpers::decode_error(err_code));
         return result::Result::ERROR_GENERAL;
     }
     return result::Result::OK;

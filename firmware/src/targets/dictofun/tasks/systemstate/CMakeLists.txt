@@ -19,4 +19,5 @@ target_link_libraries(task_system_state PUBLIC
     task_audio_tester_interface
     task_memory_interface
     task_ble_interface
+    task_led_interface
 )

@@ -36,6 +36,7 @@ private:
     result::Result init_gatt();
     result::Result init_bonding();
     result::Result init_advertising();
+    result::Result init_conn_params();
 
     result::Result start_advertising();
 

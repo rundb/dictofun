@@ -1,20 +1,13 @@
+// SPDX-License-Identifier:  Apache-2.0
+/*
+ * Copyright (c) 2023, Roman Turkin
+ */
 #pragma once
 
-/*
- * Copyright (c) 2021 Roman Turkin 
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+#include "FreeRTOS.h"
+#include "queue.h"
+#include "task.h"
+
 
 namespace led
 {
@@ -22,34 +15,35 @@ namespace led
 // Separation of this logic into a separate unit allows us to
 // concentrate all indication-dependencies inside one unit.
 
-enum LedState
+enum class State
 {
     OFF,
-    SLOW_BLINKING,
-    FAST_BLINKING,
+    // SLOW_BLINKING,
+    // FAST_BLINKING,
     ON
 };
 
-enum LedColor
+enum class Color
 {
     RED = 0,
     GREEN = 1,
     BLUE = 2,
-    COLORS_COUNT
+    COUNT = 3
 };
 
-enum IndicationState
+
+struct CommandQueueElement
 {
-    PREPARING,
-    RECORDING,
-    CONNECTING,
-    SENDING,
-    SHUTTING_DOWN,
-    INDICATION_OFF,
+    Color color;
+    State state;
 };
 
-void task_led_init();
-void task_led_cyclic();
-void task_led_set_indication_state(IndicationState state);
+struct Context
+{
+    QueueHandle_t commands_queue{nullptr};
+};
+
+
+void task_led(void * context_ptr);
 
 }
