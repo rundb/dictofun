@@ -282,8 +282,8 @@ void launch_test_3()
     // Enforce overflow of a single sector size to provoke an erase operation
     size_t written_data_size{0};
     const auto write_start_tick{xTaskGetTickCount()};
-    // for (int i = 0; i < 20; ++i)
-    // {
+    for (int i = 0; i < 20; ++i)
+    {
         const auto write_result = lfs_file_write(&lfs, &file, test_data, sizeof(test_data));
         written_data_size += sizeof(test_data);
         if (write_result!= sizeof(test_data))
@@ -291,7 +291,7 @@ void launch_test_3()
             NRF_LOG_ERROR("lfs: failed to write into a file");
             return;
         }
-    // }
+    }
     const auto write_end_tick{xTaskGetTickCount()};
     
     // ============ Step 3: close the file
