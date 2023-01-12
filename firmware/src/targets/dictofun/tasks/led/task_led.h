@@ -31,6 +31,7 @@ enum class Color
     COUNT = 3
 };
 
+constexpr Color user_color{Color::GREEN};
 
 struct CommandQueueElement
 {

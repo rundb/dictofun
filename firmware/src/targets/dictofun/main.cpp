@@ -40,7 +40,7 @@ application::TaskDescriptor<256,  1> log_task;
 application::TaskDescriptor<256,  3> systemstate_task;
 application::TaskDescriptor<1024, 2> memory_task;
 application::TaskDescriptor<256,  2> ble_task;
-application::TaskDescriptor<96,  1>  led_task;
+application::TaskDescriptor<96,   1>  led_task;
 
 // ============================= Queues =====================================
 
@@ -55,9 +55,9 @@ application::QueueDescriptor<memory::CommandQueueElement, 1>         memory_comm
 application::QueueDescriptor<memory::StatusQueueElement, 1>          memory_status_queue; 
 
 application::QueueDescriptor<ble::CommandQueueElement, 1>            ble_commands_queue;
-application::QueueDescriptor<ble::StatusQueueElement, 1>             ble_status_queue; 
+application::QueueDescriptor<ble::RequestQueueElement, 1>            ble_requests_queue; 
 
-application::QueueDescriptor<led::CommandQueueElement, 1>            led_commands_queue;
+application::QueueDescriptor<led::CommandQueueElement, 3>            led_commands_queue;
 
 // ============================= Timers =====================================
 
@@ -156,8 +156,8 @@ int main()
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
-    const auto ble_status_queue_init_result = ble_status_queue.init();
-    if (result::Result::OK != ble_status_queue_init_result)
+    const auto ble_requests_queue_init_result = ble_requests_queue.init();
+    if (result::Result::OK != ble_requests_queue_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
@@ -216,7 +216,7 @@ int main()
     systemstate_context.memory_commands_handle = memory_commands_queue.handle;
     systemstate_context.memory_status_handle = memory_status_queue.handle;
     systemstate_context.ble_commands_handle = ble_commands_queue.handle;
-    systemstate_context.ble_status_handle = ble_status_queue.handle;
+    systemstate_context.ble_requests_handle = ble_requests_queue.handle;
     systemstate_context.led_commands_handle = led_commands_queue.handle;
 
     const auto systemstate_task_init_result = systemstate_task.init(
@@ -241,7 +241,7 @@ int main()
     }
 
     ble_context.command_queue = ble_commands_queue.handle;
-    ble_context.status_queue = ble_status_queue.handle;
+    ble_context.requests_queue = ble_requests_queue.handle;
     const auto ble_task_init_result = ble_task.init(
         ble::task_ble,
         "BLE",

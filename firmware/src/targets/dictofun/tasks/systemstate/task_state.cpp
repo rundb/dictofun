@@ -14,6 +14,7 @@
 #include "task_audio_tester.h"
 #include "task_memory.h"
 #include "task_ble.h"
+#include "task_led.h"
 
 #include <FreeRTOS.h>
 #include <task.h>
@@ -24,8 +25,10 @@ namespace systemstate
 {
 
 logger::CliCommandQueueElement cli_command_buffer;
+ble::RequestQueueElement ble_requests_buffer;
 
 constexpr TickType_t cli_command_wait_ticks_type{10};
+constexpr TickType_t ble_request_wait_ticks_type{1};
 
 Context * context{nullptr};
     
@@ -111,6 +114,30 @@ void task_system_state(void * context_ptr)
                 {
                     launch_cli_command_ble_operation(cli_command_buffer.args[0]);
                     break;
+                }
+            }
+        }
+        const auto ble_request_receive_status = xQueueReceive(
+            context->ble_requests_handle,
+            reinterpret_cast<void *>(&ble_requests_buffer),
+            ble_request_wait_ticks_type
+        );
+        if (pdPASS == ble_request_receive_status)
+        {
+            if (ble_requests_buffer.request == ble::Request::LED)
+            {
+                led::CommandQueueElement cmd{
+                    led::user_color, 
+                    (ble_requests_buffer.args[0] == 0) ? led::State::OFF : led::State::ON
+                };
+                const auto led_command_send_status = xQueueSend(
+                    context->led_commands_handle,
+                    reinterpret_cast<void *>(&cmd),
+                    0
+                );
+                if (pdPASS != led_command_send_status)
+                {
+                    NRF_LOG_ERROR("state: failed to send led enable request");
                 }
             }
         }

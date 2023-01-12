@@ -20,11 +20,24 @@ BleSystem ble_system;
 ble::CommandQueueElement command_buffer;
 constexpr TickType_t command_wait_ticks{10U};
 
+struct 
+{
+    bool is_active;
+    uint8_t led_state;
+} led_state_request;
+
+void task_level_led_write_handler(uint16_t conn_handle, ble_lbs_t * p_lbs, uint8_t led_state)
+{
+    NRF_LOG_INFO("ble: received led write request");
+    led_state_request.is_active = true;
+    led_state_request.led_state = led_state;
+}
+
 /// @brief This task is responsible for all functionalities related to BLE operation.
 void task_ble(void * context_ptr)
 {
     Context& context{*reinterpret_cast<Context *>(context_ptr)};
-    const auto configure_result = ble_system.configure();
+    const auto configure_result = ble_system.configure(task_level_led_write_handler);
     if (result::Result::OK != configure_result)
     {
         NRF_LOG_ERROR("task ble: init has failed");
@@ -32,6 +45,16 @@ void task_ble(void * context_ptr)
     }
 
     NRF_LOG_INFO("task ble: initialized");
+
+    const auto start_result = ble_system.start();
+    if (result::Result::OK != start_result)
+    {
+        NRF_LOG_ERROR("task ble: start has failed");
+    }
+    else
+    {
+        NRF_LOG_INFO("task ble: start");
+    }
     while(1)
     {
         const auto command_receive_status = xQueueReceive(
@@ -74,6 +97,20 @@ void task_ble(void * context_ptr)
                     NRF_LOG_ERROR("task ble: pairing reset is not yet implemented");
                     break;
                 }
+            }
+        }
+        if (led_state_request.is_active)
+        {
+            led_state_request.is_active = false;
+            RequestQueueElement cmd{Request::LED, {static_cast<uint32_t>(led_state_request.led_state)}};
+            const auto command_send_status = xQueueSend(
+                context.requests_queue,
+                reinterpret_cast<void *>(&cmd),
+                0
+            );
+            if (pdPASS != command_send_status)
+            {
+                NRF_LOG_ERROR("BLE: failed to send led write request");
             }
         }
     }

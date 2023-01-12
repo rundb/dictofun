@@ -132,6 +132,7 @@ add_library(nrf5_sdh OBJECT EXCLUDE_FROM_ALL
   "${NRF5_SDK_PATH}/components/softdevice/common/nrf_sdh.c"
   "${NRF5_SDK_PATH}/components/softdevice/common/nrf_sdh_ble.c"
   "${NRF5_SDK_PATH}/components/softdevice/common/nrf_sdh_soc.c"
+  "${NRF5_SDK_PATH}/components/softdevice/common/nrf_sdh_freertos.c"
 )
 target_include_directories(nrf5_sdh PUBLIC
   "${NRF5_SDK_PATH}/components/libraries/util"
@@ -143,6 +144,9 @@ target_link_libraries(nrf5_sdh PUBLIC
   nrf5_log_fwd
   nrf5_section
   nrf5_strerror
+  nrf5_freertos_interface
+  nrf52_freertos_portable_gcc_interface
+  nrf52_freertos_portable_cmsis_interface
 )
 list(APPEND NRF5_LIBRARY_NRF5_SDH_DEPENDENCIES
   nrf5_app_scheduler

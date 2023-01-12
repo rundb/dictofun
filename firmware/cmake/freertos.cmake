@@ -85,3 +85,9 @@ add_library(nrf52_freertos_portable_gcc_interface INTERFACE)
 target_include_directories(nrf52_freertos_portable_gcc_interface INTERFACE
     "${NRF5_SDK_PATH}/external/freertos/portable/GCC/nrf52"
 )
+
+add_library(nrf52_freertos_portable_cmsis_interface INTERFACE)
+
+target_include_directories(nrf52_freertos_portable_cmsis_interface INTERFACE
+  "${NRF5_SDK_PATH}/external/freertos/portable/CMSIS/nrf52"
+)

@@ -16,7 +16,7 @@ void task_ble(void * context_ptr);
 struct Context
 {
     QueueHandle_t command_queue;
-    QueueHandle_t status_queue;
+    QueueHandle_t requests_queue;
 };
 
 enum class Command
@@ -31,16 +31,16 @@ struct CommandQueueElement
     Command command_id;
 };
 
-enum class Status
+enum class Request
 {
-    OK,
-    ERROR,
+    LED
 };
 
-struct StatusQueueElement
+struct RequestQueueElement
 {
-    Command command_id;
-    Status status;
+    Request request;
+    static constexpr size_t max_args_count{1};
+    uint32_t args[max_args_count];
 };
 
 }

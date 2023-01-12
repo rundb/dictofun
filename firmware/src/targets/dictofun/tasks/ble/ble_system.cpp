@@ -17,6 +17,8 @@
 #include "ble_services.h"
 #include "nrf_error_decoder.h"
 #include "ble_conn_params.h"
+#include "nrf_sdh_freertos.h"
+#include "boards.h"
 
 namespace ble
 {
@@ -27,7 +29,7 @@ constexpr uint8_t APP_BLE_OBSERVER_PRIO{3};
 constexpr uint8_t APP_BLE_CONN_CFG_TAG{1};
 
 // TODO: move this declaration into configuration memory
-static const char device_name[] = "dictofun";
+static const char device_name[] = BOARD_NAME;
 
 // GAP parameters 
 constexpr uint32_t MIN_CONN_INTERVAL{MSEC_TO_UNITS(100, UNIT_1_25_MS)};
@@ -36,7 +38,7 @@ constexpr uint32_t SLAVE_LATENCY{0};
 constexpr uint32_t CONN_SUP_TIMEOUT{MSEC_TO_UNITS(4000, UNIT_10_MS)};
 
 // GATT parameters
-static nrf_ble_gatt_t m_gatt;
+NRF_BLE_GATT_DEF(m_gatt);
 
 // Bonding parameters
 constexpr uint8_t SEC_PARAM_BOND{1};
@@ -50,24 +52,7 @@ constexpr uint8_t SEC_PARAM_MAX_KEY_SIZE{16};
 
 // Advertising parameters
 
-static uint8_t m_enc_advdata[BLE_GAP_ADV_SET_DATA_SIZE_MAX];                    /**< Buffer for storing an encoded advertising set. */
-static uint8_t m_enc_scan_response_data[BLE_GAP_ADV_SET_DATA_SIZE_MAX];         /**< Buffer for storing an encoded scan data. */
-static uint8_t m_adv_handle = BLE_GAP_ADV_SET_HANDLE_NOT_SET;                   /**< Advertising handle used to identify an advertising set. */
-
-static ble_gap_adv_data_t m_adv_data =
-{
-    .adv_data =
-    {
-        .p_data = m_enc_advdata,
-        .len    = BLE_GAP_ADV_SET_DATA_SIZE_MAX
-    },
-    .scan_rsp_data =
-    {
-        .p_data = m_enc_scan_response_data,
-        .len    = BLE_GAP_ADV_SET_DATA_SIZE_MAX
-
-    }
-};
+BLE_ADVERTISING_DEF(m_advertising);                                             /**< Advertising module instance. */
 
 constexpr uint32_t APP_ADV_INTERVAL{200};                                      //  The advertising interval (in units of 0.625 ms)
 constexpr uint32_t APP_ADV_DURATION{BLE_GAP_ADV_TIMEOUT_GENERAL_UNLIMITED};    //< The advertising time-out (in units of seconds). When set to 0, we will never time out.
@@ -78,7 +63,7 @@ constexpr uint32_t NEXT_CONN_PARAMS_UPDATE_DELAY{5000};
 constexpr uint32_t MAX_CONN_PARAMS_UPDATE_COUNT{3};
 
 
-result::Result BleSystem::configure()
+result::Result BleSystem::configure(ble_lbs_led_write_handler_t led_write_handler)
 {
     const auto sdh_init_result = init_sdh();
     if (result::Result::OK != sdh_init_result)
@@ -108,7 +93,7 @@ result::Result BleSystem::configure()
         return gatt_init_result;
     }
 
-    const auto services_init_result = init_services();
+    const auto services_init_result = init_services(led_write_handler);
     if (result::Result::OK != services_init_result)
     {
         NRF_LOG_ERROR("ble: services init failed");
@@ -134,12 +119,8 @@ result::Result BleSystem::configure()
 
 result::Result BleSystem::start()
 {
-    const auto adv_start_result = start_advertising();
-    if (result::Result::OK != adv_start_result)
-    {
-        NRF_LOG_ERROR("ble: adv start failed");
-        return adv_start_result;
-    }
+    nrf_sdh_freertos_init(start_advertising, nullptr);
+
     return result::Result::OK;
 }
 
@@ -401,82 +382,77 @@ void BleSystem::on_bonded_peer_reconnection_lvl_notify(pm_evt_t const * /*p_evt*
     // peer_id = p_evt->peer_id;
 }
 
+static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
+{
+    // uint32_t err_code;
+
+    switch (ble_adv_evt)
+    {
+        case BLE_ADV_EVT_FAST:
+            NRF_LOG_INFO("adv: Fast advertising.");
+            // APP_ERROR_CHECK(err_code);
+            break;
+
+        case BLE_ADV_EVT_IDLE:
+            NRF_LOG_INFO("adv: idle");
+            // sleep_mode_enter();
+            break;
+
+        default:
+            break;
+    }
+}
 
 result::Result BleSystem::init_advertising()
 {
-    ret_code_t    err_code;
-    ble_advdata_t advdata;
-    ble_advdata_t srdata;
+    ret_code_t             err_code;
+    ble_advertising_init_t init;
+
+    memset(&init, 0, sizeof(init));
 
     static const size_t MAX_UUIDS_COUNT = 1U;
     ble_uuid_t adv_uuids[MAX_UUIDS_COUNT]{0};
-    // TODO: fill in advertising UUIDs
-    const auto uuids_count = get_services_uuids(adv_uuids, MAX_UUIDS_COUNT);
     
-    // Build and set advertising data.
-    memset(&advdata, 0, sizeof(advdata));
+    const auto uuids_count = get_services_uuids(adv_uuids, MAX_UUIDS_COUNT);
 
-    advdata.name_type          = BLE_ADVDATA_FULL_NAME;
-    advdata.include_appearance = true;
-    advdata.flags              = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
-    // advdata.uuids_complete.uuid_cnt = uuids_count;
-    // advdata.uuids_complete.p_uuids = adv_uuids;
+    init.advdata.name_type               = BLE_ADVDATA_FULL_NAME;
+    init.advdata.include_appearance      = true;
+    init.advdata.flags                   = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
+    init.advdata.uuids_complete.uuid_cnt = uuids_count;
+    init.advdata.uuids_complete.p_uuids  = adv_uuids;
 
-    memset(&srdata, 0, sizeof(srdata));
-    srdata.uuids_complete.uuid_cnt = uuids_count;
-    srdata.uuids_complete.p_uuids  = adv_uuids;
+    init.config.ble_adv_fast_enabled  = true;
+    init.config.ble_adv_fast_interval = APP_ADV_INTERVAL;
+    init.config.ble_adv_fast_timeout  = APP_ADV_DURATION;
 
-    err_code = ble_advdata_encode(&advdata, m_adv_data.adv_data.p_data, &m_adv_data.adv_data.len);
+    init.evt_handler = on_adv_evt;
+
+    err_code = ble_advertising_init(&m_advertising, &init);
     if (NRF_SUCCESS != err_code)
     {
-        NRF_LOG_ERROR("ble: advdata encode error (%s)", helpers::decode_error(err_code));
+        NRF_LOG_ERROR("ble: adv init error (%s)", helpers::decode_error(err_code));
         return result::Result::ERROR_GENERAL;
     }
 
-    err_code = ble_advdata_encode(&srdata, m_adv_data.scan_rsp_data.p_data, &m_adv_data.scan_rsp_data.len);
-    if (NRF_SUCCESS != err_code)
-    {
-        NRF_LOG_ERROR("ble: scan resp encode  (%s)", helpers::decode_error(err_code));
-        return result::Result::ERROR_GENERAL;
-    }
-
-    ble_gap_adv_params_t adv_params;
-
-    // Set advertising parameters.
-    memset(&adv_params, 0, sizeof(adv_params));
-
-    adv_params.primary_phy     = BLE_GAP_PHY_1MBPS;
-    adv_params.duration        = APP_ADV_DURATION;
-    adv_params.properties.type = BLE_GAP_ADV_TYPE_CONNECTABLE_SCANNABLE_UNDIRECTED;
-    adv_params.p_peer_addr     = NULL;
-    adv_params.filter_policy   = BLE_GAP_ADV_FP_ANY;
-    adv_params.interval        = APP_ADV_INTERVAL;
-
-    err_code = sd_ble_gap_adv_set_configure(&m_adv_handle, &m_adv_data, &adv_params);
-    if (NRF_SUCCESS != err_code)
-    {
-        NRF_LOG_ERROR("ble: sd adv init error (%s)", helpers::decode_error(err_code));
-        return result::Result::ERROR_GENERAL;
-    }
+    ble_advertising_conn_cfg_tag_set(&m_advertising, APP_BLE_CONN_CFG_TAG);
 
     return result::Result::OK;
 }
 
-result::Result BleSystem::start_advertising()
+void BleSystem::start_advertising(void * /*context_ptr*/)
 {
-    ret_code_t           err_code;
-    err_code = sd_ble_gap_adv_start(m_adv_handle, APP_BLE_CONN_CFG_TAG);
+    ret_code_t err_code = ble_advertising_start(&m_advertising, BLE_ADV_MODE_FAST);
 
     if (err_code != 0)
     {
-        return result::Result::ERROR_GENERAL;
+        NRF_LOG_ERROR("ble: adv start error (%s)", helpers::decode_error(err_code));
     }
-    return result::Result::OK;
 }
 
 void on_conn_params_evt(ble_conn_params_evt_t * p_evt)
 {
     ret_code_t err_code;
+    NRF_LOG_DEBUG("ble: on conn param evt");
 
     if (p_evt->evt_type == BLE_CONN_PARAMS_EVT_FAILED)
     {

@@ -10,12 +10,13 @@
 #include <stdint.h>
 #include "ble_advertising.h"
 #include "nrf_ble_qwr.h"
+#include "ble_lbs.h"
 
 /// This module aggregates instantiations of all BLE services
 namespace ble
 {
 
-result::Result init_services();
+result::Result init_services(ble_lbs_led_write_handler_t led_write_handler);
 
 nrf_ble_qwr_t * get_qwr_handle();
 
