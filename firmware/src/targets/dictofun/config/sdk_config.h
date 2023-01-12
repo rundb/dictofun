@@ -2528,7 +2528,7 @@
 // <e> NRFX_PDM_CONFIG_LOG_ENABLED - Enables logging in the module.
 //==========================================================
 #ifndef NRFX_PDM_CONFIG_LOG_ENABLED
-#define NRFX_PDM_CONFIG_LOG_ENABLED 1
+#define NRFX_PDM_CONFIG_LOG_ENABLED 0
 #endif
 // <o> NRFX_PDM_CONFIG_LOG_LEVEL  - Default Severity level
  
@@ -3477,7 +3477,7 @@
 // <e> NRFX_SAADC_CONFIG_LOG_ENABLED - Enables logging in the module.
 //==========================================================
 #ifndef NRFX_SAADC_CONFIG_LOG_ENABLED
-#define NRFX_SAADC_CONFIG_LOG_ENABLED 1
+#define NRFX_SAADC_CONFIG_LOG_ENABLED 0
 #endif
 // <o> NRFX_SAADC_CONFIG_LOG_LEVEL  - Default Severity level
  
@@ -3595,7 +3595,7 @@
 // <e> NRFX_SPIM_CONFIG_LOG_ENABLED - Enables logging in the module.
 //==========================================================
 #ifndef NRFX_SPIM_CONFIG_LOG_ENABLED
-#define NRFX_SPIM_CONFIG_LOG_ENABLED 1
+#define NRFX_SPIM_CONFIG_LOG_ENABLED 0
 #endif
 // <o> NRFX_SPIM_CONFIG_LOG_LEVEL  - Default Severity level
  
@@ -7837,7 +7837,7 @@
 // <4=> Debug 
 
 #ifndef NRF_LOG_DEFAULT_LEVEL
-#define NRF_LOG_DEFAULT_LEVEL 3
+#define NRF_LOG_DEFAULT_LEVEL 4
 #endif
 
 // <q> NRF_LOG_DEFERRED  - Enable deffered logger.
@@ -11917,7 +11917,7 @@
 // <2=> NRF_SDH_DISPATCH_MODEL_POLLING 
 
 #ifndef NRF_SDH_DISPATCH_MODEL
-#define NRF_SDH_DISPATCH_MODEL 0
+#define NRF_SDH_DISPATCH_MODEL 2
 #endif
 
 // </h> 
@@ -12106,7 +12106,7 @@
 #endif
 
 #ifndef LOG_LEVEL_DEFAULT
-#define LOG_LEVEL_DEFAULT 2
+#define LOG_LEVEL_DEFAULT 3
 #endif
 
 #ifndef NRF_DFU_SETTINGS_COMPATIBILITY_MODE

@@ -9,6 +9,7 @@
 #include "nrf_sdh.h"
 #include "peer_manager.h"
 #include "ble.h"
+#include "ble_lbs.h"
 
 namespace ble
 {
@@ -26,7 +27,7 @@ public:
 
      ~BleSystem() = default;
 
-    result::Result configure();
+    result::Result configure(ble_lbs_led_write_handler_t led_write_handler);
 
     result::Result start();
     result::Result stop();
@@ -36,8 +37,9 @@ private:
     result::Result init_gatt();
     result::Result init_bonding();
     result::Result init_advertising();
+    result::Result init_conn_params();
 
-    result::Result start_advertising();
+    static void start_advertising(void * context_ptr);
 
     static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context);
     static void pm_evt_handler(pm_evt_t const * p_evt);

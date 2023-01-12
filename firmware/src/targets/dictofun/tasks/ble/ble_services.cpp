@@ -27,20 +27,7 @@ static void nrf_qwr_error_handler(uint32_t nrf_error)
     NRF_LOG_ERROR("ble: QWR error %d", nrf_error);
 }
 
-// TODO: implement led write handler
-void led_write_handler(uint16_t conn_handle, ble_lbs_t * p_lbs, uint8_t led_state)
-{
-    if (led_state)
-    {
-        NRF_LOG_INFO("Received LED ON!");
-    }
-    else
-    {
-        NRF_LOG_INFO("Received LED OFF!");
-    }
-}
-
-result::Result init_services()
+result::Result init_services(ble_lbs_led_write_handler_t led_write_handler)
 {
     // Initialize Queued Write Module.
     nrf_ble_qwr_init_t qwr_init = {0};
@@ -80,9 +67,9 @@ size_t get_services_uuids(ble_uuid_t * service_uuids, const size_t max_uuids)
     return uuids_count;
 }
 
-nrf_ble_qwr_t& get_qwr_handle()
+nrf_ble_qwr_t * get_qwr_handle()
 {
-    return m_qwr;
+    return &m_qwr;
 }
 
 }

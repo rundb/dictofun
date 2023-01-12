@@ -1,148 +1,67 @@
+// SPDX-License-Identifier:  Apache-2.0
 /*
- * Copyright (c) 2021 Roman Turkin 
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) 2023, Roman Turkin
  */
 
 #include "task_led.h"
 #include <stdint.h>
-#include <nrf_gpio.h>
-#include <app_timer.h>
+#include "nrf_gpio.h"
 #include "boards.h"
+#include "nrf_log.h"
+
+#include "FreeRTOS.h"
+#include "queue.h"
+#include "task.h"
 
 namespace led
 {
-static const uint16_t RED_LED_PIN = LED_3;
-static const uint16_t BLUE_LED_PIN = LED_1;
-static const uint16_t GREEN_LED_PIN = LED_2;
+constexpr uint16_t RED_LED_PIN = LED_3;
+constexpr uint16_t BLUE_LED_PIN = LED_1;
+constexpr uint16_t GREEN_LED_PIN = LED_2;
 
-LedState colors[COLORS_COUNT] {OFF, OFF, OFF};
+constexpr uint32_t task_led_queue_wait_time{10};
+constexpr uint32_t slow_blinking_period{2000};
+constexpr uint32_t fast_blinking_period{600};
 
-IndicationState _current_state{PREPARING};
+constexpr auto colors_count{static_cast<int>(Color::COUNT)};
 
-void task_led_init()
+const uint16_t indexes[colors_count] {RED_LED_PIN, BLUE_LED_PIN, GREEN_LED_PIN};
+State states[colors_count] {State::OFF, State::OFF, State::OFF};
+
+CommandQueueElement command_buffer;
+
+void task_led(void * context_ptr)
 {
-    nrf_gpio_pin_set(RED_LED_PIN);
-    nrf_gpio_pin_set(BLUE_LED_PIN);
-    nrf_gpio_pin_set(GREEN_LED_PIN);
+    Context& context{*(reinterpret_cast<Context*>(context_ptr))};
+    states[0] = State::OFF;
+    states[1] = State::OFF;
+    states[2] = State::OFF;
 
     nrf_gpio_cfg_output(RED_LED_PIN);
     nrf_gpio_cfg_output(BLUE_LED_PIN);
     nrf_gpio_cfg_output(GREEN_LED_PIN);
-}
 
-static const uint32_t SHORT_BLINKING_PERIOD = 100;
-static const uint32_t LONG_BLINKING_PERIOD = 10 * SHORT_BLINKING_PERIOD;
-void task_led_cyclic()
-{
-    const auto timestamp = app_timer_cnt_get();
-    const auto is_slow_blinking_on = ((timestamp / LONG_BLINKING_PERIOD) & 0x01) > 0;
-    const auto is_fast_blinking_on = ((timestamp / SHORT_BLINKING_PERIOD) & 0x01) > 0;
-    for (int i = 0; i < COLORS_COUNT; ++i)
+    nrf_gpio_pin_write(RED_LED_PIN, LED_OFF);
+    nrf_gpio_pin_write(BLUE_LED_PIN, LED_OFF);
+    nrf_gpio_pin_write(GREEN_LED_PIN, LED_OFF);
+
+    NRF_LOG_INFO("task led: initialized");
+
+    while(1)
     {
-        uint16_t index = (i == RED) ? RED_LED_PIN : (i == GREEN) ? GREEN_LED_PIN : BLUE_LED_PIN;
-        switch (colors[i])
+        const auto queue_receive_status = xQueueReceive(
+            context.commands_queue, 
+            reinterpret_cast<void *>(&command_buffer), 
+            task_led_queue_wait_time
+        );
+        if (pdPASS == queue_receive_status)
         {
-            case OFF:
-            {
-                nrf_gpio_pin_set(index);
-                break;
-            }
-            case ON:
-            {
-                nrf_gpio_pin_clear(index);
-                break;
-            }
-            case SLOW_BLINKING:
-            {
-                if (is_slow_blinking_on)
-                {
-                    nrf_gpio_pin_clear(index);
-                }
-                else
-                {
-                    nrf_gpio_pin_set(index);
-                }
-                break;
-            }
-            case FAST_BLINKING:
-            {
-                if (is_fast_blinking_on)
-                {
-                    nrf_gpio_pin_clear(index);
-                }
-                else
-                {
-                    nrf_gpio_pin_set(index);
-                }
-                break;
-            }
+            NRF_LOG_INFO("led: received command");
+            states[static_cast<int>(command_buffer.color)] = command_buffer.state;
         }
-    }
-}
-
-
-// PREPARING -> green slow blinking
-// RECORDING -> RED fast blinking
-// CONNECTING -> BLUE slow blinking
-// SENDING -> Blue fast blinking
-// SHUTTING_DOWN -> green fast blinking
-
-void task_led_set_indication_state(IndicationState state)
-{
-    _current_state = state;
-    switch (_current_state)
-    {
-        case PREPARING:
+        for (auto i = 0; i < colors_count; ++i)
         {
-            colors[RED] = OFF;
-            colors[GREEN] = SLOW_BLINKING;
-            colors[BLUE] = OFF;
-            break;
-        }
-        case RECORDING:
-        {
-            colors[RED] = FAST_BLINKING;
-            colors[GREEN] = OFF;
-            colors[BLUE] = OFF;
-            break;
-        }
-        case CONNECTING:
-        {
-            colors[RED] = OFF;
-            colors[GREEN] = OFF;
-            colors[BLUE] = SLOW_BLINKING;
-            break;
-        }
-        case SENDING:
-        {
-            colors[RED] = OFF;
-            colors[GREEN] = OFF;
-            colors[BLUE] = FAST_BLINKING;
-            break;
-        }
-        case SHUTTING_DOWN:
-        {
-            colors[RED] = OFF;
-            colors[GREEN] = FAST_BLINKING;
-            colors[BLUE] = OFF;
-            break;
-        }
-        case INDICATION_OFF:
-        {
-            colors[RED] = SLOW_BLINKING;
-            colors[GREEN] = SLOW_BLINKING;
-            colors[BLUE] = SLOW_BLINKING;
+            nrf_gpio_pin_write(indexes[i], (states[i] == State::OFF) ? LED_OFF : LED_ON);
         }
     }
 }

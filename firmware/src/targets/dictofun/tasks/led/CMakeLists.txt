@@ -9,5 +9,13 @@ target_link_libraries(task_led PRIVATE
 )
 
 target_link_libraries(task_led PUBLIC 
-    application
+    boards
+    nrf5_freertos
+    nrf52_freertos_portable_gcc
+    nrf52_freertos_portable_cmsis
+    nrf5_freertos_portable_memmang_1
 )
+
+add_library(task_led_interface INTERFACE)
+
+target_include_directories(task_led_interface INTERFACE ./)
