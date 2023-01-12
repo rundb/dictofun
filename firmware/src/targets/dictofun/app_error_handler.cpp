@@ -9,6 +9,14 @@
 #include "nrf_sdm.h"
 #include "nrf_log_ctrl.h"
 
+#include "FreeRTOS.h"
+#include "task.h"
+
+extern "C" void vApplicationStackOverflowHook( TaskHandle_t xTask, char *pcTaskName )
+{
+    NRF_LOG_ERROR("STACK OVERFLOW DETECTED: %s", pcTaskName);
+}
+
 void app_error_fault_handler(uint32_t id, uint32_t pc, uint32_t info)
 {
     __disable_irq();
