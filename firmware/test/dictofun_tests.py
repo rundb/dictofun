@@ -3,6 +3,7 @@ import time
 import re
 import logging
 import sys
+import subprocess
 
 port_identifier = '/dev/ttyUSB0'
 
@@ -87,6 +88,11 @@ if __name__ == '__main__':
     tester.start()
 
     if tester.reset_device() != 0:
-        tester.stop()    
+        tester.stop()
+        exit(-1)
+    
+    if tester.check_version() != 0:
+        tester.stop()
+        exit(-1)
 
     tester.stop()
