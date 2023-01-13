@@ -11,6 +11,9 @@
 #include "nrf_cli_uart.h"
 #include "boards.h"
 
+#include "FreeRTOS.h"
+#include "task.h"
+
 #include <string.h>
 
 NRF_CLI_UART_DEF(m_cli_uart_transport, 0, 64, 16);
@@ -58,11 +61,25 @@ static void cmd_version(nrf_cli_t const * p_cli, size_t argc, char ** argv)
 
     nrf_cli_fprintf(p_cli,
                 NRF_CLI_NORMAL,
-                "placeholder for version printout\n");
+                "dictofun application\n");
 
 }
-
 NRF_CLI_CMD_REGISTER(version, NULL, "Display software version", cmd_version);
+
+static void cmd_reset(nrf_cli_t const * p_cli, size_t argc, char ** argv)
+{
+    if (nrf_cli_help_requested(p_cli))
+    {
+        nrf_cli_help_print(p_cli, NULL, 0);
+        return;
+    }
+
+    nrf_cli_fprintf(p_cli, NRF_CLI_NORMAL, "resetting\n");
+    vTaskDelay(100);
+    NVIC_SystemReset();
+}
+
+NRF_CLI_CMD_REGISTER(reset, NULL, "Perform a software reset", cmd_reset);
 
 
 static record_launch_callback _record_launch_callback = NULL;
