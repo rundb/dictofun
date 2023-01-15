@@ -19,3 +19,4 @@ keys
 *.zip
 *.o
 *.kicad_prl
+__pycache__
