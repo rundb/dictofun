@@ -5,11 +5,6 @@ using namespace ble::fts;
 namespace integration
 {
 
-ble::fts::BleInterface dictofun_ble_if
-{
-
-};
-
 namespace test
 {
 

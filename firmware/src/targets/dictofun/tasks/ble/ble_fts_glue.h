@@ -9,7 +9,6 @@
 
 namespace integration
 {
-extern ble::fts::BleInterface dictofun_ble_if;
 namespace test
 {
 result::Result dictofun_test_get_file_list(uint32_t& files_count, ble::fts::file_id_type * files_list_ptr);
