@@ -410,16 +410,18 @@ result::Result BleSystem::init_advertising()
 
     memset(&init, 0, sizeof(init));
 
-    static const size_t MAX_UUIDS_COUNT = 1U;
+    static constexpr size_t MAX_UUIDS_COUNT = 2U;
     ble_uuid_t adv_uuids[MAX_UUIDS_COUNT]{0};
     
-    const auto uuids_count = get_services_uuids(adv_uuids, MAX_UUIDS_COUNT);
+    const auto uuids_count = get_services_uuids(adv_uuids, MAX_UUIDS_COUNT); 
 
     init.advdata.name_type               = BLE_ADVDATA_FULL_NAME;
     init.advdata.include_appearance      = true;
     init.advdata.flags                   = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
-    init.advdata.uuids_complete.uuid_cnt = uuids_count;
-    init.advdata.uuids_complete.p_uuids  = adv_uuids;
+    init.advdata.uuids_complete.uuid_cnt = 1;
+    init.advdata.uuids_complete.p_uuids  = &adv_uuids[0];
+    init.srdata.uuids_complete.uuid_cnt = uuids_count;
+    init.srdata.uuids_complete.p_uuids  = adv_uuids;
 
     init.config.ble_adv_fast_enabled  = true;
     init.config.ble_adv_fast_interval = APP_ADV_INTERVAL;

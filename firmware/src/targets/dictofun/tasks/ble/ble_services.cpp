@@ -20,6 +20,9 @@ ble_uuid_t adv_uuids[] = {
         LBS_UUID_SERVICE, 
         m_lbs.uuid_type
     },
+    {
+        0, BLE_UUID_TYPE_VENDOR_BEGIN,
+    },
 };
 
 constexpr size_t uuids_count{sizeof(adv_uuids) / sizeof(adv_uuids[0])};
@@ -50,6 +53,13 @@ result::Result init_services(ble_lbs_led_write_handler_t led_write_handler)
     {
         return result::Result::ERROR_GENERAL;
     }
+
+    // Initialize File Transfer Service
+    const auto fts_init_result = fts_service.init();
+    if (result::Result::OK != fts_init_result)
+    {
+        return fts_init_result;
+    }
     return result::Result::OK;
 }
 
@@ -66,6 +76,9 @@ size_t get_services_uuids(ble_uuid_t * service_uuids, const size_t max_uuids)
         return 0;
     }
     adv_uuids[0].type = m_lbs.uuid_type;
+
+    adv_uuids[1].uuid = fts_service.get_service_uuid();
+    adv_uuids[1].type = fts_service.get_service_uuid_type();
 
     memcpy(service_uuids, adv_uuids, sizeof(adv_uuids));
     return uuids_count;

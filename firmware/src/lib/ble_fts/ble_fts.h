@@ -36,7 +36,9 @@ public:
     FtsService& operator=(FtsService&&) = delete;
     ~FtsService() = default;
 
-    void init();
+    result::Result init();
+    constexpr uint32_t get_service_uuid() { return service_uuid;}
+    uint8_t get_service_uuid_type() { return _context.uuid_type; }
 private:
     FileSystemInterface& _fs_if;
 
@@ -47,8 +49,12 @@ private:
         0x20, 0x48, 0x22, 0xb8, 0x12, 0xa1, 0x45, 0xa0
     };
 
-    static constexpr uint8_t control_point_char_uuid{0x01};
-    static constexpr uint8_t fs_info_char_uuid{0x02};
+    static constexpr uint32_t service_uuid{0x1001};
+    static constexpr uint32_t service_uuid_type{BLE_UUID_TYPE_VENDOR_BEGIN};
+    static constexpr uint32_t control_point_char_uuid{0x1002};
+    static constexpr uint32_t fs_info_char_uuid{0x1003};
+
+    static constexpr uint32_t cp_char_max_len{16};
 
     struct ClientContext
     {
@@ -59,7 +65,7 @@ private:
     {
         uint8_t uuid_type;
         uint16_t service_handle;
-        ble_gatts_char_handles_t tx_handles;
+        ble_gatts_char_handles_t control_point_handles;
         ble_gatts_char_handles_t rx_handles;
 
         uint16_t conn_handle;
@@ -70,38 +76,16 @@ private:
 
     static constexpr uint8_t _max_clients{1};
     static constexpr uint32_t _link_ctx_size{sizeof(ClientContext)};
-    uint32_t _ctx_data_pool[_max_clients * _link_ctx_size];
-    blcm_link_ctx_storage_t _link_ctx_storage =
-    {
-        .p_ctx_data_pool = _ctx_data_pool,
-        .max_links_cnt   = _max_clients,
-        .link_ctx_size   = sizeof(_ctx_data_pool)/_max_clients
-    };
+    static uint32_t _ctx_data_pool[_max_clients * _link_ctx_size];
+    static blcm_link_ctx_storage_t _link_ctx_storage;
 
-    Context _context {
-        0, 0, 
-        {0, 0, 0, 0,}, {0,0,0,0,},
-        0, false,
-        &_link_ctx_storage
-    };
-    // NRF_SDH_BLE_OBSERVER(_name ## _obs,                           \
-    //                      BLE_NUS_BLE_OBSERVER_PRIO,               \
-    //                      ble_its_on_ble_evt,                      \
-    //                      &_name)
+    ble_uuid128_t get_service_uuid128();
 
-    // #define NRF_SDH_BLE_OBSERVER(_name, _prio, _handler, _context)                                      \
-    // NRF_SECTION_SET_ITEM_REGISTER(sdh_ble_observers, _prio, static nrf_sdh_ble_evt_observer_t _name) =  \
-    // {                                                                                                   \
-    //     .handler   = _handler,                                                                          \
-    //     .p_context = _context                                                                           \
-    // }   
+    result::Result add_characteristic(uint8_t type, uint32_t uuid, uint32_t max_len, ble_gatts_char_handles_t * handle);
+    result::Result add_control_point_char();
 
-    // #define NRF_SECTION_SET_ITEM_REGISTER(_name, _priority, _var)                                       \
-    // NRF_SECTION_ITEM_REGISTER(CONCAT_2(_name, _priority), _var)
-
-    // #define NRF_SECTION_ITEM_REGISTER(section_name, section_var) \
-    // section_var __attribute__ ((section("." STRINGIFY(section_name)))) __attribute__((used))
-
+public:
+    static Context _context;
 };
 
 }
