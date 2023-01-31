@@ -39,7 +39,10 @@ public:
     result::Result init();
     constexpr uint32_t get_service_uuid() { return service_uuid;}
     uint8_t get_service_uuid_type() { return _context.uuid_type; }
+    static FtsService& instance() { return *_instance;}
+    static void on_ble_evt(ble_evt_t const * p_ble_evt, void * p_context);
 private:
+    static FtsService * _instance;
     FileSystemInterface& _fs_if;
 
     static constexpr uint32_t _uuid_size{16};
@@ -52,9 +55,10 @@ private:
     static constexpr uint32_t service_uuid{0x1001};
     static constexpr uint32_t service_uuid_type{BLE_UUID_TYPE_VENDOR_BEGIN};
     static constexpr uint32_t control_point_char_uuid{0x1002};
-    static constexpr uint32_t fs_info_char_uuid{0x1003};
+    static constexpr uint32_t file_list_char_uuid{0x1003};
 
-    static constexpr uint32_t cp_char_max_len{16};
+    static constexpr uint32_t cp_char_max_len{5};
+    static constexpr uint32_t file_list_char_max_len{32};
 
     struct ClientContext
     {
@@ -66,7 +70,7 @@ private:
         uint8_t uuid_type;
         uint16_t service_handle;
         ble_gatts_char_handles_t control_point_handles;
-        ble_gatts_char_handles_t rx_handles;
+        ble_gatts_char_handles_t files_list;
 
         uint16_t conn_handle;
         bool is_notification_enabled; 
@@ -81,8 +85,33 @@ private:
 
     ble_uuid128_t get_service_uuid128();
 
-    result::Result add_characteristic(uint8_t type, uint32_t uuid, uint32_t max_len, ble_gatts_char_handles_t * handle);
-    result::Result add_control_point_char();
+    enum class CharacteristicInUseType
+    {
+        WRITE,
+        READ_NOTIFY,
+    };
+    result::Result add_characteristic(
+        uint8_t type, 
+        uint32_t uuid, 
+        uint32_t max_len, 
+        ble_gatts_char_handles_t * handle, 
+        CharacteristicInUseType char_type);
+
+    void on_write(ble_evt_t const * p_ble_evt, ClientContext& client_context);
+    void on_control_point_write(uint32_t len, const uint8_t * data);
+    enum class ControlPointOpcode: uint8_t
+    {
+        REQ_FILES_LIST = 1,
+        REQ_FILE_INFO = 2,
+        REQ_FILE_DATA = 3,
+        REQ_FS_STATUS = 4,
+    };
+    void on_req_files_list(uint32_t size);
+    void on_req_file_info(uint32_t data_size, const uint8_t * file_id_data);
+    void on_req_file_data(uint32_t data_size, const uint8_t * file_id_data);
+    void on_req_fs_status(uint32_t size);
+    static constexpr uint32_t file_id_size{sizeof(uint32_t)};
+    uint32_t get_file_id_from_raw(const uint8_t * data);
 
 public:
     static Context _context;

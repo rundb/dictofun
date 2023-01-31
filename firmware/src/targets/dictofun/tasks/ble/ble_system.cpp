@@ -25,7 +25,8 @@ namespace ble
 
 static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;
 nrf_ble_qwr_t * _qwr_default_handle{nullptr};
-constexpr uint8_t APP_BLE_OBSERVER_PRIO{3};
+// define has to be used here, it's a link-time feature from Nordic
+#define APP_BLE_OBSERVER_PRIO 3
 constexpr uint8_t APP_BLE_CONN_CFG_TAG{1};
 
 // TODO: move this declaration into configuration memory
@@ -410,7 +411,7 @@ result::Result BleSystem::init_advertising()
 
     memset(&init, 0, sizeof(init));
 
-    static constexpr size_t MAX_UUIDS_COUNT = 2U;
+    static constexpr size_t MAX_UUIDS_COUNT{3U};
     ble_uuid_t adv_uuids[MAX_UUIDS_COUNT]{0};
     
     const auto uuids_count = get_services_uuids(adv_uuids, MAX_UUIDS_COUNT); 
@@ -420,12 +421,15 @@ result::Result BleSystem::init_advertising()
     init.advdata.flags                   = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
     init.advdata.uuids_complete.uuid_cnt = 1;
     init.advdata.uuids_complete.p_uuids  = &adv_uuids[0];
-    init.srdata.uuids_complete.uuid_cnt = uuids_count;
-    init.srdata.uuids_complete.p_uuids  = adv_uuids;
+    init.srdata.uuids_complete.uuid_cnt = 1;//uuids_count;
+    init.srdata.uuids_complete.p_uuids  = &adv_uuids[1];
 
     init.config.ble_adv_fast_enabled  = true;
     init.config.ble_adv_fast_interval = APP_ADV_INTERVAL;
     init.config.ble_adv_fast_timeout  = APP_ADV_DURATION;
+    init.config.ble_adv_extended_enabled = false;
+    init.config.ble_adv_primary_phy      = BLE_GAP_PHY_1MBPS;
+    init.config.ble_adv_secondary_phy    = BLE_GAP_PHY_2MBPS;
 
     init.evt_handler = on_adv_evt;
 
