@@ -89,4 +89,9 @@ nrf_ble_qwr_t * get_qwr_handle()
     return &m_qwr;
 }
 
+void services_process()
+{
+    fts_service.process();
+}
+
 }

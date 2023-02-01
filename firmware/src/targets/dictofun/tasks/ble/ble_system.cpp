@@ -131,6 +131,11 @@ result::Result BleSystem::stop()
     return result::Result::ERROR_NOT_IMPLEMENTED;
 }
 
+void BleSystem::process()
+{
+    services_process();
+}
+
 /// ============ Private API implementation
 void BleSystem::ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 {

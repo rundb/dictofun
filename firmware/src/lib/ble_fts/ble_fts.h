@@ -41,6 +41,8 @@ public:
     uint8_t get_service_uuid_type() { return _context.uuid_type; }
     static FtsService& instance() { return *_instance;}
     static void on_ble_evt(ble_evt_t const * p_ble_evt, void * p_context);
+
+    void process();
 private:
     static FtsService * _instance;
     FileSystemInterface& _fs_if;
@@ -59,10 +61,22 @@ private:
 
     static constexpr uint32_t cp_char_max_len{5};
     static constexpr uint32_t file_list_char_max_len{32};
+    
+    enum class ControlPointOpcode: uint8_t
+    {
+        REQ_FILES_LIST = 1,
+        REQ_FILE_INFO = 2,
+        REQ_FILE_DATA = 3,
+        REQ_FS_STATUS = 4,
+        IDLE = 254,
+    };
 
     struct ClientContext
     {
-        bool is_notifications_enabled;
+        bool is_file_list_notifications_enabled{false};
+        bool is_file_data_notifications_enabled{false};
+        bool is_file_info_notifications_enabled{false};
+        bool is_fs_status_notifications_enabled{false};
     };
 
     struct Context
@@ -76,6 +90,8 @@ private:
         bool is_notification_enabled; 
 
         blcm_link_ctx_storage_t * const p_link_ctx_storage;
+
+        ControlPointOpcode active_command{ControlPointOpcode::IDLE};
     };
 
     static constexpr uint8_t _max_clients{1};
@@ -99,13 +115,7 @@ private:
 
     void on_write(ble_evt_t const * p_ble_evt, ClientContext& client_context);
     void on_control_point_write(uint32_t len, const uint8_t * data);
-    enum class ControlPointOpcode: uint8_t
-    {
-        REQ_FILES_LIST = 1,
-        REQ_FILE_INFO = 2,
-        REQ_FILE_DATA = 3,
-        REQ_FS_STATUS = 4,
-    };
+
     void on_req_files_list(uint32_t size);
     void on_req_file_info(uint32_t data_size, const uint8_t * file_id_data);
     void on_req_file_data(uint32_t data_size, const uint8_t * file_id_data);

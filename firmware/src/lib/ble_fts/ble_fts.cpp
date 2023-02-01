@@ -163,21 +163,25 @@ result::Result FtsService::init()
 void FtsService::on_write(ble_evt_t const * p_ble_evt, ClientContext& client_context)
 {
     ble_gatts_evt_write_t const * p_evt_write = &p_ble_evt->evt.gatts_evt.params.write;
-    if ((p_evt_write->handle == _context.control_point_handles.value_handle))
+    if (p_evt_write->handle == _context.control_point_handles.value_handle)
     {
         on_control_point_write(p_evt_write->len, p_evt_write->data);
     }
+    else if ((p_evt_write->handle == _context.files_list.cccd_handle) && (p_evt_write->len == 2))
+    {
+        client_context.is_file_list_notifications_enabled = ble_srv_is_notification_enabled(p_evt_write->data);
+    }
     else 
     {
-        NRF_LOG_WARNING("write to unknown char with len %d", p_evt_write->len);   
+        //NRF_LOG_WARNING("write to unknown char with len %d", p_evt_write->len);
     }
 }
 
 void FtsService::on_control_point_write(uint32_t len, const uint8_t * data)
 {
-    if (len == 0)
+    if (len == 0 || data == nullptr)
     {
-        NRF_LOG_ERROR("cp.write: wrong write length");
+        NRF_LOG_ERROR("cp.write: wrong input");
         return;
     }
     switch (data[0])
@@ -218,6 +222,7 @@ void FtsService::on_req_files_list(uint32_t size)
         return;
     }
     NRF_LOG_INFO("cp.write: file list request");
+    _context.active_command = FtsService::ControlPointOpcode::REQ_FILES_LIST;
 }
 
 uint32_t FtsService::get_file_id_from_raw(const uint8_t * data)
@@ -305,6 +310,23 @@ void FtsService::on_ble_evt(ble_evt_t const * p_ble_evt, void * p_context)
         default:
         {
             NRF_LOG_INFO("ble::fts::on_unk_evt::evt=%d", p_ble_evt->header.evt_id);
+            break;
+        }
+    }
+}
+
+void FtsService::process()
+{
+    switch (_context.active_command)
+    {
+        case FtsService::ControlPointOpcode::REQ_FILES_LIST:
+        {
+            NRF_LOG_INFO("ble::fts::processing files' list request");
+            _context.active_command = FtsService::ControlPointOpcode::IDLE;
+            break;
+        };
+        case FtsService::ControlPointOpcode::IDLE: default:
+        {
             break;
         }
     }
