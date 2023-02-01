@@ -57,6 +57,32 @@ class DictofunBle(gatt.Device):
                     return characteristic
         return None
 
+    def characteristic_value_updated(self, characteristic, value):
+        logging.debug(" char [%s] value updated " % characteristic.uuid)
+        pass
+
+    def characteristic_read_value_failed(self, characteristic, error):
+        logging.debug(" char [%s] read value failed (%s)" % (characteristic.uuid, str(error)))
+        pass
+
+    def characteristic_write_value_succeeded(self, characteristic):
+        logging.debug(" char [%s] write value success" % (characteristic.uuid))
+        pass
+
+    def characteristic_write_value_failed(self, characteristic, error):
+        logging.info(" char [%s] write value failed (%s)" % (characteristic.uuid, str(error)))
+        pass
+
+    def characteristic_enable_notifications_succeeded(self, characteristic):
+        logging.debug(" char [%s] enabled notifications successfully" % (characteristic.uuid))
+        pass
+
+    def characteristic_enable_notifications_failed(self, characteristic, error):
+        logging.debug(" char [%s] enable notifications failed failed (0x%s)" % (characteristic.uuid, str(error)))
+        pass
+
+
+
 class AnyDeviceManager(gatt.DeviceManager):
     mac_address = ""
     dictofun = None
@@ -67,9 +93,9 @@ class AnyDeviceManager(gatt.DeviceManager):
                 self.mac_address = device.mac_address
                 self.dictofun = DictofunBle(mac_address = device.mac_address, manager = self)
                 self.dictofun.connect()
-                time.sleep(1)
+                time.sleep(0.5)
                 self.dictofun.services_resolved()
-                time.sleep(0.3)
+                time.sleep(2)
 
     def get_dictofun(self):
         return self.dictofun
@@ -80,6 +106,10 @@ def launch_ble_manager(manager):
 
 
 def run_led_control_tests(dictofun):
+    if dictofun.get_characteristic_by_uuid(nordic_led_service_uuid) is None:
+        logging.error("failed to read LED characteristic from the device")
+        return -1
+
     # write to the LED characteristic to enable LED
     dictofun.get_characteristic_by_uuid(nordic_led_service_uuid).write_value(bytearray([1]))
     time.sleep(1)
@@ -87,11 +117,22 @@ def run_led_control_tests(dictofun):
     dictofun.get_characteristic_by_uuid(nordic_led_service_uuid).write_value(bytearray([0]))
     time.sleep(0.2)
 
+    return 0
+
 
 def run_fts_tests(dictofun):
+    if dictofun.get_characteristic_by_uuid(fts_cp_char_uuid) is None:
+        logging.error("failed to read FTS characteristic from the device")
+        return -1        
+    
+    dictofun.get_characteristic_by_uuid(fts_file_list_char_uuid).enable_notifications()
+    time.sleep(0.5)
     # request files' list
     dictofun.get_characteristic_by_uuid(fts_cp_char_uuid).write_value(bytearray([1]))
     # TODO: implement readback from files' list char here and check the results
+    time.sleep(0.5)
+
+    return 0
 
 
 if __name__ == '__main__':
@@ -117,14 +158,17 @@ if __name__ == '__main__':
 
     dictofun = manager.get_dictofun()
 
-    run_led_control_tests(dictofun)
-    run_fts_tests(dictofun)
+    led_test = run_led_control_tests(dictofun)
+    fts_test = run_fts_tests(dictofun)
 
     dictofun.disconnect()
     manager.stop()
 
-    time.sleep(1)
+    time.sleep(0.5)
     trigger_output_result = device_control.issue_command("\n")
     device_output += trigger_output_result
 
     logging.info("device output from the test execution:\n" + device_output)
+
+    if led_test != 0 or fts_test != 0:
+        exit(-1)

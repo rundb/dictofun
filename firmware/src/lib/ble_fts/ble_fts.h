@@ -19,7 +19,7 @@ using file_id_type = uint64_t;
 /// @brief This structure provides a glue to the file system
 struct FileSystemInterface
 {
-    using file_list_get_function_type = std::function<result::Result (uint32_t&, file_id_type *)>;
+    using file_list_get_function_type = result::Result (*)(uint32_t&, file_id_type *);//std::function<result::Result (uint32_t&, file_id_type *)>;
 
     file_list_get_function_type file_list_get_function;
 };
@@ -61,7 +61,7 @@ private:
 
     static constexpr uint32_t cp_char_max_len{5};
     static constexpr uint32_t file_list_char_max_len{32};
-    
+
     enum class ControlPointOpcode: uint8_t
     {
         REQ_FILES_LIST = 1,
@@ -91,6 +91,7 @@ private:
 
         blcm_link_ctx_storage_t * const p_link_ctx_storage;
 
+        ControlPointOpcode pending_command{ControlPointOpcode::IDLE};
         ControlPointOpcode active_command{ControlPointOpcode::IDLE};
     };
 
@@ -114,6 +115,8 @@ private:
         CharacteristicInUseType char_type);
 
     void on_write(ble_evt_t const * p_ble_evt, ClientContext& client_context);
+    void on_connect(ble_evt_t const * p_ble_evt, ClientContext& client_context);
+    void on_disconnect(ble_evt_t const * p_ble_evt, ClientContext& client_context);
     void on_control_point_write(uint32_t len, const uint8_t * data);
 
     void on_req_files_list(uint32_t size);
@@ -122,6 +125,19 @@ private:
     void on_req_fs_status(uint32_t size);
     static constexpr uint32_t file_id_size{sizeof(uint32_t)};
     uint32_t get_file_id_from_raw(const uint8_t * data);
+
+    // API for functions that initiate transfer of FS data
+    result::Result send_files_list();
+    static constexpr uint32_t files_list_max_count{32};
+
+    static constexpr size_t data_buffer_size{256};
+    uint32_t _data_buffer_idx{0};
+    uint32_t _data_buffer_content_size{0};
+    uint8_t _data_buffer[data_buffer_size];
+    uint16_t _data_packet_size{16}; // it's a constant, but for the API of Nordic SDK it has to be a var.
+
+    // trigger the BLE transaction specified by the opcode.
+    result::Result push_data_packets(ControlPointOpcode opcode);
 
 public:
     static Context _context;

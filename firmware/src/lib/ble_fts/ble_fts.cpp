@@ -157,6 +157,8 @@ result::Result FtsService::init()
         return file_list_char_add_result;
     }
 
+    _context.conn_handle = BLE_CONN_HANDLE_INVALID;
+
     return result::Result::OK;
 }
 
@@ -169,11 +171,12 @@ void FtsService::on_write(ble_evt_t const * p_ble_evt, ClientContext& client_con
     }
     else if ((p_evt_write->handle == _context.files_list.cccd_handle) && (p_evt_write->len == 2))
     {
+        NRF_LOG_DEBUG("ble::fts: enabling files list notifications");
         client_context.is_file_list_notifications_enabled = ble_srv_is_notification_enabled(p_evt_write->data);
     }
     else 
     {
-        //NRF_LOG_WARNING("write to unknown char with len %d", p_evt_write->len);
+        NRF_LOG_WARNING("write to unknown char with len %d", p_evt_write->len);
     }
 }
 
@@ -222,7 +225,7 @@ void FtsService::on_req_files_list(uint32_t size)
         return;
     }
     NRF_LOG_INFO("cp.write: file list request");
-    _context.active_command = FtsService::ControlPointOpcode::REQ_FILES_LIST;
+    _context.pending_command = FtsService::ControlPointOpcode::REQ_FILES_LIST;
 }
 
 uint32_t FtsService::get_file_id_from_raw(const uint8_t * data)
@@ -265,6 +268,16 @@ void FtsService::on_req_fs_status(uint32_t size)
     NRF_LOG_INFO("cp.write: fs status req");
 }
 
+void FtsService::on_connect(ble_evt_t const * p_ble_evt, ClientContext& client_context)
+{
+    _context.conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
+}
+
+void FtsService::on_disconnect(ble_evt_t const * p_ble_evt, ClientContext& client_context)
+{
+    _context.conn_handle = BLE_CONN_HANDLE_INVALID;
+}
+
 void FtsService::on_ble_evt(ble_evt_t const * p_ble_evt, void * p_context)
 {
     if ((p_context == NULL) || (p_ble_evt == NULL))
@@ -277,13 +290,13 @@ void FtsService::on_ble_evt(ble_evt_t const * p_ble_evt, void * p_context)
     {
         case BLE_GAP_EVT_CONNECTED:
         {   
-            NRF_LOG_INFO("on_conn");
+            instance().on_connect(p_ble_evt, client_context);
             break;
         }
 
         case BLE_GAP_EVT_DISCONNECTED:
         {
-            NRF_LOG_INFO("on_disconn");
+            instance().on_disconnect(p_ble_evt, client_context);
             break;
         }
 
@@ -294,22 +307,27 @@ void FtsService::on_ble_evt(ble_evt_t const * p_ble_evt, void * p_context)
         }
         case BLE_GAP_EVT_DATA_LENGTH_UPDATE:
         {
-            NRF_LOG_INFO("on_evt_data_len_upd");
+            NRF_LOG_DEBUG("ble::fts::evt_data_len_upd");
             break;
         }
         case BLE_GATTS_EVT_EXCHANGE_MTU_REQUEST:
         {
-            NRF_LOG_INFO("on_gatts_mtu_req_chng");
+            NRF_LOG_DEBUG("ble::fts::exch_mtu_req");
             break;   
         }
         case BLE_GAP_EVT_CONN_PARAM_UPDATE:
         {
-            NRF_LOG_INFO("on_gap_evt_param_upd");
+            NRF_LOG_DEBUG("ble::fts::evt_conn_param_upd");
+            break;
+        }
+        case BLE_GATTS_EVT_HVN_TX_COMPLETE:
+        {
+            NRF_LOG_INFO("HVN TX COMPLETE");
             break;
         }
         default:
         {
-            NRF_LOG_INFO("ble::fts::on_unk_evt::evt=%d", p_ble_evt->header.evt_id);
+            NRF_LOG_DEBUG("ble::fts::on_unk_evt::evt=%d", p_ble_evt->header.evt_id);
             break;
         }
     }
@@ -317,12 +335,25 @@ void FtsService::on_ble_evt(ble_evt_t const * p_ble_evt, void * p_context)
 
 void FtsService::process()
 {
-    switch (_context.active_command)
+    if (_context.pending_command != FtsService::ControlPointOpcode::IDLE &&
+        _context.active_command != FtsService::ControlPointOpcode::IDLE)
+    {
+        NRF_LOG_ERROR("ble::fts: command requested before previous command has been processed.")
+        _context.pending_command = FtsService::ControlPointOpcode::IDLE;
+    }
+    switch (_context.pending_command)
     {
         case FtsService::ControlPointOpcode::REQ_FILES_LIST:
         {
-            NRF_LOG_INFO("ble::fts::processing files' list request");
-            _context.active_command = FtsService::ControlPointOpcode::IDLE;
+            NRF_LOG_DEBUG("ble::fts::processing files' list request");
+            const auto result = send_files_list();
+            if (result != result::Result::OK)
+            {
+                NRF_LOG_ERROR("ble::fts::file_list send failed");
+                return;
+            }
+            _context.active_command = _context.pending_command;
+            _context.pending_command = FtsService::ControlPointOpcode::IDLE;
             break;
         };
         case FtsService::ControlPointOpcode::IDLE: default:
@@ -330,6 +361,67 @@ void FtsService::process()
             break;
         }
     }
+}
+
+result::Result FtsService::send_files_list()
+{
+    uint32_t count{0};
+    file_id_type files_list[files_list_max_count * sizeof(file_id_type)]{{0}};
+    const auto fs_call = _fs_if.file_list_get_function(count, files_list);
+    if (result::Result::OK != fs_call)
+    {
+        NRF_LOG_ERROR("ble::fts: FS files' list getter has failed");
+        return result::Result::ERROR_GENERAL;
+    }
+    if (count >= files_list_max_count)
+    {
+        NRF_LOG_ERROR("ble::fts: FS reported more files than this FTS implementation supports");
+        return result::Result::ERROR_GENERAL;
+    }
+    // TODO: check memory order here
+    _data_buffer_idx = 0;
+    memcpy(_data_buffer, &count, sizeof(count));
+    _data_buffer_idx += sizeof(count);
+    memset(&_data_buffer[_data_buffer_idx], 0, sizeof(uint32_t));
+    _data_buffer_idx += sizeof(uint32_t);
+    for (auto i = 0U; i < count; ++i)
+    {
+        memcpy(&_data_buffer[_data_buffer_idx], &files_list[i], sizeof(file_id_type));
+        _data_buffer_idx += sizeof(file_id_type);
+    }
+    _data_buffer_content_size = _data_buffer_idx;
+    _data_buffer_idx = 0;
+
+    const auto push_result = push_data_packets(ControlPointOpcode::REQ_FILES_LIST);
+    if (push_result == result::Result::OK)
+    {
+        NRF_LOG_INFO("ble::fts::send: sending %d bytes", _data_buffer_content_size);
+    }
+    else
+    {
+        NRF_LOG_INFO("ble::fts::send: push has failed");
+    }
+    
+    return result::Result::OK;
+}
+
+// TODO: add a check that notifications are enabled
+result::Result FtsService::push_data_packets(ControlPointOpcode opcode)
+{
+    ble_gatts_hvx_params_t hvx_params;
+
+    memset(&hvx_params, 0, sizeof(hvx_params));
+    hvx_params.handle = (opcode == ControlPointOpcode::REQ_FILES_LIST) ? _context.files_list.value_handle : BLE_CONN_HANDLE_INVALID;
+    hvx_params.p_data = _data_buffer;
+    hvx_params.p_len  = &_data_packet_size;
+    hvx_params.type   = BLE_GATT_HVX_NOTIFICATION;
+
+    const auto send_result = sd_ble_gatts_hvx(_context.conn_handle, &hvx_params);
+    if (NRF_SUCCESS != send_result)
+    {
+        return result::Result::ERROR_GENERAL;
+    }
+    return result::Result::OK;
 }
 
 }
