@@ -110,8 +110,6 @@ result::Result FtsService::add_characteristic(
 result::Result FtsService::init()
 {
     ble_uuid_t    ble_uuid;
-
-
     const auto service_base_uuid = get_service_uuid128();
     const auto uuid_add_result = sd_ble_uuid_vs_add(&service_base_uuid, &_context.uuid_type);
     if (NRF_SUCCESS != uuid_add_result)
@@ -165,13 +163,13 @@ result::Result FtsService::init()
 void FtsService::on_write(ble_evt_t const * p_ble_evt, ClientContext& client_context)
 {
     ble_gatts_evt_write_t const * p_evt_write = &p_ble_evt->evt.gatts_evt.params.write;
+    _context.client_context = &client_context;
     if (p_evt_write->handle == _context.control_point_handles.value_handle)
     {
         on_control_point_write(p_evt_write->len, p_evt_write->data);
     }
     else if ((p_evt_write->handle == _context.files_list.cccd_handle) && (p_evt_write->len == 2))
     {
-        NRF_LOG_DEBUG("ble::fts: enabling files list notifications");
         client_context.is_file_list_notifications_enabled = ble_srv_is_notification_enabled(p_evt_write->data);
     }
     else 
@@ -217,7 +215,7 @@ void FtsService::on_control_point_write(uint32_t len, const uint8_t * data)
     }
 }
 
-void FtsService::on_req_files_list(uint32_t size)
+void FtsService::on_req_files_list(const uint32_t size)
 {
     if (size != 0)
     {
@@ -228,24 +226,26 @@ void FtsService::on_req_files_list(uint32_t size)
     _context.pending_command = FtsService::ControlPointOpcode::REQ_FILES_LIST;
 }
 
-uint32_t FtsService::get_file_id_from_raw(const uint8_t * data)
+file_id_type FtsService::get_file_id_from_raw(const uint8_t * data) const
 {
-    return (data[0]) |  (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
+    const uint32_t low_half = (data[0]) |  (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
+    const uint32_t high_half = (data[4]) | (data[5] << 8) | (data[6] << 16) | (data[7] << 24);
+    return low_half | (static_cast<file_id_type>(high_half) << 32);
 }
 
-void FtsService::on_req_file_info(uint32_t data_size, const uint8_t * file_id_data)
+void FtsService::on_req_file_info(const uint32_t data_size, const uint8_t * file_id_data)
 {
     if (data_size != file_id_size || file_id_data == nullptr)
     {
         NRF_LOG_ERROR("cp.write: wrong file id size");
         return;
     }
-    const uint32_t file_id = get_file_id_from_raw(file_id_data);
+    // const file_id_type file_id = get_file_id_from_raw(file_id_data);
     
-    NRF_LOG_INFO("cp.write: file info request, id %d", file_id);
+    // TODO: implement
 }
 
-void FtsService::on_req_file_data(uint32_t data_size, const uint8_t * file_id_data)
+void FtsService::on_req_file_data(const uint32_t data_size, const uint8_t * file_id_data)
 {
     if (data_size != file_id_size || file_id_data == nullptr)
     {
@@ -253,9 +253,8 @@ void FtsService::on_req_file_data(uint32_t data_size, const uint8_t * file_id_da
         return;
     }
 
-    const uint32_t file_id = get_file_id_from_raw(file_id_data);
-    
-    NRF_LOG_INFO("cp.write: file data request, id %d", file_id);
+    // const file_id_type file_id = get_file_id_from_raw(file_id_data);
+    // TODO: implemented
 }
 
 void FtsService::on_req_fs_status(uint32_t size)
@@ -265,7 +264,6 @@ void FtsService::on_req_fs_status(uint32_t size)
         NRF_LOG_ERROR("cp.write: fs stat request wrong size");
         return;
     }
-    NRF_LOG_INFO("cp.write: fs status req");
 }
 
 void FtsService::on_connect(ble_evt_t const * p_ble_evt, ClientContext& client_context)
@@ -383,10 +381,18 @@ void FtsService::process()
         case FtsService::ControlPointOpcode::REQ_FILES_LIST:
         {
             NRF_LOG_DEBUG("ble::fts::processing files' list request");
+            if (_context.client_context == nullptr || !_context.client_context->is_file_list_notifications_enabled)
+            {
+                NRF_LOG_ERROR("ble::fts::files_list: notifications are not enabled. Aborting");
+                _context.pending_command = FtsService::ControlPointOpcode::IDLE;
+                return;
+            }
+
             const auto result = send_files_list();
             if (result != result::Result::OK)
             {
                 NRF_LOG_ERROR("ble::fts::file_list send failed");
+                _context.pending_command = FtsService::ControlPointOpcode::IDLE;
                 return;
             }
             _context.active_command = _context.pending_command;

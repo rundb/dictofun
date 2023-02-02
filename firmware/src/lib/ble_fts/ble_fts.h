@@ -19,7 +19,7 @@ using file_id_type = uint64_t;
 /// @brief This structure provides a glue to the file system
 struct FileSystemInterface
 {
-    using file_list_get_function_type = result::Result (*)(uint32_t&, file_id_type *);//std::function<result::Result (uint32_t&, file_id_type *)>;
+    using file_list_get_function_type = std::function<result::Result (uint32_t&, file_id_type *)>;
 
     file_list_get_function_type file_list_get_function;
 };
@@ -62,6 +62,7 @@ private:
     static constexpr uint32_t cp_char_max_len{5};
     static constexpr uint32_t file_list_char_max_len{32};
 
+    // TODO: separate BLE commands from internal states
     enum class ControlPointOpcode: uint8_t
     {
         REQ_FILES_LIST = 1,
@@ -95,6 +96,7 @@ private:
 
         ControlPointOpcode pending_command{ControlPointOpcode::IDLE};
         ControlPointOpcode active_command{ControlPointOpcode::IDLE};
+        ClientContext * client_context;
     };
 
     static constexpr uint8_t _max_clients{1};
@@ -127,11 +129,10 @@ private:
     void on_req_fs_status(uint32_t size);
 
     static constexpr uint32_t file_id_size{sizeof(uint64_t)};
-    uint32_t get_file_id_from_raw(const uint8_t * data);
+    file_id_type get_file_id_from_raw(const uint8_t * data) const;
 
     // API for functions that initiate transfer of FS data
     result::Result send_files_list();
-    static constexpr uint32_t files_list_max_count{32};
 
     struct TransactionContext {
         static constexpr size_t buffer_size{256};
@@ -146,6 +147,8 @@ private:
             packet_size = (leftover_size > packet_size_value) ? packet_size_value : leftover_size;
         }
     } _transaction_ctx;
+
+    static constexpr uint32_t files_list_max_count{(TransactionContext::buffer_size - 8) / file_id_size};
 
     // trigger the BLE transaction specified by the opcode.
     result::Result push_data_packets(ControlPointOpcode opcode);
