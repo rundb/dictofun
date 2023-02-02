@@ -68,6 +68,8 @@ private:
         REQ_FILE_INFO = 2,
         REQ_FILE_DATA = 3,
         REQ_FS_STATUS = 4,
+        PUSH_DATA_PACKETS = 250,
+        FINALIZE_TRANSACTION = 251,
         IDLE = 254,
     };
 
@@ -123,21 +125,32 @@ private:
     void on_req_file_info(uint32_t data_size, const uint8_t * file_id_data);
     void on_req_file_data(uint32_t data_size, const uint8_t * file_id_data);
     void on_req_fs_status(uint32_t size);
-    static constexpr uint32_t file_id_size{sizeof(uint32_t)};
+
+    static constexpr uint32_t file_id_size{sizeof(uint64_t)};
     uint32_t get_file_id_from_raw(const uint8_t * data);
 
     // API for functions that initiate transfer of FS data
     result::Result send_files_list();
     static constexpr uint32_t files_list_max_count{32};
 
-    static constexpr size_t data_buffer_size{256};
-    uint32_t _data_buffer_idx{0};
-    uint32_t _data_buffer_content_size{0};
-    uint8_t _data_buffer[data_buffer_size];
-    uint16_t _data_packet_size{16}; // it's a constant, but for the API of Nordic SDK it has to be a var.
+    struct TransactionContext {
+        static constexpr size_t buffer_size{256};
+        static constexpr uint16_t packet_size_value{16};
+        uint32_t idx{0};
+        uint32_t size{0};
+        uint8_t buffer[buffer_size];
+        uint16_t packet_size{packet_size_value}; // it's a constant, but for the API of Nordic SDK it has to be a var.
+        void update_next_packet_size() 
+        {
+            const auto leftover_size{size-idx};
+            packet_size = (leftover_size > packet_size_value) ? packet_size_value : leftover_size;
+        }
+    } _transaction_ctx;
 
     // trigger the BLE transaction specified by the opcode.
     result::Result push_data_packets(ControlPointOpcode opcode);
+
+    void process_hvn_tx_callback();
 
 public:
     static Context _context;

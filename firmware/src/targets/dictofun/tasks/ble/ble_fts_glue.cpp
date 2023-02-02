@@ -8,10 +8,10 @@ namespace integration
 namespace test
 {
 
-constexpr size_t test_files_count{1};
+constexpr size_t test_files_count{2};
 ble::fts::file_id_type test_files_ids[test_files_count] {
     0x0102030405060708ULL,
-    //0x0102030405060709ULL,
+    0x0102030405060709ULL,
 };
 
 result::Result dictofun_test_get_file_list(uint32_t& files_count, file_id_type * files_list_ptr)

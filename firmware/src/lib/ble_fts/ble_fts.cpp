@@ -322,7 +322,7 @@ void FtsService::on_ble_evt(ble_evt_t const * p_ble_evt, void * p_context)
         }
         case BLE_GATTS_EVT_HVN_TX_COMPLETE:
         {
-            NRF_LOG_INFO("HVN TX COMPLETE");
+            instance().process_hvn_tx_callback();
             break;
         }
         default:
@@ -333,9 +333,46 @@ void FtsService::on_ble_evt(ble_evt_t const * p_ble_evt, void * p_context)
     }
 }
 
+void FtsService::process_hvn_tx_callback()
+{
+    // 1. update the transaction context
+    _transaction_ctx.idx += _transaction_ctx.packet_size;
+    _transaction_ctx.update_next_packet_size();
+    // 2. if no more data left to send - 
+    if (_transaction_ctx.packet_size == 0)
+    {
+        _context.pending_command = ControlPointOpcode::FINALIZE_TRANSACTION;
+    }
+    else
+    {
+        _context.pending_command = ControlPointOpcode::PUSH_DATA_PACKETS;
+    }
+}
+
 void FtsService::process()
 {
-    if (_context.pending_command != FtsService::ControlPointOpcode::IDLE &&
+    if (_context.pending_command == FtsService::ControlPointOpcode::FINALIZE_TRANSACTION)
+    {
+        _context.active_command = FtsService::ControlPointOpcode::IDLE;
+        _context.pending_command = FtsService::ControlPointOpcode::IDLE;
+        NRF_LOG_DEBUG("finalizing transaction");
+        return;
+    }
+    else if (_context.pending_command == FtsService::ControlPointOpcode::PUSH_DATA_PACKETS)
+    {
+        const auto push_result = push_data_packets(_context.active_command);
+        if (result::Result::OK != push_result)
+        {
+            NRF_LOG_ERROR("ble::fts: failed to continue data pushing");
+        }
+        else
+        {
+            NRF_LOG_DEBUG("pushing more data");
+        }
+        _context.pending_command = FtsService::ControlPointOpcode::IDLE;
+        return;
+    }
+    else if (_context.pending_command != FtsService::ControlPointOpcode::IDLE &&
         _context.active_command != FtsService::ControlPointOpcode::IDLE)
     {
         NRF_LOG_ERROR("ble::fts: command requested before previous command has been processed.")
@@ -378,28 +415,31 @@ result::Result FtsService::send_files_list()
         NRF_LOG_ERROR("ble::fts: FS reported more files than this FTS implementation supports");
         return result::Result::ERROR_GENERAL;
     }
-    // TODO: check memory order here
-    _data_buffer_idx = 0;
-    memcpy(_data_buffer, &count, sizeof(count));
-    _data_buffer_idx += sizeof(count);
-    memset(&_data_buffer[_data_buffer_idx], 0, sizeof(uint32_t));
-    _data_buffer_idx += sizeof(uint32_t);
+    // Serialize the files list.
+    // First 8 bytes -> files' count (N)
+    _transaction_ctx.idx = 0;
+    memcpy(_transaction_ctx.buffer, &count, sizeof(count));
+    _transaction_ctx.idx += sizeof(count);
+    memset(&_transaction_ctx.buffer[_transaction_ctx.idx], 0, sizeof(uint32_t));
+    _transaction_ctx.idx += sizeof(uint32_t);
+    // After that N elements, 8 bytes each.
     for (auto i = 0U; i < count; ++i)
     {
-        memcpy(&_data_buffer[_data_buffer_idx], &files_list[i], sizeof(file_id_type));
-        _data_buffer_idx += sizeof(file_id_type);
+        memcpy(&_transaction_ctx.buffer[_transaction_ctx.idx], &files_list[i], sizeof(file_id_type));
+        _transaction_ctx.idx += sizeof(file_id_type);
     }
-    _data_buffer_content_size = _data_buffer_idx;
-    _data_buffer_idx = 0;
+
+    _transaction_ctx.size = _transaction_ctx.idx;
+    _transaction_ctx.idx = 0;
 
     const auto push_result = push_data_packets(ControlPointOpcode::REQ_FILES_LIST);
     if (push_result == result::Result::OK)
     {
-        NRF_LOG_INFO("ble::fts::send: sending %d bytes", _data_buffer_content_size);
+        NRF_LOG_DEBUG("ble::fts::send: sending %d bytes", _transaction_ctx.size);
     }
     else
     {
-        NRF_LOG_INFO("ble::fts::send: push has failed");
+        NRF_LOG_ERROR("ble::fts::send: push has failed");
     }
     
     return result::Result::OK;
@@ -408,12 +448,14 @@ result::Result FtsService::send_files_list()
 // TODO: add a check that notifications are enabled
 result::Result FtsService::push_data_packets(ControlPointOpcode opcode)
 {
+    _transaction_ctx.update_next_packet_size();
+
     ble_gatts_hvx_params_t hvx_params;
 
     memset(&hvx_params, 0, sizeof(hvx_params));
     hvx_params.handle = (opcode == ControlPointOpcode::REQ_FILES_LIST) ? _context.files_list.value_handle : BLE_CONN_HANDLE_INVALID;
-    hvx_params.p_data = _data_buffer;
-    hvx_params.p_len  = &_data_packet_size;
+    hvx_params.p_data = &_transaction_ctx.buffer[_transaction_ctx.idx];
+    hvx_params.p_len  = &_transaction_ctx.packet_size;
     hvx_params.type   = BLE_GATT_HVX_NOTIFICATION;
 
     const auto send_result = sd_ble_gatts_hvx(_context.conn_handle, &hvx_params);
