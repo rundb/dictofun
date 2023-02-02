@@ -8,14 +8,18 @@ from multiprocessing import Process
 
 dut_mac = "e3:50:c2:d4:e1:b9"
 
-nordic_led_service_uuid = "00001525-1212-efde-1523-785feabcd123"
+nordic_led_service_uuid =    "00001525-1212-efde-1523-785feabcd123"
+file_transfer_service_uuid = "a0451001-b822-4820-8782-bd8faf68807b"
+# phone shows start with a0451001
+fts_cp_char_uuid =           "00001002-0000-1000-8000-00805f9b34fb"
+fts_file_list_char_uuid =    "00001003-0000-1000-8000-00805f9b34fb"
 
 def configure_log():
     # timestr = time.strftime("%Y%m%d-%H%M%S")
     # log_filename = "ble_test_" + timestr + ".log"
     log_filename = "ble_debug.log"
     logging.basicConfig(
-        level=logging.INFO,
+        level=logging.DEBUG,
         format="%(asctime)s [%(levelname)s] %(message)s",
         handlers=[
             # logging.FileHandler(log_filename),
@@ -38,6 +42,7 @@ class DictofunBle(gatt.Device):
         logging.debug("[%s] Disconnected" % (self.mac_address))
 
     def services_resolved(self):
+        self.is_updated_value_pending = False
         super().services_resolved()
 
         logging.debug("[%s] Resolved services" % (self.mac_address))
@@ -45,7 +50,6 @@ class DictofunBle(gatt.Device):
             logging.debug("[%s]  Service [%s]" % (self.mac_address, service.uuid))
             for characteristic in service.characteristics:
                 logging.debug("[%s]    Characteristic [%s]" % (self.mac_address, characteristic.uuid))
-                logging.debug(type(characteristic.uuid))
 
     def get_characteristic_by_uuid(self, uuid):
         for service in self.services:
@@ -53,6 +57,95 @@ class DictofunBle(gatt.Device):
                 if str(characteristic.uuid).capitalize() == str(uuid).capitalize():
                     return characteristic
         return None
+
+    def characteristic_value_updated(self, characteristic, value):
+        self.is_updated_value_pending = True
+        self.value = value
+    
+    def get_last_received_packet(self):
+        self.is_updated_value_pending = False
+        return self.value
+
+    def characteristic_read_value_failed(self, characteristic, error):
+        logging.debug(" char [%s] read value failed (%s)" % (characteristic.uuid, str(error)))
+        pass
+
+    def characteristic_write_value_succeeded(self, characteristic):
+        logging.debug(" char [%s] write value success" % (characteristic.uuid))
+        pass
+
+    def characteristic_write_value_failed(self, characteristic, error):
+        logging.info(" char [%s] write value failed (%s)" % (characteristic.uuid, str(error)))
+        pass
+
+    def characteristic_enable_notifications_succeeded(self, characteristic):
+        logging.debug(" char [%s] enabled notifications successfully" % (characteristic.uuid))
+        pass
+
+    def characteristic_enable_notifications_failed(self, characteristic, error):
+        logging.debug(" char [%s] enable notifications failed failed (0x%s)" % (characteristic.uuid, str(error)))
+        pass
+
+
+"""
+This class aggregates methods of communication with BLE FTS Server
+"""
+class FtsClient:
+    def __init__(self, cp_char, file_list_char, dictofun):
+        self.cp_char = cp_char
+        self.file_list_char = file_list_char
+        self.dictofun = dictofun
+
+    def request_files_list(self):
+        self.cp_char.write_value(bytearray([1]))
+
+    def parse_files_count(self, array):
+        a = array
+        return int(a[0] + (a[1] << 8) + (a[2] << 16) + (a[3] << 24))
+
+    def parse_files_list(self, array):
+        element_size = 8
+        elements = []
+        idx = 0
+        while len(elements) < len(array) / element_size:
+            elements.append(int.from_bytes(array[idx:idx + element_size], "little"))
+            idx += element_size
+        return elements
+        
+    
+    def get_files_list(self):
+        # caller has checked that chars exist.
+        self.file_list_char.enable_notifications()
+        time.sleep(0.5)
+        self.request_files_list()
+        is_first_packet_received = False
+
+        # minimal expected size, if there are no files provided
+        expected_size = 8
+        
+        received_data = bytearray([])
+        start_time = time.time()
+        transaction_timeout = 10 # seconds
+
+        while (not is_first_packet_received) and (time.time() - start_time < transaction_timeout):
+            is_first_packet_received = self.dictofun.is_updated_value_pending
+        
+        if is_first_packet_received:
+            raw = self.dictofun.get_last_received_packet()
+            # FIXME this is a potential exception location - raw packet isn't a regular Python structure
+            received_data += raw
+            expected_size = (self.parse_files_count(received_data) + 1) * 8
+        
+        while len(received_data) != expected_size and time.time() - start_time < transaction_timeout:
+            if self.dictofun.is_updated_value_pending:
+                received_data += self.dictofun.get_last_received_packet()
+        
+        if time.time() - start_time >= transaction_timeout:
+            logging.error("files list: transaction timeout")
+            return []
+
+        return self.parse_files_list(received_data[8:])
+
 
 class AnyDeviceManager(gatt.DeviceManager):
     mac_address = ""
@@ -64,8 +157,9 @@ class AnyDeviceManager(gatt.DeviceManager):
                 self.mac_address = device.mac_address
                 self.dictofun = DictofunBle(mac_address = device.mac_address, manager = self)
                 self.dictofun.connect()
-                time.sleep(2)
+                time.sleep(0.5)
                 self.dictofun.services_resolved()
+                time.sleep(2)
 
     def get_dictofun(self):
         return self.dictofun
@@ -73,6 +167,40 @@ class AnyDeviceManager(gatt.DeviceManager):
 
 def launch_ble_manager(manager):
     manager.run()
+
+
+def run_led_control_tests(dictofun):
+    if dictofun.get_characteristic_by_uuid(nordic_led_service_uuid) is None:
+        logging.error("failed to read LED characteristic from the device")
+        return -1
+
+    # write to the LED characteristic to enable LED
+    dictofun.get_characteristic_by_uuid(nordic_led_service_uuid).write_value(bytearray([1]))
+    time.sleep(1)
+    # write to the LED characteristic to disable LED
+    dictofun.get_characteristic_by_uuid(nordic_led_service_uuid).write_value(bytearray([0]))
+    time.sleep(0.2)
+
+    return 0
+
+
+def run_fts_tests(dictofun):
+    if dictofun.get_characteristic_by_uuid(fts_cp_char_uuid) is None:
+        logging.error("failed to read FTS characteristic from the device")
+        return -1        
+    
+    cp_char = dictofun.get_characteristic_by_uuid(fts_cp_char_uuid)
+    list_char = dictofun.get_characteristic_by_uuid(fts_file_list_char_uuid)
+    fts_client = FtsClient(cp_char, list_char, dictofun)
+
+    # Execute test on reading out the list of the files available on the device
+    files_list = fts_client.get_files_list()
+    logging.info("FTS Server provides following %d files" % len(files_list))
+    for file in files_list:
+        logging.info("\t%x" % file)
+
+    return 0
+
 
 if __name__ == '__main__':
     configure_log()
@@ -97,18 +225,17 @@ if __name__ == '__main__':
 
     dictofun = manager.get_dictofun()
 
-    # write to the LED characteristic to enable LED
-    dictofun.get_characteristic_by_uuid(nordic_led_service_uuid).write_value(bytearray([1]))
-    time.sleep(1)
-    # write to the LED characteristic to disable LED
-    dictofun.get_characteristic_by_uuid(nordic_led_service_uuid).write_value(bytearray([0]))
-    time.sleep(0.2)
+    led_test = run_led_control_tests(dictofun)
+    fts_test = run_fts_tests(dictofun)
 
     dictofun.disconnect()
     manager.stop()
 
-    time.sleep(1)
+    time.sleep(0.5)
     trigger_output_result = device_control.issue_command("\n")
     device_output += trigger_output_result
 
     logging.info("device output from the test execution:\n" + device_output)
+
+    if led_test != 0 or fts_test != 0:
+        exit(-1)

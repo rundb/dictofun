@@ -31,6 +31,7 @@ public:
 
     result::Result start();
     result::Result stop();
+    void process();
 private:
     result::Result init_sdh();
     result::Result init_gap();

@@ -52,7 +52,7 @@ set(CMAKE_C_FLAGS   "${OBJECT_CXX_GEN_GLAGS} -std=c99 " CACHE INTERNAL "C Compil
 set(CMAKE_CXX_FLAGS "${OBJECT_CXX_GEN_GLAGS} -fno-exceptions -fno-rtti -Wno-register -std=c++17 " CACHE INTERNAL "C++ Compiler options")
 set(CMAKE_ASM_FLAGS "${OBJECT_GEN_FLAGS} -g3" CACHE INTERNAL "ASM Compiler options")
 
-set(CMAKE_EXE_LINKER_FLAGS "${OBJECT_GEN_FLAGS} -Wl,--gc-sections --specs=nano.specs --specs=nosys.specs -lc -lnosys -lm" CACHE INTERNAL "Linker options")
+set(CMAKE_EXE_LINKER_FLAGS "${OBJECT_GEN_FLAGS} -Wl,--gc-sections -Wl,-Map=dictofun.map --specs=nano.specs --specs=nosys.specs -lc -lnosys -lm" CACHE INTERNAL "Linker options")
 
 # Debug/Release configuration
 set(CMAKE_C_FLAGS_DEBUG "-Og -g3 -DDEBUG" CACHE INTERNAL "C Compiler options for debug build type")

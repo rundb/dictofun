@@ -18,7 +18,7 @@ namespace ble
 BleSystem ble_system;
 
 ble::CommandQueueElement command_buffer;
-constexpr TickType_t command_wait_ticks{10U};
+constexpr TickType_t command_wait_ticks{5U};
 
 struct 
 {
@@ -105,6 +105,8 @@ void task_ble(void * context_ptr)
                 NRF_LOG_ERROR("BLE: failed to send led write request");
             }
         }
+
+        ble_system.process();
     }
 }
 
