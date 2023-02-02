@@ -22,9 +22,13 @@ struct FileSystemInterface
     using file_list_get_function_type = std::function<result::Result (uint32_t&, file_id_type *)>;
     // file data is a minimal json string describing the contents of a particular file
     using file_info_get_function_type = std::function<result::Result (file_id_type, uint8_t *, uint32_t&, uint32_t)>; 
+    using file_open_function_type = std::function<result::Result (file_id_type, uint32_t&)>; 
+    using file_data_get_function_type = std::function<result::Result (file_id_type, uint8_t *, uint32_t&, uint32_t)>; 
 
     file_list_get_function_type file_list_get_function;
     file_info_get_function_type file_info_get_function;
+    file_open_function_type file_open_function;
+    file_data_get_function_type file_data_get_function;
 };
 
 // TODO: consider replacing the glue structures above with a template
@@ -62,10 +66,12 @@ private:
     static constexpr uint32_t control_point_char_uuid{0x1002};
     static constexpr uint32_t file_list_char_uuid{0x1003};
     static constexpr uint32_t file_info_char_uuid{0x1004};
+    static constexpr uint32_t file_data_char_uuid{0x1005};
 
     static constexpr uint32_t cp_char_max_len{9};
     static constexpr uint32_t file_list_char_max_len{32};
     static constexpr uint32_t file_info_char_max_len{32};
+    static constexpr uint32_t file_data_char_max_len{128};
 
     // TODO: separate BLE commands from internal states
     enum class ControlPointOpcode: uint8_t
@@ -94,6 +100,7 @@ private:
         ble_gatts_char_handles_t control_point_handles;
         ble_gatts_char_handles_t files_list;
         ble_gatts_char_handles_t file_info;
+        ble_gatts_char_handles_t file_data;
 
         uint16_t conn_handle;
         bool is_notification_enabled; 
@@ -140,6 +147,8 @@ private:
     // API for functions that initiate transfer of FS data
     result::Result send_files_list();
     result::Result send_file_info();
+    result::Result send_file_data();
+    result::Result continue_sending_file_data();
 
     struct TransactionContext {
         static constexpr size_t buffer_size{256};
@@ -148,7 +157,9 @@ private:
         uint32_t size{0};
         uint8_t buffer[buffer_size];
         uint16_t packet_size{packet_size_value}; // it's a constant, but for the API of Nordic SDK it has to be a var.
-        file_id_type file_id;
+        file_id_type file_id{0};
+        uint32_t file_size{0};
+        uint32_t file_sent_size{0};
         void update_next_packet_size() 
         {
             const auto leftover_size{size-idx};

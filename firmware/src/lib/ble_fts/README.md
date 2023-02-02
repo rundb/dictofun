@@ -92,6 +92,13 @@ Command format: byte 0 - opcode, bytes 1..8 contain the file ID in little endian
 
 TODO: specify way to signal error to the host (f.e. if file doesn't exist)
 
+##### Opcode 0x03 - Request file data
+
+If operation is successful, device shall ASAP start sending the contents of the file using `File data` characteristic. It will send the whole file, so it's a host's responsibility to figure out the size of the data to expect 
+by using `Request file info` command.
+
+TODO: specify way to signal error to the host (f.e. if file doesn't exist)
+
 #### Data transfer procedure for the read/notify characteristics
 
 Data transaction is performed in the following way:
@@ -119,3 +126,7 @@ Assuming that file system on device contains N files, data consists of following
 
 File info is a JSON string containing descriptor of a file. Format is straight forward: first 2 bytes contain the JSON size (little endian), rest is a JSON containing meta information about the target file.
 It could also be used in order to signal errors in case of a broken file or anything alike. 
+
+#### File data
+
+File data is the raw content of the file as it is contained in the memory on the device. In order to interptet the file host must first read out the metadata of the device.
