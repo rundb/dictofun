@@ -68,8 +68,8 @@ Service advertises following set of characteristics.
 | Opcode | Procedure                | Parameters        |Response       |
 |:-------|:-------------------------|:------------------|:--------------|
 | 01     | Request list of files    | N/A               | Status, UINT8 |
-| 02     | Request file info        | File ID (UINT32)  | Status, UINT8 |
-| 03     | Request file data        | File ID (UINT32)  | Status, UINT8 |
+| 02     | Request file info        | File ID (UINT64)  | Status, UINT8 |
+| 03     | Request file data        | File ID (UINT64)  | Status, UINT8 |
 | 04     | Request FS status        | N/A               | Status, UINT8 |
 
 Following statuses shall be returned in response:
@@ -85,12 +85,21 @@ Following statuses shall be returned in response:
 
 If operation is successful, device shall immediately provide list of existing files through the `Files' list` characteristic. Status code shall be returned otherwise. Data format for the files' list is defined in the characteristic description.
 
+##### Opcode 0x02 - Request file info
+
+If operation is successful, device shall ASAP provide information about the file in JSON format through the `File info` characteristic.
+Command format: byte 0 - opcode, bytes 1..8 contain the file ID in little endian format. 
+
+TODO: specify way to signal error to the host (f.e. if file doesn't exist)
+
 #### Data transfer procedure for the read/notify characteristics
 
 Data transaction is performed in the following way:
 1. device puts the initial value to the characteristic
 2. host receives a notification and reads value from the characteristic.
 3. if more data is available, device updates the data in the characteristic, then p.2
+
+### Read/Notify characteristics
 
 #### Files' list
 
@@ -105,3 +114,8 @@ Assuming that file system on device contains N files, data consists of following
 ... 
 
 (N+1). Last file identifier
+
+#### File info
+
+File info is a JSON string containing descriptor of a file. Format is straight forward: first 2 bytes contain the JSON size (little endian), rest is a JSON containing meta information about the target file.
+It could also be used in order to signal errors in case of a broken file or anything alike. 

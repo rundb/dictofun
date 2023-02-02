@@ -13,6 +13,7 @@ file_transfer_service_uuid = "a0451001-b822-4820-8782-bd8faf68807b"
 # phone shows start with a0451001
 fts_cp_char_uuid =           "00001002-0000-1000-8000-00805f9b34fb"
 fts_file_list_char_uuid =    "00001003-0000-1000-8000-00805f9b34fb"
+fts_file_info_char_uuid =    "00001004-0000-1000-8000-00805f9b34fb"
 
 def configure_log():
     # timestr = time.strftime("%Y%m%d-%H%M%S")
@@ -59,6 +60,7 @@ class DictofunBle(gatt.Device):
         return None
 
     def characteristic_value_updated(self, characteristic, value):
+        logging.debug(" char [%s] value updated" % (characteristic.uuid))
         self.is_updated_value_pending = True
         self.value = value
     
@@ -91,17 +93,29 @@ class DictofunBle(gatt.Device):
 This class aggregates methods of communication with BLE FTS Server
 """
 class FtsClient:
-    def __init__(self, cp_char, file_list_char, dictofun):
+    def __init__(self, cp_char, file_list_char, info_char, dictofun):
         self.cp_char = cp_char
         self.file_list_char = file_list_char
+        self.file_info_char = info_char
         self.dictofun = dictofun
 
     def request_files_list(self):
         self.cp_char.write_value(bytearray([1]))
 
+    def request_file_info(self, file_id):
+        request = bytearray([2])
+        file_id_bytes = file_id.to_bytes(8, "little")
+        for b in file_id_bytes:
+            request.append(b)
+        self.cp_char.write_value(request)
+
     def parse_files_count(self, array):
         a = array
         return int(a[0] + (a[1] << 8) + (a[2] << 16) + (a[3] << 24))
+
+    def parse_json_size(self, array):
+        a = array
+        return int(a[0] + (a[1] << 8))
 
     def parse_files_list(self, array):
         element_size = 8
@@ -145,6 +159,41 @@ class FtsClient:
             return []
 
         return self.parse_files_list(received_data[8:])
+
+
+    def get_file_info(self, file_id):
+        self.file_info_char.enable_notifications()
+        time.sleep(0.5)
+        self.request_file_info(file_id)
+
+        is_first_packet_received = False
+
+        # minimal expected size, if there are no files provided
+        expected_size = 8
+        
+        received_data = bytearray([])
+        start_time = time.time()
+        transaction_timeout = 10 # seconds
+
+        while (not is_first_packet_received) and (time.time() - start_time < transaction_timeout):
+            is_first_packet_received = self.dictofun.is_updated_value_pending
+        
+        if is_first_packet_received:
+            raw = self.dictofun.get_last_received_packet()
+            # FIXME this is a potential exception location - raw packet isn't a regular Python structure
+            received_data += raw
+            expected_size = self.parse_json_size(received_data) + 2
+        
+        while len(received_data) != expected_size and time.time() - start_time < transaction_timeout:
+            if self.dictofun.is_updated_value_pending:
+                received_data += self.dictofun.get_last_received_packet()
+        
+        if time.time() - start_time >= transaction_timeout:
+            logging.error("file info: transaction timeout. Received %d out of %d bytes" % (len(received_data), expected_size) )
+            return []
+
+        return received_data.decode("utf-8")
+        
 
 
 class AnyDeviceManager(gatt.DeviceManager):
@@ -191,13 +240,19 @@ def run_fts_tests(dictofun):
     
     cp_char = dictofun.get_characteristic_by_uuid(fts_cp_char_uuid)
     list_char = dictofun.get_characteristic_by_uuid(fts_file_list_char_uuid)
-    fts_client = FtsClient(cp_char, list_char, dictofun)
+    info_char = dictofun.get_characteristic_by_uuid(fts_file_info_char_uuid)
+    fts_client = FtsClient(cp_char, list_char, info_char, dictofun)
 
     # Execute test on reading out the list of the files available on the device
     files_list = fts_client.get_files_list()
     logging.info("FTS Server provides following %d files" % len(files_list))
     for file in files_list:
         logging.info("\t%x" % file)
+    
+    file0_info = ""
+    if len(files_list) > 0:
+        file0_info = fts_client.get_file_info(files_list[0])
+        logging.info("\tfile 0 info: %s" % file0_info)
 
     return 0
 

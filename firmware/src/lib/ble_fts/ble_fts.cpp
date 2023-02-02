@@ -26,7 +26,7 @@ blcm_link_ctx_storage_t FtsService::_link_ctx_storage =
 
 FtsService::Context FtsService::_context {
     0, 0, 
-    {0, 0, 0, 0,}, {0,0,0,0,},
+    {0, 0, 0, 0,}, {0,0,0,0,}, {0,0,0,0,},
     0, false,
     &_link_ctx_storage
 };
@@ -155,6 +155,20 @@ result::Result FtsService::init()
         return file_list_char_add_result;
     }
 
+    const auto file_info_char_add_result = add_characteristic(
+        BLE_UUID_TYPE_BLE,
+        file_info_char_uuid, 
+        file_info_char_max_len,
+        &_context.file_info,
+        CharacteristicInUseType::READ_NOTIFY
+    );
+
+    if (result::Result::OK != file_info_char_add_result)
+    {
+        return file_info_char_add_result;
+    }
+
+
     _context.conn_handle = BLE_CONN_HANDLE_INVALID;
 
     return result::Result::OK;
@@ -171,6 +185,10 @@ void FtsService::on_write(ble_evt_t const * p_ble_evt, ClientContext& client_con
     else if ((p_evt_write->handle == _context.files_list.cccd_handle) && (p_evt_write->len == 2))
     {
         client_context.is_file_list_notifications_enabled = ble_srv_is_notification_enabled(p_evt_write->data);
+    }
+    else if ((p_evt_write->handle == _context.file_info.cccd_handle) && (p_evt_write->len == 2))
+    {
+        client_context.is_file_info_notifications_enabled = ble_srv_is_notification_enabled(p_evt_write->data);
     }
     else 
     {
@@ -222,7 +240,6 @@ void FtsService::on_req_files_list(const uint32_t size)
         NRF_LOG_ERROR("cp.write: file list request wrong size");
         return;
     }
-    NRF_LOG_INFO("cp.write: file list request");
     _context.pending_command = FtsService::ControlPointOpcode::REQ_FILES_LIST;
 }
 
@@ -240,9 +257,9 @@ void FtsService::on_req_file_info(const uint32_t data_size, const uint8_t * file
         NRF_LOG_ERROR("cp.write: wrong file id size");
         return;
     }
-    // const file_id_type file_id = get_file_id_from_raw(file_id_data);
-    
-    // TODO: implement
+    const file_id_type file_id = get_file_id_from_raw(file_id_data);
+    _transaction_ctx.file_id = file_id;
+    _context.pending_command = FtsService::ControlPointOpcode::REQ_FILE_INFO;
 }
 
 void FtsService::on_req_file_data(const uint32_t data_size, const uint8_t * file_id_data)
@@ -399,6 +416,26 @@ void FtsService::process()
             _context.pending_command = FtsService::ControlPointOpcode::IDLE;
             break;
         };
+        case FtsService::ControlPointOpcode::REQ_FILE_INFO:
+        {
+            NRF_LOG_DEBUG("ble::fts::processing file info request");
+            if (_context.client_context == nullptr || !_context.client_context->is_file_info_notifications_enabled)
+            {
+                NRF_LOG_ERROR("ble::fts::file info: notifications are not enabled. Aborting");
+                _context.pending_command = FtsService::ControlPointOpcode::IDLE;
+                return;
+            }
+
+            const auto result = send_file_info();
+            if (result != result::Result::OK)
+            {
+                _context.pending_command = FtsService::ControlPointOpcode::IDLE;
+                return;
+            }
+            _context.active_command = _context.pending_command;
+            _context.pending_command = FtsService::ControlPointOpcode::IDLE;
+            break;
+        }
         case FtsService::ControlPointOpcode::IDLE: default:
         {
             break;
@@ -451,7 +488,43 @@ result::Result FtsService::send_files_list()
     return result::Result::OK;
 }
 
-// TODO: add a check that notifications are enabled
+result::Result FtsService::send_file_info()
+{
+    static constexpr size_t json_size_field_size{2};
+
+    // TODO: add a signalling in case if the file doesn't exist.
+    const auto file_info_call_result = _fs_if.file_info_get_function(
+        _transaction_ctx.file_id,
+        &_transaction_ctx.buffer[json_size_field_size],
+        _transaction_ctx.size,
+        TransactionContext::buffer_size
+    );
+
+    if (result::Result::OK != file_info_call_result)
+    {
+        NRF_LOG_ERROR("ble::fts::send_info: error");
+        return file_info_call_result;
+    }
+
+    _transaction_ctx.idx = 0;
+    _transaction_ctx.buffer[_transaction_ctx.size + json_size_field_size] = 0;
+    _transaction_ctx.buffer[0] = static_cast<uint8_t>(_transaction_ctx.size & 0xFF);
+    _transaction_ctx.buffer[1] = static_cast<uint8_t>((_transaction_ctx.size >> 8) & 0xFF);
+
+    _transaction_ctx.size += json_size_field_size;
+    
+    const auto push_result = push_data_packets(ControlPointOpcode::REQ_FILE_INFO);
+    if (push_result == result::Result::OK)
+    {
+        NRF_LOG_DEBUG("ble::fts::send_info: sending %d bytes", _transaction_ctx.size);
+    }
+    else
+    {
+        NRF_LOG_ERROR("ble::fts::send_info: push has failed");
+    }
+    return result::Result::OK;
+}
+
 result::Result FtsService::push_data_packets(ControlPointOpcode opcode)
 {
     _transaction_ctx.update_next_packet_size();
@@ -459,7 +532,9 @@ result::Result FtsService::push_data_packets(ControlPointOpcode opcode)
     ble_gatts_hvx_params_t hvx_params;
 
     memset(&hvx_params, 0, sizeof(hvx_params));
-    hvx_params.handle = (opcode == ControlPointOpcode::REQ_FILES_LIST) ? _context.files_list.value_handle : BLE_CONN_HANDLE_INVALID;
+    hvx_params.handle = (opcode == ControlPointOpcode::REQ_FILES_LIST) ? _context.files_list.value_handle : 
+                        (opcode == ControlPointOpcode::REQ_FILE_INFO) ? _context.file_info.value_handle : 
+                        BLE_CONN_HANDLE_INVALID;
     hvx_params.p_data = &_transaction_ctx.buffer[_transaction_ctx.idx];
     hvx_params.p_len  = &_transaction_ctx.packet_size;
     hvx_params.type   = BLE_GATT_HVX_NOTIFICATION;
