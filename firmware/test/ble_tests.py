@@ -352,7 +352,7 @@ def run_fts_tests(dictofun):
         logging.error("File size from JSON is 0. Aborting")
         return -1
 
-    file0_data = fts_client.get_file_data(files_list[0] + 1, file_size)
+    file0_data = fts_client.get_file_data(files_list[0], file_size)
 
     logging.info("received file with size %d" % len(file0_data))
 
