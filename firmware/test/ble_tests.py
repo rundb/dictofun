@@ -211,15 +211,9 @@ class FtsClient:
 
     def get_file_data(self, file_id, size):
         # reset possibly pending previous transactions
-        self.dictofun.get_last_received_packet()
-
         self.info_char.enable_notifications(False)
         self.list_char.enable_notifications(False)
-        time.sleep(0.5)
-
         self.data_char.enable_notifications()
-        time.sleep(1)
-        self.dictofun.get_last_received_packet()
         time.sleep(0.5)
 
         self.request_file_data(file_id)

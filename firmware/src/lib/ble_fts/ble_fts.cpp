@@ -39,9 +39,8 @@ nrf_sdh_ble_evt_observer_t observer = {
 
 FtsService * FtsService::_instance{nullptr};
 
-FtsService::FtsService(FileSystemInterface& fs_if, DelayFunction delay_function)
+FtsService::FtsService(FileSystemInterface& fs_if)
 : _fs_if(fs_if)
-, _delay(delay_function)
 {
     if (_instance == nullptr)
     {
@@ -399,7 +398,10 @@ void FtsService::process()
                 {
                     NRF_LOG_ERROR("failed to close file after transferring data");    
                 }
-                NRF_LOG_DEBUG("finalizing transaction");
+                else
+                {
+                    NRF_LOG_DEBUG("file transaction completed");
+                }
             }
             else
             {
@@ -417,7 +419,6 @@ void FtsService::process()
         {
             _context.active_command = FtsService::ControlPointOpcode::IDLE;
             _context.pending_command = FtsService::ControlPointOpcode::IDLE;
-            NRF_LOG_DEBUG("finalizing transaction");
         }
         return;
     }
@@ -613,7 +614,6 @@ result::Result FtsService::send_file_data()
     _transaction_ctx.file_size = file_size;
 
     // 3. Read out first buffer from the file to the buffer
-    // using file_data_get_function_type = std::function<result::Result (file_id_type, uint8_t *, uint32_t&, uint32_t)>; 
     const auto read_result = _fs_if.file_data_get_function(
         _transaction_ctx.file_id,
         _transaction_ctx.buffer,

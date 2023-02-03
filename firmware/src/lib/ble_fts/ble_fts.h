@@ -37,8 +37,7 @@ struct FileSystemInterface
 class FtsService
 {
 public:
-    using DelayFunction = std::function<void(uint32_t)>;
-    explicit FtsService(FileSystemInterface& fs_if, DelayFunction delay_function);
+    explicit FtsService(FileSystemInterface& fs_if);
     FtsService() = delete;
     FtsService(const FtsService&) = delete;
     FtsService(FtsService&&) = delete;
@@ -56,7 +55,6 @@ public:
 private:
     static FtsService * _instance;
     FileSystemInterface& _fs_if;
-    DelayFunction _delay;
 
     static constexpr uint32_t _uuid_size{16};
     // a045a112-b822-4820-8782-bd8faf68807b

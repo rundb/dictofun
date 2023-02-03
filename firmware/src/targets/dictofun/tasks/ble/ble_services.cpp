@@ -8,9 +8,6 @@
 #include "nrf_log.h"
 #include "ble_fts.h"
 #include "ble_fts_glue.h"
-#include "FreeRTOS.h"
-#include "task.h"
-
 namespace ble
 {
 
@@ -34,7 +31,7 @@ static void nrf_qwr_error_handler(uint32_t nrf_error)
     NRF_LOG_ERROR("ble: QWR error %d", nrf_error);
 }
 
-ble::fts::FtsService fts_service{integration::test::dictofun_test_fs_if, vTaskDelay};
+ble::fts::FtsService fts_service{integration::test::dictofun_test_fs_if};
 
 result::Result init_services(ble_lbs_led_write_handler_t led_write_handler)
 {
