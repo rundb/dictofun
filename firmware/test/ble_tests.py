@@ -17,6 +17,7 @@ fts_file_list_char_uuid =    "00001003-0000-1000-8000-00805f9b34fb"
 fts_file_info_char_uuid =    "00001004-0000-1000-8000-00805f9b34fb"
 fts_file_data_char_uuid =    "00001005-0000-1000-8000-00805f9b34fb"
 fts_fs_status_char_uuid =    "00001006-0000-1000-8000-00805f9b34fb"
+fts_status_char_uuid =       "00001007-0000-1000-8000-00805f9b34fb"
 
 def configure_log():
     # timestr = time.strftime("%Y%m%d-%H%M%S")
@@ -64,8 +65,11 @@ class DictofunBle(gatt.Device):
 
     def characteristic_value_updated(self, characteristic, value):
         # logging.debug(" char [%s] value updated" % (characteristic.uuid))
-        self.is_updated_value_pending = True
-        self.value = value
+        if str(characteristic.uuid) == fts_status_char_uuid:
+            logging.info("detected status update in the target: %s" + str(value))
+        else:
+            self.is_updated_value_pending = True
+            self.value = value
     
     def get_last_received_packet(self):
         self.is_updated_value_pending = False
@@ -102,6 +106,8 @@ class FtsClient:
         self.info_char = dictofun.get_characteristic_by_uuid(fts_file_info_char_uuid)
         self.data_char = dictofun.get_characteristic_by_uuid(fts_file_data_char_uuid)
         self.fs_status = dictofun.get_characteristic_by_uuid(fts_fs_status_char_uuid)
+        self.status = dictofun.get_characteristic_by_uuid(fts_status_char_uuid)
+        self.status.enable_notifications()
         self.dictofun = dictofun
 
     def request_files_list(self):
@@ -346,7 +352,7 @@ def run_fts_tests(dictofun):
         logging.error("File size from JSON is 0. Aborting")
         return -1
 
-    file0_data = fts_client.get_file_data(files_list[0], file_size)
+    file0_data = fts_client.get_file_data(files_list[0] + 1, file_size)
 
     logging.info("received file with size %d" % len(file0_data))
 
