@@ -65,10 +65,33 @@ result::Result dictofun_test_get_file_info(const ble::fts::file_id_type file_id,
     return result::Result::OK;
 }
 
+result::Result dictofun_test_open_file(file_id_type file_id, uint32_t& file_size)
+{
+    if (file_id == test_files_ids[0])
+    {
+        return result::Result::ERROR_NOT_IMPLEMENTED;
+    }
+    else if (file_id == test_files_ids[1])
+    {
+        return result::Result::ERROR_NOT_IMPLEMENTED;
+    }
+    else
+    {
+        return result::Result::ERROR_INVALID_PARAMETER;
+    }
+}
+
+result::Result dictofun_test_get_data(file_id_type file_id, uint8_t * buffer, uint32_t& actual_size, uint32_t max_size)
+{
+    return result::Result::ERROR_NOT_IMPLEMENTED;
+}
+
 FileSystemInterface dictofun_test_fs_if
 {
     dictofun_test_get_file_list,
     dictofun_test_get_file_info,
+    dictofun_test_open_file,
+    dictofun_test_get_data,
 };
 
 }

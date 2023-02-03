@@ -137,11 +137,8 @@ class FtsClient:
         return elements
 
     def get_file_size_from_json(self, raw_metadata):
-        raw_metadata = raw_metadata.replace('"','\\"')
-        print(raw_metadata)
         try:
             metadata = json.loads(raw_metadata)
-            print(metadata)
             return int(metadata["s"])
         except Exception as e:
             print("JSON decoding error " + str(e))
@@ -212,7 +209,7 @@ class FtsClient:
             logging.error("file info: transaction timeout. Received %d out of %d bytes" % (len(received_data), expected_size) )
             return []
 
-        return received_data.decode("utf-8")
+        return received_data[2:].decode("utf-8")
 
     def get_file_data(self, file_id, size):
         self.data_char.enable_notifications()
