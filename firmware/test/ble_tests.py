@@ -150,8 +150,10 @@ class FtsClient:
             return 0
     
     def get_files_list(self):
-        # caller has checked that chars exist.
         self.list_char.enable_notifications()
+        self.info_char.enable_notifications(False)
+        self.data_char.enable_notifications(False)
+        self.fs_status.enable_notifications(False)
         time.sleep(0.5)
         self.request_files_list()
         is_first_packet_received = False
@@ -183,7 +185,10 @@ class FtsClient:
 
 
     def get_file_info(self, file_id):
+        self.list_char.enable_notifications(False)
         self.info_char.enable_notifications()
+        self.data_char.enable_notifications(False)
+        self.fs_status.enable_notifications(False)
         time.sleep(0.5)
         self.request_file_info(file_id)
 
@@ -215,11 +220,10 @@ class FtsClient:
         return received_data[2:].decode("utf-8")
 
     def get_file_data(self, file_id, size):
-        # reset possibly pending previous transactions
         self.info_char.enable_notifications(False)
         self.list_char.enable_notifications(False)
         self.data_char.enable_notifications()
-        time.sleep(0.5)
+        self.fs_status.enable_notifications(False)
 
         self.request_file_data(file_id)
 
@@ -251,7 +255,6 @@ class FtsClient:
         return received_data
     
     def get_fs_status(self):
-        # reset possibly pending previous transactions
         self.info_char.enable_notifications(False)
         self.list_char.enable_notifications(False)
         self.data_char.enable_notifications(False)
@@ -355,8 +358,7 @@ def run_fts_tests(dictofun):
 if __name__ == '__main__':
     configure_log()
 
-    # device_control = DictofunControl("/dev/ttyUSB0")
-    device_control = DictofunControl("/dev/ttyUSB1")
+    device_control = DictofunControl("/dev/ttyUSB0")
     reset_result = device_control.issue_command("reset", 0.5)
     device_output = ""
     device_output += reset_result
