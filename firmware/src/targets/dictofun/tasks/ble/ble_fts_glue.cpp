@@ -21,6 +21,18 @@ ble::fts::file_id_type test_files_ids[test_files_count] {
     0x0102030405060709ULL,
 };
 
+constexpr uint32_t file_0_size{512};
+constexpr uint32_t file_0_frequency{16000};
+constexpr uint32_t file_0_codec{0};
+
+struct TestContext
+{
+    file_id_type current_file_id{0ULL};
+    bool is_file_open{false};
+    uint32_t position{0};
+    uint32_t size{0};
+} _test_ctx;
+
 result::Result dictofun_test_get_file_list(uint32_t& files_count, ble::fts::file_id_type * files_list_ptr)
 {
     if (nullptr == files_list_ptr)
@@ -45,11 +57,8 @@ result::Result dictofun_test_get_file_info(const ble::fts::file_id_type file_id,
     {
         // let first file have a size of 512 bytes, no codec used, frequency 16000
         // TODO: consider using string primitives from ESTL here (good chance)
-        constexpr uint32_t file_size{512};
-        constexpr uint32_t frequency{16000};
-        constexpr uint32_t codec{0};
         uint32_t idx{0};
-        idx += snprintf(&tmp[idx], max_buffer_size - idx - 1, "{\"s\":%lu,\"f\":%lu,\"c\":%lu}", file_size, frequency, codec);
+        idx += snprintf(&tmp[idx], max_buffer_size - idx - 1, "{\"s\":%lu,\"f\":%lu,\"c\":%lu}", file_0_size, file_0_frequency, file_0_codec);
 
         memcpy(file_data, tmp, std::min(max_data_size - 1, idx));
         file_data_size = idx;
@@ -65,10 +74,66 @@ result::Result dictofun_test_get_file_info(const ble::fts::file_id_type file_id,
     return result::Result::OK;
 }
 
+result::Result dictofun_test_close_file(file_id_type file_id)
+{
+    if (!_test_ctx.is_file_open) 
+    {
+        return result::Result::ERROR_INVALID_PARAMETER;
+    }
+    _test_ctx.is_file_open = false;
+    _test_ctx.position = 0;
+    _test_ctx.current_file_id = 0;
+
+    return result::Result::OK;
+}
+
+result::Result dictofun_test_open_file(file_id_type file_id, uint32_t& file_size)
+{
+    if (_test_ctx.is_file_open) 
+    {
+        return result::Result::ERROR_BUSY;
+    }
+
+    if (file_id == test_files_ids[0])
+    {
+        _test_ctx.is_file_open = true;
+        _test_ctx.current_file_id = file_id;
+        _test_ctx.position = 0;
+        _test_ctx.size = file_0_size;
+        file_size = file_0_size;
+        return result::Result::OK;
+    }
+    else if (file_id == test_files_ids[1])
+    {
+        return result::Result::ERROR_NOT_IMPLEMENTED;
+    }
+    else
+    {
+        return result::Result::ERROR_INVALID_PARAMETER;
+    }
+}
+
+result::Result dictofun_test_get_data(file_id_type file_id, uint8_t * buffer, uint32_t& actual_size, uint32_t max_size)
+{
+    if (!_test_ctx.is_file_open || file_id != _test_ctx.current_file_id || buffer == nullptr)
+    {
+        return result::Result::ERROR_INVALID_PARAMETER;
+    }
+    actual_size = std::min(max_size, _test_ctx.size - _test_ctx.position);
+    for (uint32_t i = _test_ctx.position; i < _test_ctx.position + actual_size; ++i)
+    {
+        buffer[i - _test_ctx.position] = static_cast<uint8_t>(i % 0xFF);
+    }
+    return result::Result::OK;
+}
+
 FileSystemInterface dictofun_test_fs_if
 {
     dictofun_test_get_file_list,
     dictofun_test_get_file_info,
+    dictofun_test_open_file,
+    dictofun_test_close_file,
+    dictofun_test_get_data,
 };
 
 }

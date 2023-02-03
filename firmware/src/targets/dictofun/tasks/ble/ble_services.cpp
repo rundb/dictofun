@@ -8,7 +8,6 @@
 #include "nrf_log.h"
 #include "ble_fts.h"
 #include "ble_fts_glue.h"
-
 namespace ble
 {
 

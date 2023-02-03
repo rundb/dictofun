@@ -5,6 +5,7 @@ import sys
 from dictofun_control import DictofunControl
 import threading
 from multiprocessing import Process
+import json
 
 dut_mac = "e3:50:c2:d4:e1:b9"
 
@@ -14,6 +15,7 @@ file_transfer_service_uuid = "a0451001-b822-4820-8782-bd8faf68807b"
 fts_cp_char_uuid =           "00001002-0000-1000-8000-00805f9b34fb"
 fts_file_list_char_uuid =    "00001003-0000-1000-8000-00805f9b34fb"
 fts_file_info_char_uuid =    "00001004-0000-1000-8000-00805f9b34fb"
+fts_file_data_char_uuid =    "00001005-0000-1000-8000-00805f9b34fb"
 
 def configure_log():
     # timestr = time.strftime("%Y%m%d-%H%M%S")
@@ -60,7 +62,7 @@ class DictofunBle(gatt.Device):
         return None
 
     def characteristic_value_updated(self, characteristic, value):
-        logging.debug(" char [%s] value updated" % (characteristic.uuid))
+        # logging.debug(" char [%s] value updated" % (characteristic.uuid))
         self.is_updated_value_pending = True
         self.value = value
     
@@ -93,10 +95,11 @@ class DictofunBle(gatt.Device):
 This class aggregates methods of communication with BLE FTS Server
 """
 class FtsClient:
-    def __init__(self, cp_char, file_list_char, info_char, dictofun):
-        self.cp_char = cp_char
-        self.file_list_char = file_list_char
-        self.file_info_char = info_char
+    def __init__(self, dictofun):
+        self.cp_char = dictofun.get_characteristic_by_uuid(fts_cp_char_uuid)
+        self.list_char = dictofun.get_characteristic_by_uuid(fts_file_list_char_uuid)
+        self.info_char = dictofun.get_characteristic_by_uuid(fts_file_info_char_uuid)
+        self.data_char = dictofun.get_characteristic_by_uuid(fts_file_data_char_uuid)
         self.dictofun = dictofun
 
     def request_files_list(self):
@@ -104,6 +107,13 @@ class FtsClient:
 
     def request_file_info(self, file_id):
         request = bytearray([2])
+        file_id_bytes = file_id.to_bytes(8, "little")
+        for b in file_id_bytes:
+            request.append(b)
+        self.cp_char.write_value(request)
+
+    def request_file_data(self, file_id):
+        request = bytearray([3])
         file_id_bytes = file_id.to_bytes(8, "little")
         for b in file_id_bytes:
             request.append(b)
@@ -125,11 +135,18 @@ class FtsClient:
             elements.append(int.from_bytes(array[idx:idx + element_size], "little"))
             idx += element_size
         return elements
-        
+
+    def get_file_size_from_json(self, raw_metadata):
+        try:
+            metadata = json.loads(raw_metadata)
+            return int(metadata["s"])
+        except Exception as e:
+            print("JSON decoding error " + str(e))
+            return 0
     
     def get_files_list(self):
         # caller has checked that chars exist.
-        self.file_list_char.enable_notifications()
+        self.list_char.enable_notifications()
         time.sleep(0.5)
         self.request_files_list()
         is_first_packet_received = False
@@ -146,7 +163,6 @@ class FtsClient:
         
         if is_first_packet_received:
             raw = self.dictofun.get_last_received_packet()
-            # FIXME this is a potential exception location - raw packet isn't a regular Python structure
             received_data += raw
             expected_size = (self.parse_files_count(received_data) + 1) * 8
         
@@ -162,7 +178,7 @@ class FtsClient:
 
 
     def get_file_info(self, file_id):
-        self.file_info_char.enable_notifications()
+        self.info_char.enable_notifications()
         time.sleep(0.5)
         self.request_file_info(file_id)
 
@@ -180,7 +196,6 @@ class FtsClient:
         
         if is_first_packet_received:
             raw = self.dictofun.get_last_received_packet()
-            # FIXME this is a potential exception location - raw packet isn't a regular Python structure
             received_data += raw
             expected_size = self.parse_json_size(received_data) + 2
         
@@ -192,8 +207,43 @@ class FtsClient:
             logging.error("file info: transaction timeout. Received %d out of %d bytes" % (len(received_data), expected_size) )
             return []
 
-        return received_data.decode("utf-8")
+        return received_data[2:].decode("utf-8")
+
+    def get_file_data(self, file_id, size):
+        # reset possibly pending previous transactions
+        self.info_char.enable_notifications(False)
+        self.list_char.enable_notifications(False)
+        self.data_char.enable_notifications()
+        time.sleep(0.5)
+
+        self.request_file_data(file_id)
+
+        is_first_packet_received = False
+
+        # minimal expected size, if there are no files provided
+        expected_size = size
         
+        received_data = bytearray([])
+        start_time = time.time()
+        transaction_timeout = 10 # seconds
+        while (not is_first_packet_received) and (time.time() - start_time < transaction_timeout):
+            is_first_packet_received = self.dictofun.is_updated_value_pending
+        
+        if is_first_packet_received:
+            raw = self.dictofun.get_last_received_packet()
+            received_data += raw
+        else:
+            logging.error("timeout error")
+            return []
+        
+        while len(received_data) != expected_size and time.time() - start_time < transaction_timeout:
+            if self.dictofun.is_updated_value_pending:
+                received_data += self.dictofun.get_last_received_packet()
+        
+        if time.time() - start_time >= transaction_timeout:
+            logging.error("file info: transaction timeout. Received %d out of %d bytes" % (len(received_data), expected_size) )
+
+        return received_data
 
 
 class AnyDeviceManager(gatt.DeviceManager):
@@ -238,10 +288,7 @@ def run_fts_tests(dictofun):
         logging.error("failed to read FTS characteristic from the device")
         return -1        
     
-    cp_char = dictofun.get_characteristic_by_uuid(fts_cp_char_uuid)
-    list_char = dictofun.get_characteristic_by_uuid(fts_file_list_char_uuid)
-    info_char = dictofun.get_characteristic_by_uuid(fts_file_info_char_uuid)
-    fts_client = FtsClient(cp_char, list_char, info_char, dictofun)
+    fts_client = FtsClient(dictofun)
 
     # Execute test on reading out the list of the files available on the device
     files_list = fts_client.get_files_list()
@@ -253,7 +300,19 @@ def run_fts_tests(dictofun):
     if len(files_list) > 0:
         file0_info = fts_client.get_file_info(files_list[0])
         logging.info("\tfile 0 info: %s" % file0_info)
+    
+    if len(file0_info) == 0:
+        logging.error("failed to fetch file info (empty json received)")
+        return -1
+    
+    file_size = fts_client.get_file_size_from_json(file0_info)
+    if file_size == 0:
+        logging.error("File size from JSON is 0. Aborting")
+        return -1
 
+    file0_data = fts_client.get_file_data(files_list[0], file_size)
+
+    logging.info("received file with size %d" % len(file0_data))
     return 0
 
 
