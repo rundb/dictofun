@@ -21,13 +21,15 @@ struct FileSystemInterface
 {
     using file_list_get_function_type = std::function<result::Result (uint32_t&, file_id_type *)>;
     // file data is a minimal json string describing the contents of a particular file
-    using file_info_get_function_type = std::function<result::Result (file_id_type, uint8_t *, uint32_t&, uint32_t)>; 
-    using file_open_function_type = std::function<result::Result (file_id_type, uint32_t&)>; 
-    using file_data_get_function_type = std::function<result::Result (file_id_type, uint8_t *, uint32_t&, uint32_t)>; 
+    using file_info_get_function_type = std::function<result::Result (file_id_type, uint8_t *, uint32_t&, uint32_t)>;
+    using file_open_function_type = std::function<result::Result (file_id_type, uint32_t&)>;
+    using file_close_function_type = std::function<result::Result (file_id_type)>;
+    using file_data_get_function_type = std::function<result::Result (file_id_type, uint8_t *, uint32_t&, uint32_t)>;
 
     file_list_get_function_type file_list_get_function;
     file_info_get_function_type file_info_get_function;
     file_open_function_type file_open_function;
+    file_close_function_type file_close_function;
     file_data_get_function_type file_data_get_function;
 };
 
@@ -35,7 +37,8 @@ struct FileSystemInterface
 class FtsService
 {
 public:
-    explicit FtsService(FileSystemInterface& fs_if);
+    using DelayFunction = std::function<void(uint32_t)>;
+    explicit FtsService(FileSystemInterface& fs_if, DelayFunction delay_function);
     FtsService() = delete;
     FtsService(const FtsService&) = delete;
     FtsService(FtsService&&) = delete;
@@ -53,6 +56,7 @@ public:
 private:
     static FtsService * _instance;
     FileSystemInterface& _fs_if;
+    DelayFunction _delay;
 
     static constexpr uint32_t _uuid_size{16};
     // a045a112-b822-4820-8782-bd8faf68807b
@@ -149,6 +153,8 @@ private:
     result::Result send_file_info();
     result::Result send_file_data();
     result::Result continue_sending_file_data();
+
+    void process_client_request(ControlPointOpcode client_request);
 
     struct TransactionContext {
         static constexpr size_t buffer_size{256};

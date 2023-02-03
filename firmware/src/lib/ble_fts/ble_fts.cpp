@@ -39,8 +39,9 @@ nrf_sdh_ble_evt_observer_t observer = {
 
 FtsService * FtsService::_instance{nullptr};
 
-FtsService::FtsService(FileSystemInterface& fs_if)
+FtsService::FtsService(FileSystemInterface& fs_if, DelayFunction delay_function)
 : _fs_if(fs_if)
+, _delay(delay_function)
 {
     if (_instance == nullptr)
     {
@@ -393,6 +394,11 @@ void FtsService::process()
             {
                 _context.active_command = FtsService::ControlPointOpcode::IDLE;
                 _context.pending_command = FtsService::ControlPointOpcode::IDLE;
+                const auto close_result = _fs_if.file_close_function(_transaction_ctx.file_id);
+                if (result::Result::OK != close_result)
+                {
+                    NRF_LOG_DEBUG("failed to close file after transferring data");    
+                }
                 NRF_LOG_DEBUG("finalizing transaction");
             }
             else
@@ -420,6 +426,7 @@ void FtsService::process()
         if (result::Result::OK != push_result)
         {
             NRF_LOG_ERROR("ble::fts: failed to continue data pushing");
+            _context.active_command = FtsService::ControlPointOpcode::IDLE;
         }
         else
         {
@@ -434,7 +441,15 @@ void FtsService::process()
         NRF_LOG_ERROR("ble::fts: command requested before previous command has been processed.")
         _context.pending_command = FtsService::ControlPointOpcode::IDLE;
     }
-    switch (_context.pending_command)
+    else
+    {
+        process_client_request(_context.pending_command);
+    }
+}
+
+void FtsService::process_client_request(ControlPointOpcode client_request)
+{
+    switch (client_request)
     {
         case FtsService::ControlPointOpcode::REQ_FILES_LIST:
         {
@@ -498,10 +513,7 @@ void FtsService::process()
             _context.pending_command = FtsService::ControlPointOpcode::IDLE;
             break;
         }
-        case FtsService::ControlPointOpcode::IDLE: default:
-        {
-            break;
-        }
+        default: break;
     }
 }
 
@@ -610,22 +622,18 @@ result::Result FtsService::send_file_data()
     );
     if (result::Result::OK != read_result)
     {
+        NRF_LOG_ERROR("ble::fts::send_data: FS read failed");
         return read_result;
     }
 
     // 4. Kick off data packets push
     const auto push_result = push_data_packets(ControlPointOpcode::REQ_FILE_DATA);
-    if (push_result == result::Result::OK)
+    if (push_result != result::Result::OK)
     {
-        NRF_LOG_DEBUG("ble::fts::send_info: sending %d bytes", _transaction_ctx.size);
-    }
-    else
-    {
-        NRF_LOG_ERROR("ble::fts::send_info: push has failed");
-        return result::Result::ERROR_GENERAL;
+        NRF_LOG_ERROR("ble::fts::send_data: push has failed");
     }
 
-    return result::Result::OK;
+    return push_result;
 }
 
 result::Result FtsService::continue_sending_file_data()
@@ -638,13 +646,22 @@ result::Result FtsService::continue_sending_file_data()
     );
     if (result::Result::OK != read_result)
     {
+        NRF_LOG_ERROR("ble::fts::fs read has failed");
         return read_result;
     }
     _transaction_ctx.idx = 0;
-    const auto push_result = push_data_packets(ControlPointOpcode::REQ_FILE_DATA);
+    auto push_result = push_data_packets(ControlPointOpcode::REQ_FILE_DATA);
+    // if (result::Result::ERROR_BUSY == push_result)
+    // {
+    //     // Sometimes HVX queue gets a bit full and we may want to wait a tiny bit and continue afterwards
+    //     NRF_LOG_WARNING("ble::fts::push: HVX queue is full, delaying the transaction");
+    //     _delay(5);
+    //     push_result = push_data_packets(ControlPointOpcode::REQ_FILE_DATA);
+    // }
+
     if (push_result != result::Result::OK)
     {
-        NRF_LOG_ERROR("ble::fts::cont_send_info: push has failed");
+        NRF_LOG_ERROR("ble::fts::cont_send_data: push has failed");
         return result::Result::ERROR_GENERAL;
     }
 
@@ -669,7 +686,8 @@ result::Result FtsService::push_data_packets(ControlPointOpcode opcode)
     const auto send_result = sd_ble_gatts_hvx(_context.conn_handle, &hvx_params);
     if (NRF_SUCCESS != send_result)
     {
-        return result::Result::ERROR_GENERAL;
+        NRF_LOG_ERROR("sd_ble_gatts_hvx: %d", static_cast<int>(send_result));
+        return send_result == NRF_ERROR_RESOURCES ? result::Result::ERROR_BUSY : result::Result::ERROR_GENERAL;
     }
     return result::Result::OK;
 }
