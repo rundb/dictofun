@@ -140,10 +140,10 @@ occupied and free space values.
 
 ##### Transaction format
 
-1. Bytes [0,1]: Amount of bytes in the transaction (in LSB order, f.e. `0x0C 0x00` in the start of the development of the given module)
-2. Bytes [2,3]: count of files in the filesystem.
-3. Bytes [4-7]: amount of free space in the FS in bytes
-3. Bytes [8-11]: amount of occupied space in the FS in bytes
+1. Bytes [0,1]: Amount of bytes in the transaction (in LSB order, f.e. `0x0E 0x00` in the start of the development of the given module)
+2. Bytes [2-5]: amount of free space in the FS in bytes (`UINT32`)
+3. Bytes [6-9]: amount of occupied space in the FS in bytes (`UINT32`)
+3. Bytes [10-13]: count of files in the filesystem (`UINT32`)
 
 #### General status
 

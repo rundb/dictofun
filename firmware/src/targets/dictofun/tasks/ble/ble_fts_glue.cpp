@@ -25,6 +25,12 @@ constexpr uint32_t file_0_size{512};
 constexpr uint32_t file_0_frequency{16000};
 constexpr uint32_t file_0_codec{0};
 
+constexpr uint32_t file_1_size{66000};
+constexpr uint32_t file_1_frequency{16000};
+constexpr uint32_t file_1_codec{1};
+
+constexpr uint32_t fs_total_space{4*1024*1024};
+
 struct TestContext
 {
     file_id_type current_file_id{0ULL};
@@ -127,6 +133,14 @@ result::Result dictofun_test_get_data(file_id_type file_id, uint8_t * buffer, ui
     return result::Result::OK;
 }
 
+result::Result dictofun_test_fs_status(FileSystemInterface::FSStatus& status)
+{
+    status.occupied_space = file_0_size + file_1_size;
+    status.free_space = fs_total_space - status.occupied_space;
+    status.files_count = 2;
+    return result::Result::OK;
+}
+
 FileSystemInterface dictofun_test_fs_if
 {
     dictofun_test_get_file_list,
@@ -134,6 +148,7 @@ FileSystemInterface dictofun_test_fs_if
     dictofun_test_open_file,
     dictofun_test_close_file,
     dictofun_test_get_data,
+    dictofun_test_fs_status
 };
 
 }

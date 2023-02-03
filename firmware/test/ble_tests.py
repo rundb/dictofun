@@ -16,6 +16,7 @@ fts_cp_char_uuid =           "00001002-0000-1000-8000-00805f9b34fb"
 fts_file_list_char_uuid =    "00001003-0000-1000-8000-00805f9b34fb"
 fts_file_info_char_uuid =    "00001004-0000-1000-8000-00805f9b34fb"
 fts_file_data_char_uuid =    "00001005-0000-1000-8000-00805f9b34fb"
+fts_fs_status_char_uuid =    "00001006-0000-1000-8000-00805f9b34fb"
 
 def configure_log():
     # timestr = time.strftime("%Y%m%d-%H%M%S")
@@ -100,6 +101,7 @@ class FtsClient:
         self.list_char = dictofun.get_characteristic_by_uuid(fts_file_list_char_uuid)
         self.info_char = dictofun.get_characteristic_by_uuid(fts_file_info_char_uuid)
         self.data_char = dictofun.get_characteristic_by_uuid(fts_file_data_char_uuid)
+        self.fs_status = dictofun.get_characteristic_by_uuid(fts_fs_status_char_uuid)
         self.dictofun = dictofun
 
     def request_files_list(self):
@@ -118,6 +120,9 @@ class FtsClient:
         for b in file_id_bytes:
             request.append(b)
         self.cp_char.write_value(request)
+
+    def request_fs_status(self):
+        self.cp_char.write_value(bytearray([4]))
 
     def parse_files_count(self, array):
         a = array
@@ -244,6 +249,34 @@ class FtsClient:
             logging.error("file info: transaction timeout. Received %d out of %d bytes" % (len(received_data), expected_size) )
 
         return received_data
+    
+    def get_fs_status(self):
+        # reset possibly pending previous transactions
+        self.info_char.enable_notifications(False)
+        self.list_char.enable_notifications(False)
+        self.data_char.enable_notifications(False)
+        self.fs_status.enable_notifications(True)
+        time.sleep(0.5)
+
+        self.request_fs_status()
+
+        received_data = bytearray([])
+        start_time = time.time()
+        transaction_timeout = 10 # seconds
+        while (not self.dictofun.is_updated_value_pending) and (time.time() - start_time < transaction_timeout):
+            time.sleep(0.01)
+
+        if time.time() - start_time >= transaction_timeout:
+            logging.error("fs status: timeout detected")
+            return {}
+        
+        raw = self.dictofun.get_last_received_packet()
+        fs_status = {}
+        fs_status["free_space"] = int.from_bytes(raw[2:5], "little")
+        fs_status["occupied_space"] = int.from_bytes(raw[6:9], "little")
+        fs_status["count"] = int.from_bytes(raw[10:13], "little")
+        
+        return fs_status
 
 
 class AnyDeviceManager(gatt.DeviceManager):
@@ -313,13 +346,17 @@ def run_fts_tests(dictofun):
     file0_data = fts_client.get_file_data(files_list[0], file_size)
 
     logging.info("received file with size %d" % len(file0_data))
+
+    fs_status = fts_client.get_fs_status()
+    logging.info("received fs status: " + str(fs_status))
     return 0
 
 
 if __name__ == '__main__':
     configure_log()
 
-    device_control = DictofunControl("/dev/ttyUSB0")
+    # device_control = DictofunControl("/dev/ttyUSB0")
+    device_control = DictofunControl("/dev/ttyUSB1")
     reset_result = device_control.issue_command("reset", 0.5)
     device_output = ""
     device_output += reset_result
