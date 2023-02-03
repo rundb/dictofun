@@ -60,6 +60,7 @@ Service advertises following set of characteristics.
 | 0003              | File Information | Read/Notify |
 | 0004              | File Data        | Read/Notify |
 | 0005              | FS Status        | Read/Notify |
+| 0006              | General Status   | Read/Notify |
 
 #### Control point
 
@@ -72,7 +73,7 @@ Service advertises following set of characteristics.
 | 03     | Request file data        | File ID (UINT64)  | Status, UINT8 |
 | 04     | Request FS status        | N/A               | Status, UINT8 |
 
-Following statuses shall be returned in response:
+Following statuses shall be returned in response, in case if it can be done immediately.
 
 | Status | Description                       |
 |:-------|:----------------------------------|
@@ -80,6 +81,7 @@ Following statuses shall be returned in response:
 | 02     | Opcode not supported              |
 | 03     | Invalid parameter                 |
 | 04     | File system corrupt               |
+
 
 ##### Opcode 0x01 - Request list of files
 
@@ -130,3 +132,28 @@ It could also be used in order to signal errors in case of a broken file or anyt
 #### File data
 
 File data is the raw content of the file as it is contained in the memory on the device. In order to interptet the file host must first read out the metadata of the device.
+
+#### FS Status
+
+FS Status characteristic shall provide general information about the state of the file system. In particular, it shall provide count of files in the FS,
+occupied and free space values. 
+
+##### Transaction format
+
+1. Bytes [0,1]: Amount of bytes in the transaction (in LSB order, f.e. `0x0C 0x00` in the start of the development of the given module)
+2. Bytes [2,3]: count of files in the filesystem.
+3. Bytes [4-7]: amount of free space in the FS in bytes
+3. Bytes [8-11]: amount of occupied space in the FS in bytes
+
+#### General status
+
+Since many FS operations can be lengthy and are being processed in the OS context, some responses can't be
+sent to the client in the form of immediate response. For this case characteristic `General Status` shall be used.
+Following statuses shall be reported:
+
+| Opcode | Status                   | Parameters        | Comments                           |
+|:-------|:-------------------------|:------------------|:-----------------------------------|
+| 01     | OK                       | N/A               | Can be used as a keep-alive packet |
+| 02     | File not found           | File ID (UINT64)  | N/A                                |
+| 03     | FS corrupt               | N/A               | N/A                                |
+| 04     | Transaction aborted      | Reason (UINT8)    | F.e. if record has been started    |
