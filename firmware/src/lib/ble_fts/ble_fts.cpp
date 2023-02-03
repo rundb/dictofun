@@ -26,7 +26,7 @@ blcm_link_ctx_storage_t FtsService::_link_ctx_storage =
 
 FtsService::Context FtsService::_context {
     0, 0, 
-    {0,0,0,0,}, {0,0,0,0,}, {0,0,0,0,}, {0,0,0,0,}, {0,0,0,0,},
+    {0,0,0,0,}, {0,0,0,0,}, {0,0,0,0,}, {0,0,0,0,}, {0,0,0,0,}, {0,0,0,0,},
     0, false,
     &_link_ctx_storage
 };
@@ -194,6 +194,18 @@ result::Result FtsService::init()
         return fs_status_char_add_result;
     }
 
+    const auto status_char_add_result = add_characteristic(
+        BLE_UUID_TYPE_BLE,
+        status_char_uuid, 
+        status_char_max_len,
+        &_context.status,
+        CharacteristicInUseType::READ_NOTIFY
+    );
+
+    if (result::Result::OK != status_char_add_result)
+    {
+        return status_char_add_result;
+    }
 
     _context.conn_handle = BLE_CONN_HANDLE_INVALID;
 
@@ -236,6 +248,7 @@ void FtsService::on_control_point_write(const uint32_t len, const uint8_t * data
     if (len == 0 || data == nullptr)
     {
         NRF_LOG_ERROR("cp.write: wrong input");
+        
         return;
     }
     switch (data[0])
@@ -565,11 +578,13 @@ result::Result FtsService::send_files_list()
     if (result::Result::OK != fs_call)
     {
         NRF_LOG_ERROR("ble::fts: FS files' list getter has failed");
+        (void)update_general_status(GeneralStatus::FS_CORRUPT, 0);
         return result::Result::ERROR_GENERAL;
     }
     if (count >= files_list_max_count)
     {
         NRF_LOG_ERROR("ble::fts: FS reported more files than this FTS implementation supports");
+        (void)update_general_status(GeneralStatus::FS_CORRUPT, 0);
         return result::Result::ERROR_GENERAL;
     }
     // Serialize the files list.
@@ -617,6 +632,7 @@ result::Result FtsService::send_file_info()
     if (result::Result::OK != file_info_call_result)
     {
         NRF_LOG_ERROR("ble::fts::send_info: error");
+        (void)update_general_status(GeneralStatus::FS_CORRUPT, 0);
         return file_info_call_result;
     }
 
@@ -646,6 +662,7 @@ result::Result FtsService::send_file_data()
     const auto open_result = _fs_if.file_open_function(_transaction_ctx.file_id, file_size);
     if (result::Result::OK != open_result)
     {
+        (void)update_general_status(GeneralStatus::FILE_NOT_FOUND, _transaction_ctx.file_id);
         return open_result;
     }
 
@@ -665,6 +682,7 @@ result::Result FtsService::send_file_data()
     if (result::Result::OK != read_result)
     {
         NRF_LOG_ERROR("ble::fts::send_data: FS read failed");
+        (void)update_general_status(GeneralStatus::FS_CORRUPT, 0);
         return read_result;
     }
 
@@ -708,13 +726,13 @@ result::Result FtsService::continue_sending_file_data()
 result::Result FtsService::send_fs_status()
 { 
     // TODO: add a signalling in case if the file doesn't exist.
-
     FileSystemInterface::FSStatus fs_status{};
     const auto fs_status_result = _fs_if.fs_status_function(fs_status);
 
     if (result::Result::OK != fs_status_result)
     {
         NRF_LOG_ERROR("ble::fts::send fs status failed");
+        (void)update_general_status(GeneralStatus::FS_CORRUPT, 0);
         return fs_status_result;
     }    
 
@@ -739,6 +757,40 @@ result::Result FtsService::send_fs_status()
     return result::Result::OK;
 }
 
+result::Result FtsService::update_general_status(GeneralStatus status, uint64_t parameter)
+{
+    _transaction_ctx.buffer[0] = static_cast<uint8_t>(status);
+    if (status == GeneralStatus::TRANSACTION_ABORTED)
+    {
+        // Intentionally casting 64->8, as the user should put abortion reason to the first byte
+        _transaction_ctx.buffer[1] = static_cast<uint8_t>(parameter);
+        _transaction_ctx.size = 2;
+    }
+    else if (status == GeneralStatus::FILE_NOT_FOUND)
+    {
+        memcpy(&_transaction_ctx.buffer[1], &parameter, sizeof(parameter));
+        _transaction_ctx.size = 1 + sizeof(parameter);
+    }
+    else
+    {
+        _transaction_ctx.size = 1;
+    }
+    _transaction_ctx.idx = 0;
+    _transaction_ctx.update_next_packet_size();
+
+    const auto push_result = push_data_packets(ControlPointOpcode::GENERAL_STATUS);
+    if (push_result == result::Result::OK)
+    {
+        NRF_LOG_DEBUG("ble::fts::status: sending %d bytes", _transaction_ctx.size);
+    }
+    else
+    {
+        NRF_LOG_ERROR("ble::fts::status: push has failed");
+        return result::Result::ERROR_GENERAL;
+    }
+    return result::Result::OK;
+}
+
 result::Result FtsService::push_data_packets(ControlPointOpcode opcode)
 {
     _transaction_ctx.update_next_packet_size();
@@ -749,7 +801,8 @@ result::Result FtsService::push_data_packets(ControlPointOpcode opcode)
     hvx_params.handle = (opcode == ControlPointOpcode::REQ_FILES_LIST) ? _context.files_list.value_handle : 
                         (opcode == ControlPointOpcode::REQ_FILE_INFO) ? _context.file_info.value_handle : 
                         (opcode == ControlPointOpcode::REQ_FILE_DATA) ? _context.file_data.value_handle : 
-                        (opcode == ControlPointOpcode::REQ_FS_STATUS) ? _context.fs_status.value_handle : 
+                        (opcode == ControlPointOpcode::REQ_FS_STATUS) ? _context.fs_status.value_handle :
+                        (opcode == ControlPointOpcode::GENERAL_STATUS) ? _context.status.value_handle :
                         BLE_CONN_HANDLE_INVALID;
     hvx_params.p_data = &_transaction_ctx.buffer[_transaction_ctx.idx];
     hvx_params.p_len  = &_transaction_ctx.packet_size;

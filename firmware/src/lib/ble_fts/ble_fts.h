@@ -79,12 +79,14 @@ private:
     static constexpr uint32_t file_info_char_uuid{0x1004};
     static constexpr uint32_t file_data_char_uuid{0x1005};
     static constexpr uint32_t fs_status_char_uuid{0x1006};
+    static constexpr uint32_t status_char_uuid{0x1007};
 
     static constexpr uint32_t cp_char_max_len{9};
     static constexpr uint32_t file_list_char_max_len{32};
     static constexpr uint32_t file_info_char_max_len{32};
     static constexpr uint32_t file_data_char_max_len{128};
     static constexpr uint32_t fs_status_char_max_len{14};
+    static constexpr uint32_t status_char_max_len{9};
 
     // TODO: separate BLE commands from internal states
     enum class ControlPointOpcode: uint8_t
@@ -93,6 +95,9 @@ private:
         REQ_FILE_INFO = 2,
         REQ_FILE_DATA = 3,
         REQ_FS_STATUS = 4,
+
+        GENERAL_STATUS = 240,
+        
         PUSH_DATA_PACKETS = 250,
         FINALIZE_TRANSACTION = 251,
         IDLE = 254,
@@ -110,6 +115,7 @@ private:
         bool is_file_data_notifications_enabled{false};
         bool is_file_info_notifications_enabled{false};
         bool is_fs_status_notifications_enabled{false};
+        bool is_status_notifications_enabled{false};
     };
 
     struct Context
@@ -121,6 +127,7 @@ private:
         ble_gatts_char_handles_t file_info;
         ble_gatts_char_handles_t file_data;
         ble_gatts_char_handles_t fs_status;
+        ble_gatts_char_handles_t status;
 
         uint16_t conn_handle;
         bool is_notification_enabled; 
@@ -170,6 +177,17 @@ private:
     result::Result send_file_data();
     result::Result continue_sending_file_data();
     result::Result send_fs_status();
+
+    enum GeneralStatus: uint8_t
+    {
+        OK = 1,
+        FILE_NOT_FOUND = 2,
+        FS_CORRUPT = 3,
+        TRANSACTION_ABORTED = 4,
+        GENERIC_ERROR = 5
+    };
+
+    result::Result update_general_status(GeneralStatus status, uint64_t parameter);
 
     void process_client_request(ControlPointOpcode client_request);
 

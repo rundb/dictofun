@@ -73,15 +73,6 @@ Service advertises following set of characteristics.
 | 03     | Request file data        | File ID (UINT64)  | Status, UINT8 |
 | 04     | Request FS status        | N/A               | Status, UINT8 |
 
-Following statuses shall be returned in response, in case if it can be done immediately.
-
-| Status | Description                       |
-|:-------|:----------------------------------|
-| 01     | Success                           |
-| 02     | Opcode not supported              |
-| 03     | Invalid parameter                 |
-| 04     | File system corrupt               |
-
 
 ##### Opcode 0x01 - Request list of files
 
@@ -151,9 +142,13 @@ Since many FS operations can be lengthy and are being processed in the OS contex
 sent to the client in the form of immediate response. For this case characteristic `General Status` shall be used.
 Following statuses shall be reported:
 
-| Opcode | Status                   | Parameters        | Comments                           |
-|:-------|:-------------------------|:------------------|:-----------------------------------|
-| 01     | OK                       | N/A               | Can be used as a keep-alive packet |
-| 02     | File not found           | File ID (UINT64)  | N/A                                |
-| 03     | FS corrupt               | N/A               | N/A                                |
-| 04     | Transaction aborted      | Reason (UINT8)    | F.e. if record has been started    |
+| Opcode | Status                   | Parameters        | Comments                              |
+|:-------|:-------------------------|:------------------|:--------------------------------------|
+| 01     | OK                       | N/A               | Can be used as a keep-alive packet    |
+| 02     | File not found           | File ID (UINT64)  | N/A                                   |
+| 03     | FS corrupt               | N/A               | N/A                                   |
+| 04     | Transaction aborted      | Reason (UINT8)    | F.e. if record has been started       |
+| 05     | Generic error            | N/A               | In case if yet unknown error occurred |
+
+First byte of the characteristic value contains the opcode.
+Data afterwards is defined by the table above.
