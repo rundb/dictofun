@@ -26,11 +26,20 @@ struct FileSystemInterface
     using file_close_function_type = std::function<result::Result (file_id_type)>;
     using file_data_get_function_type = std::function<result::Result (file_id_type, uint8_t *, uint32_t&, uint32_t)>;
 
+    struct FSStatus
+    {
+        uint32_t free_space{0};
+        uint32_t occupied_space{0};
+        uint32_t files_count{0};
+    } __attribute__((packed));
+    using fs_status_function_type = std::function<result::Result (FSStatus&)>;
+
     file_list_get_function_type file_list_get_function;
     file_info_get_function_type file_info_get_function;
     file_open_function_type file_open_function;
     file_close_function_type file_close_function;
     file_data_get_function_type file_data_get_function;
+    fs_status_function_type fs_status_function;
 };
 
 // TODO: consider replacing the glue structures above with a template
@@ -69,11 +78,13 @@ private:
     static constexpr uint32_t file_list_char_uuid{0x1003};
     static constexpr uint32_t file_info_char_uuid{0x1004};
     static constexpr uint32_t file_data_char_uuid{0x1005};
+    static constexpr uint32_t fs_status_char_uuid{0x1006};
 
     static constexpr uint32_t cp_char_max_len{9};
     static constexpr uint32_t file_list_char_max_len{32};
     static constexpr uint32_t file_info_char_max_len{32};
     static constexpr uint32_t file_data_char_max_len{128};
+    static constexpr uint32_t fs_status_char_max_len{14};
 
     // TODO: separate BLE commands from internal states
     enum class ControlPointOpcode: uint8_t
@@ -109,6 +120,7 @@ private:
         ble_gatts_char_handles_t files_list;
         ble_gatts_char_handles_t file_info;
         ble_gatts_char_handles_t file_data;
+        ble_gatts_char_handles_t fs_status;
 
         uint16_t conn_handle;
         bool is_notification_enabled; 
@@ -152,11 +164,12 @@ private:
     static constexpr uint32_t file_id_size{sizeof(uint64_t)};
     file_id_type get_file_id_from_raw(const uint8_t * data) const;
 
-    // API for functions that initiate transfer of FS data
+    // API for functions that initiate transfer of FS data (executed from OS context)
     result::Result send_files_list();
     result::Result send_file_info();
     result::Result send_file_data();
     result::Result continue_sending_file_data();
+    result::Result send_fs_status();
 
     void process_client_request(ControlPointOpcode client_request);
 

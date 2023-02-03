@@ -26,7 +26,7 @@ blcm_link_ctx_storage_t FtsService::_link_ctx_storage =
 
 FtsService::Context FtsService::_context {
     0, 0, 
-    {0, 0, 0, 0,}, {0,0,0,0,}, {0,0,0,0,}, {0,0,0,0,},
+    {0,0,0,0,}, {0,0,0,0,}, {0,0,0,0,}, {0,0,0,0,}, {0,0,0,0,},
     0, false,
     &_link_ctx_storage
 };
@@ -181,6 +181,19 @@ result::Result FtsService::init()
         return file_data_char_add_result;
     }
 
+    const auto fs_status_char_add_result = add_characteristic(
+        BLE_UUID_TYPE_BLE,
+        fs_status_char_uuid, 
+        fs_status_char_max_len,
+        &_context.fs_status,
+        CharacteristicInUseType::READ_NOTIFY
+    );
+
+    if (result::Result::OK != fs_status_char_add_result)
+    {
+        return fs_status_char_add_result;
+    }
+
 
     _context.conn_handle = BLE_CONN_HANDLE_INVALID;
 
@@ -207,13 +220,18 @@ void FtsService::on_write(ble_evt_t const * p_ble_evt, ClientContext& client_con
     {
         client_context.is_file_data_notifications_enabled = ble_srv_is_notification_enabled(p_evt_write->data);
     }
+    else if ((p_evt_write->handle == _context.fs_status.cccd_handle) && (p_evt_write->len == 2))
+    {
+        client_context.is_fs_status_notifications_enabled = ble_srv_is_notification_enabled(p_evt_write->data);
+    }
     else 
     {
-        NRF_LOG_WARNING("write to unknown char with len %d", p_evt_write->len);
+        //// Ignore, but it's kept here for the cases of debugging (in particular for porting to other client platforms)
+        // NRF_LOG_WARNING("write to unknown char with len %d", p_evt_write->len);
     }
 }
 
-void FtsService::on_control_point_write(uint32_t len, const uint8_t * data)
+void FtsService::on_control_point_write(const uint32_t len, const uint8_t * data)
 {
     if (len == 0 || data == nullptr)
     {
@@ -222,6 +240,7 @@ void FtsService::on_control_point_write(uint32_t len, const uint8_t * data)
     }
     switch (data[0])
     {
+        // TODO: add to all requests an immediate response in case of wrong parameters.
         case static_cast<int>(ControlPointOpcode::REQ_FILES_LIST):
         {
             on_req_files_list(len-1);
@@ -245,6 +264,7 @@ void FtsService::on_control_point_write(uint32_t len, const uint8_t * data)
         default:
         {
             NRF_LOG_ERROR("cp.write: wrong opcode");
+            // TODO: send a response to the client in order to notify it about an error. 
             break;
         }
     }
@@ -292,13 +312,14 @@ void FtsService::on_req_file_data(const uint32_t data_size, const uint8_t * file
     _context.pending_command = FtsService::ControlPointOpcode::REQ_FILE_DATA;
 }
 
-void FtsService::on_req_fs_status(uint32_t size)
+void FtsService::on_req_fs_status(const uint32_t size)
 {
     if (size != 0)
     {
         NRF_LOG_ERROR("cp.write: fs stat request wrong size");
         return;
     }
+    _context.pending_command = FtsService::ControlPointOpcode::REQ_FS_STATUS;
 }
 
 void FtsService::on_connect(ble_evt_t const * p_ble_evt, ClientContext& client_context)
@@ -511,6 +532,27 @@ void FtsService::process_client_request(ControlPointOpcode client_request)
             _context.pending_command = FtsService::ControlPointOpcode::IDLE;
             break;
         }
+        case FtsService::ControlPointOpcode::REQ_FS_STATUS:
+        {
+            NRF_LOG_DEBUG("ble::fts::processing FS status request");
+            if (_context.client_context == nullptr || !_context.client_context->is_fs_status_notifications_enabled)
+            {
+                NRF_LOG_ERROR("ble::fts::fs status: notifications are not enabled. Aborting");
+                _context.pending_command = FtsService::ControlPointOpcode::IDLE;
+                return;
+            }
+
+            const auto result = send_fs_status();
+            if (result != result::Result::OK)
+            {
+                NRF_LOG_ERROR("ble::fts::fs status send failed");
+                _context.pending_command = FtsService::ControlPointOpcode::IDLE;
+                return;
+            }
+            _context.active_command = _context.pending_command;
+            _context.pending_command = FtsService::ControlPointOpcode::IDLE;
+            break;   
+        }
         default: break;
     }
 }
@@ -663,6 +705,40 @@ result::Result FtsService::continue_sending_file_data()
     return result::Result::OK;
 }
 
+result::Result FtsService::send_fs_status()
+{ 
+    // TODO: add a signalling in case if the file doesn't exist.
+
+    FileSystemInterface::FSStatus fs_status{};
+    const auto fs_status_result = _fs_if.fs_status_function(fs_status);
+
+    if (result::Result::OK != fs_status_result)
+    {
+        NRF_LOG_ERROR("ble::fts::send fs status failed");
+        return fs_status_result;
+    }    
+
+    _transaction_ctx.idx = 0;
+    // NB: this is the place where problems can arise, if status structure is modified
+    constexpr uint32_t transaction_size{2 + sizeof(FileSystemInterface::FSStatus)};
+    _transaction_ctx.buffer[0] = static_cast<uint8_t>(transaction_size);
+    _transaction_ctx.buffer[1] = static_cast<uint8_t>(transaction_size >> 8);
+    memcpy(&_transaction_ctx.buffer[2], &fs_status, sizeof(fs_status));
+
+    _transaction_ctx.size = transaction_size;
+    
+    const auto push_result = push_data_packets(ControlPointOpcode::REQ_FS_STATUS);
+    if (push_result == result::Result::OK)
+    {
+        NRF_LOG_DEBUG("ble::fts::fs_status: sending %d bytes", _transaction_ctx.size);
+    }
+    else
+    {
+        NRF_LOG_ERROR("ble::fts::fs_status: push has failed");
+    }
+    return result::Result::OK;
+}
+
 result::Result FtsService::push_data_packets(ControlPointOpcode opcode)
 {
     _transaction_ctx.update_next_packet_size();
@@ -673,6 +749,7 @@ result::Result FtsService::push_data_packets(ControlPointOpcode opcode)
     hvx_params.handle = (opcode == ControlPointOpcode::REQ_FILES_LIST) ? _context.files_list.value_handle : 
                         (opcode == ControlPointOpcode::REQ_FILE_INFO) ? _context.file_info.value_handle : 
                         (opcode == ControlPointOpcode::REQ_FILE_DATA) ? _context.file_data.value_handle : 
+                        (opcode == ControlPointOpcode::REQ_FS_STATUS) ? _context.fs_status.value_handle : 
                         BLE_CONN_HANDLE_INVALID;
     hvx_params.p_data = &_transaction_ctx.buffer[_transaction_ctx.idx];
     hvx_params.p_len  = &_transaction_ctx.packet_size;
