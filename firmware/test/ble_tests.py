@@ -62,7 +62,7 @@ class DictofunBle(gatt.Device):
         return None
 
     def characteristic_value_updated(self, characteristic, value):
-        logging.debug(" char [%s] value updated" % (characteristic.uuid))
+        # logging.debug(" char [%s] value updated" % (characteristic.uuid))
         self.is_updated_value_pending = True
         self.value = value
     
@@ -163,7 +163,6 @@ class FtsClient:
         
         if is_first_packet_received:
             raw = self.dictofun.get_last_received_packet()
-            # FIXME this is a potential exception location - raw packet isn't a regular Python structure
             received_data += raw
             expected_size = (self.parse_files_count(received_data) + 1) * 8
         
@@ -197,7 +196,6 @@ class FtsClient:
         
         if is_first_packet_received:
             raw = self.dictofun.get_last_received_packet()
-            # FIXME this is a potential exception location - raw packet isn't a regular Python structure
             received_data += raw
             expected_size = self.parse_json_size(received_data) + 2
         
@@ -212,8 +210,18 @@ class FtsClient:
         return received_data[2:].decode("utf-8")
 
     def get_file_data(self, file_id, size):
-        self.data_char.enable_notifications()
+        # reset possibly pending previous transactions
+        self.dictofun.get_last_received_packet()
+
+        self.info_char.enable_notifications(False)
+        self.list_char.enable_notifications(False)
         time.sleep(0.5)
+
+        self.data_char.enable_notifications()
+        time.sleep(1)
+        self.dictofun.get_last_received_packet()
+        time.sleep(0.5)
+
         self.request_file_data(file_id)
 
         is_first_packet_received = False
@@ -223,15 +231,16 @@ class FtsClient:
         
         received_data = bytearray([])
         start_time = time.time()
-        transaction_timeout = 20 # seconds
-
+        transaction_timeout = 10 # seconds
         while (not is_first_packet_received) and (time.time() - start_time < transaction_timeout):
             is_first_packet_received = self.dictofun.is_updated_value_pending
         
         if is_first_packet_received:
             raw = self.dictofun.get_last_received_packet()
-            # FIXME this is a potential exception location - raw packet isn't a regular Python structure
             received_data += raw
+        else:
+            logging.error("timeout error")
+            return []
         
         while len(received_data) != expected_size and time.time() - start_time < transaction_timeout:
             if self.dictofun.is_updated_value_pending:
@@ -239,7 +248,6 @@ class FtsClient:
         
         if time.time() - start_time >= transaction_timeout:
             logging.error("file info: transaction timeout. Received %d out of %d bytes" % (len(received_data), expected_size) )
-            return []
 
         return received_data
 

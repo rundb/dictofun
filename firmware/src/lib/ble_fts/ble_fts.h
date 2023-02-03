@@ -88,7 +88,13 @@ private:
         FINALIZE_TRANSACTION = 251,
         IDLE = 254,
     };
-
+    bool is_command_a_request(const ControlPointOpcode opcode) const
+    {
+        return ControlPointOpcode::REQ_FILES_LIST == opcode ||
+               ControlPointOpcode::REQ_FILE_INFO == opcode ||
+               ControlPointOpcode::REQ_FILE_DATA == opcode ||
+               ControlPointOpcode::REQ_FS_STATUS == opcode;
+    }
     struct ClientContext
     {
         bool is_file_list_notifications_enabled{false};

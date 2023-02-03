@@ -76,9 +76,9 @@ result::Result dictofun_test_get_file_info(const ble::fts::file_id_type file_id,
 
 result::Result dictofun_test_close_file(file_id_type file_id)
 {
-    if (_test_ctx.is_file_open) 
+    if (!_test_ctx.is_file_open) 
     {
-        return result::Result::ERROR_BUSY;
+        return result::Result::ERROR_INVALID_PARAMETER;
     }
     _test_ctx.is_file_open = false;
     _test_ctx.position = 0;
@@ -100,6 +100,7 @@ result::Result dictofun_test_open_file(file_id_type file_id, uint32_t& file_size
         _test_ctx.current_file_id = file_id;
         _test_ctx.position = 0;
         _test_ctx.size = file_0_size;
+        file_size = file_0_size;
         return result::Result::OK;
     }
     else if (file_id == test_files_ids[1])

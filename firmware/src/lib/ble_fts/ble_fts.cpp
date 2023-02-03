@@ -397,19 +397,20 @@ void FtsService::process()
                 const auto close_result = _fs_if.file_close_function(_transaction_ctx.file_id);
                 if (result::Result::OK != close_result)
                 {
-                    NRF_LOG_DEBUG("failed to close file after transferring data");    
+                    NRF_LOG_ERROR("failed to close file after transferring data");    
                 }
                 NRF_LOG_DEBUG("finalizing transaction");
             }
             else
             {
                 const auto continue_result = continue_sending_file_data();
+                NRF_LOG_DEBUG("sent %d of %d", _transaction_ctx.file_sent_size, _transaction_ctx.file_size);
                 if (result::Result::OK != continue_result)
                 {
                     _context.active_command = FtsService::ControlPointOpcode::IDLE;
-                    _context.pending_command = FtsService::ControlPointOpcode::IDLE;
                     NRF_LOG_ERROR("failed to continue sending file data");
                 }
+                _context.pending_command = FtsService::ControlPointOpcode::IDLE;
             }
         }
         else
@@ -428,15 +429,11 @@ void FtsService::process()
             NRF_LOG_ERROR("ble::fts: failed to continue data pushing");
             _context.active_command = FtsService::ControlPointOpcode::IDLE;
         }
-        else
-        {
-            NRF_LOG_DEBUG("pushing more data");
-        }
         _context.pending_command = FtsService::ControlPointOpcode::IDLE;
         return;
     }
     else if (_context.pending_command != FtsService::ControlPointOpcode::IDLE &&
-        _context.active_command != FtsService::ControlPointOpcode::IDLE)
+        is_command_a_request(_context.active_command))
     {
         NRF_LOG_ERROR("ble::fts: command requested before previous command has been processed.")
         _context.pending_command = FtsService::ControlPointOpcode::IDLE;
@@ -609,7 +606,10 @@ result::Result FtsService::send_file_data()
         return open_result;
     }
 
+    NRF_LOG_DEBUG("ble::fts::sending %d bytes", file_size);
+
     // 2. Fill in the file size data to the transaction context
+    _transaction_ctx.idx = 0;
     _transaction_ctx.file_size = file_size;
 
     // 3. Read out first buffer from the file to the buffer
@@ -649,15 +649,10 @@ result::Result FtsService::continue_sending_file_data()
         NRF_LOG_ERROR("ble::fts::fs read has failed");
         return read_result;
     }
+
     _transaction_ctx.idx = 0;
+    _transaction_ctx.update_next_packet_size();
     auto push_result = push_data_packets(ControlPointOpcode::REQ_FILE_DATA);
-    // if (result::Result::ERROR_BUSY == push_result)
-    // {
-    //     // Sometimes HVX queue gets a bit full and we may want to wait a tiny bit and continue afterwards
-    //     NRF_LOG_WARNING("ble::fts::push: HVX queue is full, delaying the transaction");
-    //     _delay(5);
-    //     push_result = push_data_packets(ControlPointOpcode::REQ_FILE_DATA);
-    // }
 
     if (push_result != result::Result::OK)
     {
