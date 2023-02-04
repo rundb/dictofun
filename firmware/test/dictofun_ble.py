@@ -3,6 +3,7 @@ import gatt
 from enum import Enum
 import time
 import threading
+from fts import FtsClient
 
 class DictofunBle(gatt.Device):
     mac_address = None
@@ -11,6 +12,8 @@ class DictofunBle(gatt.Device):
     reconnect_time = 1
     are_services_resolved = False
     reconnect_thread = None
+
+    fts = None
 
     def __init__(self, mac_address, manager):
         super().__init__(mac_address, manager)
@@ -59,6 +62,7 @@ class DictofunBle(gatt.Device):
         if time.time() - start_time > timeout_value:
             logging.error("services resolution failed")
             return -1
+        self.fts = FtsClient(self)
         return 0
 
     """
@@ -93,6 +97,28 @@ class DictofunBle(gatt.Device):
             logging.debug("[%s]  Service [%s]" % (self.mac_address, service.uuid))
             for characteristic in service.characteristics:
                 logging.debug("[%s]    Characteristic [%s]" % (self.mac_address, characteristic.uuid))
+    
+    def get_characteristic_by_uuid(self, uuid):
+        for service in self.services:
+            for characteristic in service.characteristics:
+                if str(characteristic.uuid).capitalize() == str(uuid).capitalize():
+                    return characteristic
+        return None
+
+    def characteristic_read_value_failed(self, characteristic, error):
+        self.fts.characteristic_read_value_failed(characteristic, error)
+
+    def characteristic_write_value_succeeded(self, characteristic):
+        self.fts.characteristic_write_value_succeeded(characteristic)
+
+    def characteristic_write_value_failed(self, characteristic, error):
+        self.fts.characteristic_write_value_failed(characteristic, error)
+
+    def characteristic_enable_notifications_succeeded(self, characteristic):
+        self.fts.characteristic_enable_notifications_succeeded(characteristic)
+
+    def characteristic_enable_notifications_failed(self, characteristic, error):
+        self.fts.characteristic_enable_notifications_failed(characteristic, error)
 
 
 class DictofunDeviceManager(gatt.DeviceManager):
