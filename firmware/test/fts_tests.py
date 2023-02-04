@@ -30,6 +30,22 @@ def exit_routine(manager):
 def launch_tests():
     pass
 
+def prepare_dictofun(dictofun):
+    dictofun.connect_to_device(reconnect_attempts=1)
+    logging.debug("connecting")
+    if dictofun.wait_until_connected() < 0:
+        exit_routine(manager)
+    if dictofun.wait_until_services_resolved() < 0:
+        exit_routine(manager)
+
+def release_dictofun(dictofun):
+    dictofun.disconnect()
+    logging.debug("disconnecting")
+    if dictofun.wait_until_disconnected() < 0:
+        exit_routine(manager)
+    time.sleep(0.1)
+
+
 if __name__ == '__main__':
     configure_log()
 
@@ -42,21 +58,9 @@ if __name__ == '__main__':
         exit_routine(manager)
     dictofun = manager.get_dictofun()
     if not dictofun is None:
-        dictofun.connect_to_device(reconnect_attempts=1)
-        logging.debug("connecting")
-        if dictofun.wait_until_connected() < 0:
-            exit_routine(manager)
-        if dictofun.wait_until_services_resolved() < 0:
-            exit_routine(manager)
-
+        prepare_dictofun(dictofun)
         launch_tests()
-
-        dictofun.disconnect()
-        logging.debug("disconnecting")
-        if dictofun.wait_until_disconnected() < 0:
-            exit_routine(manager)
-        
-        time.sleep(0.1)
+        release_dictofun(dictofun)
     else:
         logging.error("no dictofun discovered")
 
