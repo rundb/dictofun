@@ -16,8 +16,15 @@ fi
 
 python3 dictofun_tests.py
 if [ $? -ne 0 ]; then
-    echo "Test execution has failed"
+    echo "Test execution has failed (dictofun)"
     exit -1
 fi
+
+python3 fts_tests.py "/dev/ttyUSB0"
+if [ $? -ne 0 ]; then
+    echo "Test execution has failed (FTS)"
+    exit -1
+fi
+
 
 exit 0

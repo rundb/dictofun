@@ -2,6 +2,10 @@ import serial
 import time
 import re
 
+
+"""
+This class represents an interface for communicating to Dictofun over UART console.
+"""
 class DictofunControl:
     def __init__(self, port):
         self.ser = serial.Serial(port, timeout=1)
