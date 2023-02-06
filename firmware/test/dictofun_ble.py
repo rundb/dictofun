@@ -105,6 +105,9 @@ class DictofunBle(gatt.Device):
                     return characteristic
         return None
 
+    def characteristic_value_updated(self, characteristic, value):
+        self.fts.characteristic_value_updated(characteristic, value)
+
     def characteristic_read_value_failed(self, characteristic, error):
         self.fts.characteristic_read_value_failed(characteristic, error)
 
