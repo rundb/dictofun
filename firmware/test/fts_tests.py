@@ -49,6 +49,15 @@ def test_files_info_getter(fts):
         return -1
     return 0
 
+def test_files_data_getter(fts):
+    test_file_id = 0x102030405060708
+    test_file_size = 512
+    file_data = fts.get_file_data(test_file_id, test_file_size)
+    if len(file_data) != 512:
+        logging.error("received file data size = %d != 512" % len(file_data))
+        return -1
+    return 0
+
 def launch_tests(dictofun):
     fts = None
     try:
@@ -68,6 +77,12 @@ def launch_tests(dictofun):
         logging.error("file info test: failed")
     else:
         logging.debug("file info test: passed")
+
+    data_getter_result = test_files_data_getter(fts)
+    if data_getter_result < 0:
+        logging.error("file data test: failed")
+    else:
+        logging.debug("file data test: passed")
 
     return min(0, files_list_result, info_getter_result)
 

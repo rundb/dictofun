@@ -31,19 +31,16 @@ class FtsClient:
     ##################### Implementation of GATT callbacks #################
 
     def characteristic_value_updated(self, characteristic, value):
-        logging.debug(" char [%s] updated" % (characteristic.uuid))
+        #logging.debug(" char [%s] updated" % (characteristic.uuid))
         self.values[characteristic.uuid] = value
         self.pending_flags[characteristic.uuid] = True
-
-    def is_new_packet_pending(self, characteristic):
-        return self.pending_flags[characteristic.uuid]
 
     def characteristic_read_value_failed(self, characteristic, error):
         logging.debug(" char [%s] read value failed (%s)" % (characteristic.uuid, str(error)))
         pass
 
     def characteristic_write_value_succeeded(self, characteristic):
-        logging.debug(" char [%s] write value success" % (characteristic.uuid))
+        #logging.debug(" char [%s] write value success" % (characteristic.uuid))
         pass
 
     def characteristic_write_value_failed(self, characteristic, error):
@@ -51,7 +48,7 @@ class FtsClient:
         pass
 
     def characteristic_enable_notifications_succeeded(self, characteristic):
-        logging.debug(" char [%s] enabled notifications successfully" % (characteristic.uuid))
+        #logging.debug(" char [%s] enabled notifications successfully" % (characteristic.uuid))
         pass
 
     def characteristic_enable_notifications_failed(self, characteristic, error):
@@ -64,6 +61,13 @@ class FtsClient:
 
     def _request_file_info(self, file_id):
         request = bytearray([2])
+        file_id_bytes = file_id.to_bytes(8, "little")
+        for b in file_id_bytes:
+            request.append(b)
+        self.cp_char.write_value(request)
+
+    def _request_file_data(self, file_id):
+        request = bytearray([3])
         file_id_bytes = file_id.to_bytes(8, "little")
         for b in file_id_bytes:
             request.append(b)
@@ -113,10 +117,10 @@ class FtsClient:
         start_time = time.time()
         transaction_timeout = 10 # seconds
 
-        while (not self.is_new_packet_pending(self.list_char)) and (time.time() - start_time < transaction_timeout):
+        while (not self.pending_flags[self.list_char.uuid]) and (time.time() - start_time < transaction_timeout):
             pass
         
-        if self.is_new_packet_pending(self.list_char):
+        if self.pending_flags[self.list_char.uuid]:
             raw = self.values[self.list_char.uuid]
             self.pending_flags[self.list_char.uuid] = False
             received_data += raw
@@ -126,7 +130,7 @@ class FtsClient:
             return []
         
         while len(received_data) != expected_size and time.time() - start_time < transaction_timeout:
-            if self.is_new_packet_pending(self.list_char):
+            if self.pending_flags[self.list_char.uuid]:
                 self.pending_flags[self.list_char.uuid] = False
                 received_data += self.values[self.list_char.uuid]
         
@@ -142,7 +146,6 @@ class FtsClient:
         self.pending_flags[self.info_char.uuid] = False
         self._request_file_info(file_id)
 
-        # minimal expected size, if there are no files provided
         expected_size = 8
         
         received_data = bytearray([])
@@ -172,3 +175,23 @@ class FtsClient:
 
         json_info = received_data[2:].decode("utf-8")
         return self._parse_file_info_json(json_info)
+
+    def get_file_data(self, file_id, size):
+        self.data_char.enable_notifications()
+        self.pending_flags[self.data_char.uuid] = False
+        self._request_file_data(file_id)
+        expected_size = size
+        
+        received_data = bytearray([])
+        start_time = time.time()
+        transaction_timeout = 0.1 * size
+
+        while len(received_data) != expected_size and time.time() - start_time < transaction_timeout:
+            if self.pending_flags[self.data_char.uuid]:
+                received_data += self.values[self.data_char.uuid]
+                self.pending_flags[self.data_char.uuid] = False
+        
+        if time.time() - start_time >= transaction_timeout:
+            logging.error("file info: transaction timeout. Received %d out of %d bytes" % (len(received_data), expected_size) )
+
+        return received_data
