@@ -3,6 +3,14 @@ import logging
 import time
 import json
 
+"""
+This class represents a set of methods implementing a simple FTS client. 
+It allows to:
+- get list of files available on the device
+- get information about any of the files on the device
+- get the file contents (from device to the user)
+- get status of the filesystem (free/occupied space, files' count)
+"""
 class FtsClient:
     file_transfer_service_uuid = "a0451001-b822-4820-8782-bd8faf68807b"
 
@@ -58,6 +66,7 @@ class FtsClient:
         pass
     
     ##################### Implementation of requests #################
+    # Opcodes 1-4: you can find explanations in the README.md: https://github.com/rundb/dictofun/tree/master/firmware/src/lib/ble_fts#control-point
     def _request_files_list(self):
         self.cp_char.write_value(bytearray([1]))
 

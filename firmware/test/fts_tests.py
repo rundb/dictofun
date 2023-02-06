@@ -30,7 +30,8 @@ def launch_ble_manager(manager):
 def exit_routine(manager):
     manager.stop()
     exit(-1)
-
+    
+####################### Test functions (assuming that BLE subsystem runs in testing mode) ######
 def test_files_list_getter(fts):
     # Execute test on reading out the list of the files available on the device
     files_list = fts.get_files_list()
@@ -65,6 +66,10 @@ def test_fs_status_getter(fts):
         return -1
     return 0
 
+"""
+Tests' launcher: executes all tests and prints their status to the log.
+Also returns -1, if any of the tests failed (so return value can be used in CI automation scripting)
+"""
 def launch_tests(dictofun):
     fts = None
     try:
@@ -99,6 +104,12 @@ def launch_tests(dictofun):
 
     return min(0, files_list_result, info_getter_result, data_getter_result, fs_status_getter_result)
 
+"""
+Here all preparations (except for UART commands is performed)
+TODO: consider placing here the `bletest 1` command.
+
+After this command is done FTS tests can be executed.
+"""
 def prepare_dictofun(dictofun, dictofun_control):
     global device_output
     dictofun.connect_to_device(reconnect_attempts=1)
@@ -160,5 +171,8 @@ if __name__ == '__main__':
 
     manager.stop()
 
+    if test_execution_result < 0:
+        logging.error("tests failed")
+    else:
+        logging.info("tests passed")
     exit(test_execution_result)
-    

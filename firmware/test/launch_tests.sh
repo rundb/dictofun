@@ -20,7 +20,7 @@ if [ $? -ne 0 ]; then
     exit -1
 fi
 
-python3 fts_tests.py
+python3 fts_tests.py "/dev/ttyUSB0"
 if [ $? -ne 0 ]; then
     echo "Test execution has failed (FTS)"
     exit -1

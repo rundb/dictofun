@@ -5,6 +5,12 @@ import time
 import threading
 from fts import FtsClient
 
+"""
+Class representing Dictofun as a GATT device. Instance of this class can be created when 
+device is discovered with BLE.
+It contains inherited methods of gatt.device related to connection states and to characteristics 
+callbacks.
+"""
 class DictofunBle(gatt.Device):
     mac_address = None
     manager = None
@@ -13,17 +19,25 @@ class DictofunBle(gatt.Device):
     are_services_resolved = False
     reconnect_thread = None
 
+    """
+    Instance of FTS Client, shall be instantiated after services discovery and only if all
+    FTS characteristics exist in the device.
+    """
     fts = None
 
     def __init__(self, mac_address, manager):
         super().__init__(mac_address, manager)
 
+    """
+    This method should be used publicly in order to create an instance of a Dictofun using 
+    an existing instance of a GATT device.
+    """
     @classmethod
     def from_parent(cls, parent):
         return cls(parent.mac_address, parent.manager)
 
     """
-    Due to inheritance issues connect() and _connect() can't be used here
+    NB: Due to inheritance issues connect() and _connect() can't be used here
     """
     def connect_to_device(self, reconnect_attempts = 0):
         self.reconnect_attempts = reconnect_attempts + 1
@@ -124,6 +138,10 @@ class DictofunBle(gatt.Device):
         self.fts.characteristic_enable_notifications_failed(characteristic, error)
 
 
+"""
+This class inherits a DeviceManager. Essentially it's just a factory for creating a Dictofun object,
+after it's been discovered by the GATT library.
+"""
 class DictofunDeviceManager(gatt.DeviceManager):
     class ConnectionStatus(Enum):
         IDLE = 1
@@ -149,6 +167,7 @@ class DictofunDeviceManager(gatt.DeviceManager):
                 self.connection_status = self.ConnectionStatus.IDLE
 
     # TODO: extend this getter with specified MAC address
+    # TODO: make sure that dictofun instance is not re-created
     def get_dictofun(self):
         if self.connection_status != self.ConnectionStatus.IDLE:
             self.dictofun = DictofunBle.from_parent(self.device)
