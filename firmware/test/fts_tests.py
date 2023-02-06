@@ -31,6 +31,24 @@ def exit_routine(manager):
     manager.stop()
     exit(-1)
 
+def test_files_list_getter(fts):
+    # Execute test on reading out the list of the files available on the device
+    files_list = fts.get_files_list()
+    logging.debug("FTS Server provides following %d files" % len(files_list))
+    for file in files_list:
+        logging.debug("\t%x" % file)
+    if len(files_list) != 2 or files_list[0] != 0x102030405060708:
+        return -1
+
+    return 0
+
+def test_files_info_getter(fts):
+    test_file_id = 0x102030405060708
+    file_info = fts.get_file_info(test_file_id)
+    if len(file_info) == 0 or file_info["size"] != 512:
+        return -1
+    return 0
+
 def launch_tests(dictofun):
     fts = None
     try:
@@ -39,29 +57,37 @@ def launch_tests(dictofun):
         logging.error("failed to create FTS Client instance, error: %s" % str(e))
         exit(-1)
 
-    # Execute test on reading out the list of the files available on the device
-    files_list = fts.get_files_list()
-    logging.info("FTS Server provides following %d files" % len(files_list))
-    for file in files_list:
-        logging.info("\t%x" % file)
-    
-    return 0
+    files_list_result = test_files_list_getter(fts)
+    if files_list_result < 0:
+        logging.error("files list test: failed")
+    else:
+        logging.debug("files list test: passed")
+
+    info_getter_result = test_files_info_getter(fts)
+    if info_getter_result < 0:
+        logging.error("file info test: failed")
+    else:
+        logging.debug("file info test: passed")
+
+    return min(0, files_list_result, info_getter_result)
 
 def prepare_dictofun(dictofun, dictofun_control):
     global device_output
     dictofun.connect_to_device(reconnect_attempts=1)
-    logging.debug("connecting")
     if dictofun.wait_until_connected() < 0:
         exit_routine(manager)
     if dictofun.wait_until_services_resolved() < 0:
         exit_routine(manager)
+    device_output += dictofun_control.issue_command("\n", 0.1)
+
 
 def release_dictofun(dictofun, dictofun_control):
+    global device_output
     dictofun.disconnect()
-    logging.debug("disconnecting")
     if dictofun.wait_until_disconnected() < 0:
         exit_routine(manager)
     time.sleep(0.1)
+    device_output += dictofun_control.issue_command("\n", 0.1)
 
 
 if __name__ == '__main__':
@@ -91,9 +117,10 @@ if __name__ == '__main__':
         exit_routine(manager)
     dictofun = manager.get_dictofun()
     
+    test_execution_result = 0
     if not dictofun is None:
         prepare_dictofun(dictofun, dictofun_control)
-        launch_tests(dictofun)
+        test_execution_result = launch_tests(dictofun)
         release_dictofun(dictofun, dictofun_control)
     else:
         logging.error("no dictofun discovered")
@@ -105,3 +132,5 @@ if __name__ == '__main__':
 
     manager.stop()
 
+    exit(test_execution_result)
+    

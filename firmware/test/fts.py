@@ -1,6 +1,7 @@
 import gatt
 import logging
 import time
+import json
 
 class FtsClient:
     file_transfer_service_uuid = "a0451001-b822-4820-8782-bd8faf68807b"
@@ -26,6 +27,8 @@ class FtsClient:
             raise Exception("failed to access FTS characteristic")
         #self.status.enable_notifications()
         self.dictofun = dictofun
+
+    ##################### Implementation of GATT callbacks #################
 
     def characteristic_value_updated(self, characteristic, value):
         logging.debug(" char [%s] updated" % (characteristic.uuid))
@@ -55,9 +58,18 @@ class FtsClient:
         logging.debug(" char [%s] enable notifications failed failed (0x%s)" % (characteristic.uuid, str(error)))
         pass
     
+    ##################### Implementation of requests #################
     def _request_files_list(self):
         self.cp_char.write_value(bytearray([1]))
+
+    def _request_file_info(self, file_id):
+        request = bytearray([2])
+        file_id_bytes = file_id.to_bytes(8, "little")
+        for b in file_id_bytes:
+            request.append(b)
+        self.cp_char.write_value(request)
     
+    ##################### Implementation of parsers #################
     def _parse_files_count(self, array):
         a = array
         return int(a[0] + (a[1] << 8) + (a[2] << 16) + (a[3] << 24))
@@ -71,6 +83,23 @@ class FtsClient:
             idx += element_size
         return elements
 
+    def _parse_json_size(self, array):
+        a = array
+        return int(a[0] + (a[1] << 8))
+
+    def _parse_file_info_json(self, json_value):
+        file_info = {}
+        try:
+            metadata = json.loads(json_value)
+            file_info["size"] = metadata["s"]
+            file_info["frequency"] = metadata["f"]
+            file_info["codec"] = metadata["c"]
+        except Exception as e:
+            logging.error("JSON decoding error " + str(e))
+            return file_info
+        return file_info
+
+    ##################### Implementation of public API methods #################
     def get_files_list(self):
         self.list_char.enable_notifications()
         time.sleep(0.5)
@@ -106,3 +135,40 @@ class FtsClient:
             return []
 
         return self._parse_files_list(received_data[8:])
+
+    def get_file_info(self, file_id):
+        self.info_char.enable_notifications()
+        time.sleep(0.5)
+        self.pending_flags[self.info_char.uuid] = False
+        self._request_file_info(file_id)
+
+        # minimal expected size, if there are no files provided
+        expected_size = 8
+        
+        received_data = bytearray([])
+        start_time = time.time()
+        transaction_timeout = 10 # seconds
+
+        while (not self.pending_flags[self.info_char.uuid]) and (time.time() - start_time < transaction_timeout):
+            pass
+        
+        if self.pending_flags[self.info_char.uuid]:
+            raw = self.values[self.info_char.uuid]
+            self.pending_flags[self.info_char.uuid] = False
+            received_data += raw
+            expected_size = self._parse_json_size(received_data) + 2
+        else:
+            logging.error("file info: transaction timeout")
+            return {}
+        
+        while len(received_data) != expected_size and time.time() - start_time < transaction_timeout:
+            if self.pending_flags[self.info_char.uuid]:
+                received_data += self.values[self.info_char.uuid]
+                self.pending_flags[self.info_char.uuid] = False
+        
+        if time.time() - start_time >= transaction_timeout:
+            logging.error("file info: transaction timeout. Received %d out of %d bytes" % (len(received_data), expected_size) )
+            return []
+
+        json_info = received_data[2:].decode("utf-8")
+        return self._parse_file_info_json(json_info)
