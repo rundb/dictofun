@@ -58,6 +58,13 @@ def test_files_data_getter(fts):
         return -1
     return 0
 
+def test_fs_status_getter(fts):
+    fs_status = fts.get_fs_status()
+    if len(fs_status) == 0 or fs_status["count"] != 2:
+        logging.error("failed to receive fs status")
+        return -1
+    return 0
+
 def launch_tests(dictofun):
     fts = None
     try:
@@ -84,7 +91,13 @@ def launch_tests(dictofun):
     else:
         logging.debug("file data test: passed")
 
-    return min(0, files_list_result, info_getter_result)
+    fs_status_getter_result = test_fs_status_getter(fts)
+    if fs_status_getter_result < 0:
+        logging.error("fs status test: failed")
+    else:
+        logging.debug("fs status test: passed")
+
+    return min(0, files_list_result, info_getter_result, data_getter_result, fs_status_getter_result)
 
 def prepare_dictofun(dictofun, dictofun_control):
     global device_output

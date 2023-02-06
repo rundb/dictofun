@@ -25,7 +25,7 @@ class FtsClient:
         self.status = dictofun.get_characteristic_by_uuid(self.fts_status_char_uuid)
         if self.cp_char is None or self.list_char is None or self.data_char is None or self.fs_status is None or self.status is None:
             raise Exception("failed to access FTS characteristic")
-        #self.status.enable_notifications()
+        self.status.enable_notifications()
         self.dictofun = dictofun
 
     ##################### Implementation of GATT callbacks #################
@@ -34,6 +34,8 @@ class FtsClient:
         #logging.debug(" char [%s] updated" % (characteristic.uuid))
         self.values[characteristic.uuid] = value
         self.pending_flags[characteristic.uuid] = True
+        if characteristic.uuid == self.status.uuid:
+            logging.warn(" status char updated. new value: %s " + str(value))
 
     def characteristic_read_value_failed(self, characteristic, error):
         logging.debug(" char [%s] read value failed (%s)" % (characteristic.uuid, str(error)))
@@ -72,6 +74,9 @@ class FtsClient:
         for b in file_id_bytes:
             request.append(b)
         self.cp_char.write_value(request)
+
+    def _request_fs_status(self):
+        self.cp_char.write_value(bytearray([4]))
     
     ##################### Implementation of parsers #################
     def _parse_files_count(self, array):
@@ -103,6 +108,13 @@ class FtsClient:
             return file_info
         return file_info
 
+    def _parse_fs_status(self, raw):
+        fs_status = {}
+        fs_status["free_space"] = int.from_bytes(raw[2:5], "little")
+        fs_status["occupied_space"] = int.from_bytes(raw[6:9], "little")
+        fs_status["count"] = int.from_bytes(raw[10:13], "little")
+        return fs_status
+
     ##################### Implementation of public API methods #################
     def get_files_list(self):
         self.list_char.enable_notifications()
@@ -118,7 +130,7 @@ class FtsClient:
         transaction_timeout = 10 # seconds
 
         while (not self.pending_flags[self.list_char.uuid]) and (time.time() - start_time < transaction_timeout):
-            pass
+            time.sleep(0.01)
         
         if self.pending_flags[self.list_char.uuid]:
             raw = self.values[self.list_char.uuid]
@@ -153,7 +165,7 @@ class FtsClient:
         transaction_timeout = 10 # seconds
 
         while (not self.pending_flags[self.info_char.uuid]) and (time.time() - start_time < transaction_timeout):
-            pass
+            time.sleep(0.01)
         
         if self.pending_flags[self.info_char.uuid]:
             raw = self.values[self.info_char.uuid]
@@ -195,3 +207,25 @@ class FtsClient:
             logging.error("file info: transaction timeout. Received %d out of %d bytes" % (len(received_data), expected_size) )
 
         return received_data
+
+    def get_fs_status(self):
+        self.fs_status.enable_notifications(True)
+
+        self._request_fs_status()
+        self.pending_flags[self.fs_status.uuid] = False
+
+        received_data = bytearray([])
+        start_time = time.time()
+        transaction_timeout = 2
+
+        while (not self.pending_flags[self.fs_status.uuid]) and (time.time() - start_time < transaction_timeout):
+            time.sleep(0.01)
+
+        if time.time() - start_time >= transaction_timeout:
+            logging.error("fs status: timeout detected")
+            return {}
+        
+        raw = self.values[self.fs_status.uuid]
+        fs_status = self._parse_fs_status(raw)
+        
+        return fs_status
