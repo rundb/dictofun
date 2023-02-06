@@ -13,7 +13,7 @@ device_output = ""
 
 def configure_log():
     logging.basicConfig(
-        level=logging.DEBUG,
+        level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",
         handlers=[
             logging.StreamHandler(sys.stdout)
@@ -125,7 +125,6 @@ def release_dictofun(dictofun, dictofun_control):
     dictofun.disconnect()
     if dictofun.wait_until_disconnected() < 0:
         exit_routine(manager)
-    time.sleep(0.1)
     device_output += dictofun_control.issue_command("\n", 0.1)
 
 
@@ -164,12 +163,17 @@ if __name__ == '__main__':
     else:
         logging.error("no dictofun discovered")
 
+    manager.stop()
+
     device_output += dictofun_control.issue_command("\n", 0.5)
 
-    logging.info("device output: " + str(device_output))
-    #TODO: add parsing of device_output to discover errors
-
-    manager.stop()
+    if "error" in device_output:
+        logging.error("found keyword `error` in the device output.")
+        logging.error("device output: " + str(device_output))
+        test_execution_result = -1
+    else:
+        logging.debug("device output: " + str(device_output))
+    
 
     if test_execution_result < 0:
         logging.error("tests failed")
