@@ -10,6 +10,7 @@
 #include "peer_manager.h"
 #include "ble.h"
 #include "ble_lbs.h"
+#include "ble_fts.h"
 
 namespace ble
 {
@@ -32,6 +33,7 @@ public:
     result::Result start();
     result::Result stop();
     void process();
+    void connect_fts_to_target_fs();
 private:
     result::Result init_sdh();
     result::Result init_gap();

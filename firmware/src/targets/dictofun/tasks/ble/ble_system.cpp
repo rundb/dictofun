@@ -19,6 +19,7 @@
 #include "ble_conn_params.h"
 #include "nrf_sdh_freertos.h"
 #include "boards.h"
+#include "ble_fts_glue.h"
 
 namespace ble
 {
@@ -134,6 +135,11 @@ result::Result BleSystem::stop()
 void BleSystem::process()
 {
     services_process();
+}
+
+void BleSystem::connect_fts_to_target_fs()
+{
+    set_fts_fs_handler(integration::target::dictofun_fs_if);
 }
 
 /// ============ Private API implementation

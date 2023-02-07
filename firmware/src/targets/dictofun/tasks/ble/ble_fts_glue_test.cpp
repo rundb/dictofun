@@ -6,6 +6,7 @@
 #include "ble_fts_glue.h"
 #include <cstdio>
 #include <algorithm>
+#include "ble_fts.h"
 
 using namespace ble::fts;
 
@@ -153,8 +154,4 @@ FileSystemInterface dictofun_test_fs_if
 
 }
 
-namespace target
-{
-
-}
 }

@@ -106,7 +106,7 @@ def launch_tests(dictofun):
 
 """
 Here all preparations (except for UART commands is performed)
-TODO: consider placing here the `bletest 1` command.
+TODO: consider placing here the `ble 1` command.
 
 After this command is done FTS tests can be executed.
 """
@@ -142,7 +142,7 @@ if __name__ == '__main__':
         exit(-1)
 
     device_output += dictofun_control.issue_command("reset", 0.5)
-    device_output += dictofun_control.issue_command("bletest 1", 0.5)
+    device_output += dictofun_control.issue_command("ble 1", 0.5)
 
     manager = DictofunDeviceManager(adapter_name='hci0')
     manager.start_discovery()

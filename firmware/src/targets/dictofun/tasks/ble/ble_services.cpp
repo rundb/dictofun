@@ -62,6 +62,11 @@ result::Result init_services(ble_lbs_led_write_handler_t led_write_handler)
     return result::Result::OK;
 }
 
+void set_fts_fs_handler(ble::fts::FileSystemInterface& fs_if)
+{
+    fts_service.set_fs_interface(fs_if);
+}
+
 size_t get_services_uuids(ble_uuid_t * service_uuids, const size_t max_uuids)
 {
     if (nullptr == service_uuids)

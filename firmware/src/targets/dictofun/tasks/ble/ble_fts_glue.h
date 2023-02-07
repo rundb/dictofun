@@ -20,7 +20,7 @@ extern ble::fts::FileSystemInterface dictofun_test_fs_if;
 namespace target
 {
 
-//ble::fts::FileSystemInterface dictofun_fs_if;
+extern ble::fts::FileSystemInterface dictofun_fs_if;
 
 }
 }

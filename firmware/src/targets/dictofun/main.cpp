@@ -57,6 +57,10 @@ application::QueueDescriptor<memory::StatusQueueElement, 1>          memory_stat
 application::QueueDescriptor<ble::CommandQueueElement, 1>            ble_commands_queue;
 application::QueueDescriptor<ble::RequestQueueElement, 1>            ble_requests_queue; 
 
+application::QueueDescriptor<ble::CommandToMemoryQueueElement, 1>    ble_to_mem_commands_queue;
+application::QueueDescriptor<ble::StatusFromMemoryQueueElement, 1>   ble_from_mem_status_queue;
+application::QueueDescriptor<ble::FileDataFromMemoryQueueElement, 1> ble_from_mem_data_queue;
+
 application::QueueDescriptor<led::CommandQueueElement, 3>            led_commands_queue;
 
 // ============================= Timers =====================================
@@ -162,6 +166,24 @@ int main()
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
+    const auto ble_to_mem_commands_queue_init_result = ble_to_mem_commands_queue.init();
+    if (result::Result::OK != ble_to_mem_commands_queue_init_result)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
+    const auto ble_from_mem_status_queue_init_result = ble_from_mem_status_queue.init();
+    if (result::Result::OK != ble_from_mem_status_queue_init_result)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
+    const auto ble_from_mem_data_queue_init_result = ble_from_mem_data_queue.init();
+    if (result::Result::OK != ble_from_mem_data_queue_init_result)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
     const auto led_commands_queue_init_result = led_commands_queue.init();
     if (result::Result::OK != led_commands_queue_init_result)
     {
@@ -230,6 +252,9 @@ int main()
 
     memory_context.command_queue = memory_commands_queue.handle;
     memory_context.status_queue = memory_status_queue.handle;
+    memory_context.command_from_ble_queue = ble_to_mem_commands_queue.handle;
+    memory_context.status_to_ble_queue = ble_from_mem_status_queue.handle;
+    memory_context.data_to_ble_queue =  ble_from_mem_data_queue.handle;
     const auto memory_task_init_result = memory_task.init(
         memory::task_memory,
         "MEM",
@@ -242,6 +267,9 @@ int main()
 
     ble_context.command_queue = ble_commands_queue.handle;
     ble_context.requests_queue = ble_requests_queue.handle;
+    ble_context.command_to_mem_queue = ble_to_mem_commands_queue.handle;
+    ble_context.status_from_mem_queue = ble_from_mem_status_queue.handle;
+    ble_context.data_from_mem_queue = ble_from_mem_data_queue.handle;
     const auto ble_task_init_result = ble_task.init(
         ble::task_ble,
         "BLE",
