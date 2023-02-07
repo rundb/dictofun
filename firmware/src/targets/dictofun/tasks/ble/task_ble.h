@@ -74,7 +74,6 @@ struct StatusFromMemoryQueueElement
     StatusFromMemory status;
 };
 
-
 struct FileDataFromMemoryQueueElement
 {
     static constexpr size_t element_size{256};
