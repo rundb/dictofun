@@ -12,6 +12,7 @@
 #include "spi_flash.h"
 #include "boards.h"
 #include "block_api.h"
+#include "littlefs_access.h"
 
 // TODO: consider moving all data structure definitions to a single location 
 // instead of introducing dependencies between the tasks.
@@ -128,6 +129,7 @@ static bool is_ble_access_allowed()
     return true;
 }
 
+
 void process_request_from_ble(Context& context, ble::CommandToMemory command_id)
 {
     NRF_LOG_DEBUG("mem: rcvd request %d from BLE", command_id);
@@ -136,6 +138,44 @@ void process_request_from_ble(Context& context, ble::CommandToMemory command_id)
     {
         status.status = ble::StatusFromMemory::ERROR_PERMISSION_DENIED;
         status.data_size = 0;
+        const auto send_result = xQueueSend(context.status_to_ble_queue, &status, 0);
+        if (pdTRUE != send_result)
+        {
+            NRF_LOG_ERROR("mem: failed to send response to BLE");
+        }
+        return;
+    }
+
+    ble::FileDataFromMemoryQueueElement data_queue_elem;
+    switch (command_id)
+    {
+        case ble::CommandToMemory::GET_FILES_LIST:
+        {
+            const auto mount_result = memory::filesystem::init_littlefs(lfs, lfs_configuration);
+            if (mount_result != result::Result::OK)
+            {
+                NRF_LOG_ERROR("mem: failed to mount littlefs");
+                status.status = ble::StatusFromMemory::ERROR_FS_CORRUPT;
+                status.data_size = 0;
+            }
+            const auto ls_result = memory::filesystem::get_files_list(
+                lfs, 
+                data_queue_elem.size, 
+                data_queue_elem.data, 
+                ble::FileDataFromMemoryQueueElement::element_max_size);
+            if (result::Result::OK != ls_result)
+            {
+                NRF_LOG_ERROR("mem: failed to fetch files list");
+                status.status = ble::StatusFromMemory::ERROR_OTHER;
+                status.data_size = 0;
+            }
+            break;
+        }
+        default:
+        {
+            NRF_LOG_ERROR("mem from ble: command %d not yet implemented", command_id);
+            break;
+        }
     }
 
     const auto send_result = xQueueSend(context.status_to_ble_queue, &status, 0);

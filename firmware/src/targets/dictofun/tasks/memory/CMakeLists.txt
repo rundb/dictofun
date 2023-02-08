@@ -1,5 +1,6 @@
 add_library(task_memory STATIC
     task_memory.cpp
+    littlefs_access.cpp
 )
 
 target_include_directories(task_memory PUBLIC ./)
