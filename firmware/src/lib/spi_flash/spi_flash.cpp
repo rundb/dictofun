@@ -55,6 +55,8 @@ SpiFlash::Result SpiFlash::read(uint32_t address, uint8_t* data, uint32_t size)
         return Result::ERROR_INPUT;
     }
 
+    _delay(1);
+
     // 1. fill in transaction header
     _txBuffer[0] = 0x3U;
     _txBuffer[1] = (address >> 16) & 0xFF;
@@ -79,7 +81,9 @@ SpiFlash::Result SpiFlash::read(uint32_t address, uint8_t* data, uint32_t size)
     if (0 == timeout)
     {
         // TODO: define appropriate actions for this case
+        NRF_LOG_ERROR("read: timeout error");
     }
+
     return Result::OK;
 }
 
@@ -310,7 +314,6 @@ void SpiFlash::writeEnable(bool shouldEnable)
 void SpiFlash::eraseChip()
 {
     writeEnable(true);
-    const auto sr1 = getSR1();
 
     uint32_t timeout{long_delay_duration_ms};
     while(isBusy() && timeout > 0)

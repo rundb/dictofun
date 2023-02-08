@@ -56,7 +56,7 @@ const struct lfs_config lfs_configuration = {
     .read_size = 16,
     .prog_size = flash_page_size,
     .block_size = flash_sector_size,
-    .block_count = 4096,
+    .block_count = flash_sectors_count,
     .block_cycles = 500,
     .cache_size = flash_page_size,
     .lookahead_size = LOOKAHEAD_BUFFER_SIZE,
@@ -217,7 +217,8 @@ void launch_test_2()
 {
     NRF_LOG_INFO("task memory: launching read-program-read-erase-program test. \n"\
                     "Memory task shall not accept commands during the execution of this command.");
-    constexpr uint32_t test_area_start_address{16*1024*1024-2*4096}; // second sector from the end.  
+    // constexpr uint32_t test_area_start_address{16*1024*1024-2*4096}; // second sector from the end.  
+    constexpr uint32_t test_area_start_address{0x27000}; 
     constexpr uint32_t test_data_size{256};
     constexpr uint32_t test_erase_size{4096};
     uint8_t test_data[test_data_size]{0};
@@ -243,8 +244,6 @@ void launch_test_2()
     }
     NRF_LOG_INFO("read took %d ms", read_1_end_tick - read_1_start_tick);
 
-    vTaskDelay(100);
-
     // ==== Step 2: program a single page with predefined values
     for (auto i = 0UL; i < test_data_size; ++i)
     {
@@ -259,8 +258,6 @@ void launch_test_2()
         return;
     }
     NRF_LOG_INFO("prog took %d ms", prog_end_tick - prog_start_tick);
-
-    vTaskDelay(100);
 
     // ==== Step 3: read back the programmed content
     memset(test_data, 0, test_data_size);
@@ -284,8 +281,6 @@ void launch_test_2()
     }
     NRF_LOG_INFO("read 2 took %d ms", read_2_end_tick - read_2_start_tick);
 
-    vTaskDelay(100);
-
     // ==== Step 4: erase the sector we just programmed
     const auto erase_start_tick{xTaskGetTickCount()};
     const auto erase_res = flash.erase(test_area_start_address, test_erase_size);
@@ -297,8 +292,6 @@ void launch_test_2()
         return;
     }
     NRF_LOG_INFO("erase took %d ms", erase_end_tick - erase_start_tick);
-    
-    vTaskDelay(100);
 
     // ==== Step 5: verify that the test area has been erased.
     memset(test_data, 0, test_data_size);
@@ -365,6 +358,7 @@ void launch_test_3()
     {
         test_data[i] = i & 0xFF;
     }
+    NRF_LOG_INFO("mem: writing data to opened file");
     // Enforce overflow of a single sector size to provoke an erase operation
     size_t written_data_size{0};
     const auto write_start_tick{xTaskGetTickCount()};
@@ -374,7 +368,7 @@ void launch_test_3()
         written_data_size += sizeof(test_data);
         if (write_result!= sizeof(test_data))
         {
-            NRF_LOG_ERROR("lfs: failed to write into a file");
+            NRF_LOG_ERROR("lfs: failed to write into a file (%d)", write_result);
             return;
         }
     }

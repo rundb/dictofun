@@ -62,14 +62,18 @@ TEST(LittleFsTest, BasicFormat)
         const auto create_result = lfs_file_open(&lfs, &file, "rec0", LFS_O_WRONLY | LFS_O_CREAT);
         EXPECT_EQ(create_result, 0);
 
+
         constexpr size_t test_data_size{16};
         uint8_t test_data[test_data_size];
         for (int i = 0; i < test_data_size; ++i)
         {
             test_data[i] = i;
         }
-        const auto write_result = lfs_file_write(&lfs, &file, test_data, sizeof(test_data));
-        EXPECT_EQ(write_result, test_data_size);
+        for (int i = 0; i < 20; ++i)
+        {
+            const auto write_result = lfs_file_write(&lfs, &file, test_data, sizeof(test_data));
+            EXPECT_EQ(write_result, test_data_size);
+        }
 
         const auto close_result_1 = lfs_file_close(&lfs, &file);
         EXPECT_EQ(close_result_1, 0);
