@@ -13,6 +13,10 @@
 #include "boards.h"
 #include "block_api.h"
 
+// TODO: consider moving all data structure definitions to a single location 
+// instead of introducing dependencies between the tasks.
+#include "task_ble.h"
+
 #include "lfs.h"
 
 namespace memory
@@ -61,17 +65,21 @@ const struct lfs_config lfs_configuration = {
 };
 
 
-constexpr uint32_t cmd_wait_ticks{10};
+constexpr uint32_t cmd_wait_ticks{5};
+constexpr uint32_t ble_command_wait_ticks{5};
 
 void launch_test_1();
 void launch_test_2();
 void launch_test_3();
+
+static bool is_ble_access_allowed();
 
 void task_memory(void * context_ptr)
 {
     NRF_LOG_INFO("task memory: initialized");
     Context& context = *(reinterpret_cast<Context *>(context_ptr));
     CommandQueueElement command;
+    ble::CommandToMemoryQueueElement command_from_ble;
 
     flash_spi.init(flash_spi_config);
     flash.init();
@@ -102,6 +110,14 @@ void task_memory(void * context_ptr)
             {
                 launch_test_3();
             }
+        }
+        const auto cmd_from_ble_queue_receive_status = xQueueReceive(
+            context.command_from_ble_queue,
+            reinterpret_cast<void *>(&command_from_ble),
+            ble_command_wait_ticks);
+        if (pdPASS == cmd_from_ble_queue_receive_status)
+        {
+            NRF_LOG_DEBUG("received request %d from BLE", command_from_ble.command_id);
         }
     }
 }

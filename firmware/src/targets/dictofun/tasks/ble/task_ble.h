@@ -72,12 +72,14 @@ enum class StatusFromMemory
 struct StatusFromMemoryQueueElement
 {
     StatusFromMemory status;
+    uint32_t data_size;
 };
 
 struct FileDataFromMemoryQueueElement
 {
-    static constexpr size_t element_size{256};
-    uint8_t data[element_size];
+    static constexpr size_t element_max_size{256};
+    uint32_t size{0};
+    uint8_t data[element_max_size];
 };
 
 }

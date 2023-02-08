@@ -8,6 +8,7 @@ target_link_libraries(task_memory PRIVATE
     spi_flash
     littlefs
     littlefs_integration
+    task_ble_interface
 )
 
 target_link_libraries(task_memory PUBLIC 
