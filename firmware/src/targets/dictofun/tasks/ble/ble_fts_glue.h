@@ -23,7 +23,7 @@ namespace target
 {
 
 extern ble::fts::FileSystemInterface dictofun_fs_if;
-void register_filesystem_queues(QueueHandle_t * command_queue, QueueHandle_t * status_queue, QueueHandle_t * data_queue);
+void register_filesystem_queues(QueueHandle_t command_queue, QueueHandle_t status_queue, QueueHandle_t data_queue);
 
 }
 }

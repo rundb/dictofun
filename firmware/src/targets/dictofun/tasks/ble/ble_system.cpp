@@ -512,9 +512,9 @@ result::Result BleSystem::init_conn_params()
 }
 
 void BleSystem::register_fs_communication_queues(
-    QueueHandle_t * commands_queue, 
-    QueueHandle_t * status_queue, 
-    QueueHandle_t * data_queue)
+    QueueHandle_t commands_queue, 
+    QueueHandle_t status_queue, 
+    QueueHandle_t data_queue)
 {
     services::register_fs_communication_queues(commands_queue, status_queue, data_queue);
 }

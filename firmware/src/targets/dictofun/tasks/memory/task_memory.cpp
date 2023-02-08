@@ -73,6 +73,7 @@ void launch_test_2();
 void launch_test_3();
 
 static bool is_ble_access_allowed();
+void process_request_from_ble(Context& context, ble::CommandToMemory command_id);
 
 void task_memory(void * context_ptr)
 {
@@ -117,9 +118,38 @@ void task_memory(void * context_ptr)
             ble_command_wait_ticks);
         if (pdPASS == cmd_from_ble_queue_receive_status)
         {
-            NRF_LOG_DEBUG("received request %d from BLE", command_from_ble.command_id);
+            process_request_from_ble(context, command_from_ble.command_id);
         }
     }
+}
+
+static bool is_ble_access_allowed()
+{
+    return true;
+}
+
+void process_request_from_ble(Context& context, ble::CommandToMemory command_id)
+{
+    NRF_LOG_DEBUG("mem: rcvd request %d from BLE", command_id);
+    ble::StatusFromMemoryQueueElement status{ble::StatusFromMemory::OK, 0};
+    if (!is_ble_access_allowed())
+    {
+        status.status = ble::StatusFromMemory::ERROR_PERMISSION_DENIED;
+        status.data_size = 0;
+    }
+
+    const auto send_result = xQueueSend(context.status_to_ble_queue, &status, 0);
+    if (pdTRUE != send_result)
+    {
+        NRF_LOG_ERROR("mem: failed to send response to BLE");
+        return;
+    }
+    if (status.status != ble::StatusFromMemory::OK)
+    {
+        return;
+    }
+
+    // Start processing of the request
 }
 
 void launch_test_1()
