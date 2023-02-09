@@ -110,8 +110,10 @@ class FtsClient:
         try:
             metadata = json.loads(json_value)
             file_info["size"] = metadata["s"]
-            file_info["frequency"] = metadata["f"]
-            file_info["codec"] = metadata["c"]
+            if "f" in metadata:
+                file_info["frequency"] = metadata["f"]
+            if "c" in metadata:
+                file_info["codec"] = metadata["c"]
         except Exception as e:
             logging.error("JSON decoding error " + str(e))
             return file_info

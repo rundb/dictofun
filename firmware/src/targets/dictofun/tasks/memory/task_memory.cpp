@@ -67,12 +67,15 @@ const struct lfs_config lfs_configuration = {
 constexpr uint32_t cmd_wait_ticks{5};
 constexpr uint32_t ble_command_wait_ticks{5};
 
+// This element allocated statically, as it's rather big (~260 bytes)
+ble::FileDataFromMemoryQueueElement data_queue_elem;
+
 void launch_test_1();
 void launch_test_2();
 void launch_test_3();
 
 static bool is_ble_access_allowed();
-void process_request_from_ble(Context& context, ble::CommandToMemory command_id);
+void process_request_from_ble(Context& context, ble::CommandToMemory command_id, ble::fts::file_id_type file_id);
 
 void task_memory(void * context_ptr)
 {
@@ -117,7 +120,7 @@ void task_memory(void * context_ptr)
             ble_command_wait_ticks);
         if (pdPASS == cmd_from_ble_queue_receive_status)
         {
-            process_request_from_ble(context, command_from_ble.command_id);
+            process_request_from_ble(context, command_from_ble.command_id, command_from_ble.file_id);
         }
     }
 }
@@ -128,8 +131,12 @@ static bool is_ble_access_allowed()
     return true;
 }
 
+void convert_file_id_to_string(ble::fts::file_id_type file_id, char * buffer)
+{
+    memcpy(buffer, &file_id, sizeof(ble::fts::file_id_type));
+}
 
-void process_request_from_ble(Context& context, ble::CommandToMemory command_id)
+void process_request_from_ble(Context& context, ble::CommandToMemory command_id, ble::fts::file_id_type file_id)
 {
     ble::StatusFromMemoryQueueElement status{ble::StatusFromMemory::OK, 0};
     if (!is_ble_access_allowed())
@@ -144,7 +151,6 @@ void process_request_from_ble(Context& context, ble::CommandToMemory command_id)
         return;
     }
 
-    ble::FileDataFromMemoryQueueElement data_queue_elem;
     switch (command_id)
     {
         case ble::CommandToMemory::GET_FILES_LIST:
@@ -167,6 +173,31 @@ void process_request_from_ble(Context& context, ble::CommandToMemory command_id)
                 NRF_LOG_ERROR("mem: failed to fetch files list");
                 status.status = ble::StatusFromMemory::ERROR_OTHER;
                 status.data_size = 0;
+            }
+            break;
+        }
+        case ble::CommandToMemory::GET_FILE_INFO:
+        {
+            static constexpr uint32_t max_file_name_size{8 + 1};
+            char target_file_name[max_file_name_size] = {0};
+            convert_file_id_to_string(file_id, target_file_name);
+            const auto file_info_result = memory::filesystem::get_file_info(
+                lfs,
+                target_file_name, 
+                data_queue_elem.data, 
+                data_queue_elem.size, 
+                ble::FileDataFromMemoryQueueElement::element_max_size);
+
+            if (result::Result::OK != file_info_result)
+            {
+                NRF_LOG_ERROR("mem: failed to fetch file info");
+                status.status = ble::StatusFromMemory::ERROR_OTHER;
+                status.data_size = 0;
+            }
+            if (data_queue_elem.size == 0)
+            {
+                NRF_LOG_ERROR("mem: file not found");
+                status.status = ble::StatusFromMemory::ERROR_FILE_NOT_FOUND;
             }
             break;
         }

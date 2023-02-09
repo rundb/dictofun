@@ -34,7 +34,6 @@ target_link_libraries(task_ble PRIVATE
     nrf5_ble_advertising
     nrf5_ble_srv_lbs
     boards
-    ble_fts
 )
 target_link_libraries(task_ble PUBLIC 
     nrf5_freertos
@@ -42,6 +41,7 @@ target_link_libraries(task_ble PUBLIC
     nrf52_freertos_portable_cmsis
     nrf5_freertos_portable_memmang_1
     common
+    ble_fts
 )
 
 add_library(task_ble_interface INTERFACE)
