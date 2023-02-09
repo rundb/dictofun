@@ -62,6 +62,16 @@ result::Result init_services(ble_lbs_led_write_handler_t led_write_handler)
     return result::Result::OK;
 }
 
+void set_fts_fs_handler(ble::fts::FileSystemInterface& fs_if)
+{
+    fts_service.set_fs_interface(fs_if);
+}
+
+void services::register_fs_communication_queues(QueueHandle_t commands_queue, QueueHandle_t status_queue, QueueHandle_t data_queue)
+{
+    integration::target::register_filesystem_queues(commands_queue, status_queue, data_queue);
+}
+
 size_t get_services_uuids(ble_uuid_t * service_uuids, const size_t max_uuids)
 {
     if (nullptr == service_uuids)

@@ -15,8 +15,11 @@ void task_ble(void * context_ptr);
 
 struct Context
 {
-    QueueHandle_t command_queue;
-    QueueHandle_t requests_queue;
+    QueueHandle_t command_queue{nullptr};
+    QueueHandle_t requests_queue{nullptr};
+    QueueHandle_t command_to_mem_queue{nullptr};
+    QueueHandle_t status_from_mem_queue{nullptr};
+    QueueHandle_t data_from_mem_queue{nullptr};
 };
 
 enum class Command
@@ -24,6 +27,7 @@ enum class Command
     START,
     STOP,
     RESET_PAIRING,
+    CONNECT_FS,
 };
 
 struct CommandQueueElement
@@ -41,6 +45,41 @@ struct RequestQueueElement
     Request request;
     static constexpr size_t max_args_count{1};
     uint32_t args[max_args_count];
+};
+
+enum class CommandToMemory
+{
+    GET_FILES_LIST,
+    GET_FILE_INFO,
+    GET_FILE_DATA,
+    GET_FS_STATUS,
+};
+
+struct CommandToMemoryQueueElement
+{
+    CommandToMemory command_id;
+};
+
+enum class StatusFromMemory
+{
+    OK,
+    ERROR_PERMISSION_DENIED,
+    ERROR_FILE_NOT_FOUND,
+    ERROR_FS_CORRUPT,
+    ERROR_OTHER,
+};
+
+struct StatusFromMemoryQueueElement
+{
+    StatusFromMemory status;
+    uint32_t data_size;
+};
+
+struct FileDataFromMemoryQueueElement
+{
+    static constexpr size_t element_max_size{256};
+    uint32_t size{0};
+    uint8_t data[element_max_size];
 };
 
 }

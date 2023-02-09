@@ -3,7 +3,8 @@ add_library(task_ble STATIC
     ble_system.cpp
     ble_services.cpp
     nrf_error_decoder.cpp
-    ble_fts_glue.cpp
+    ble_fts_glue_test.cpp
+    ble_fts_glue_target.cpp
 )
 
 target_include_directories(task_ble PUBLIC ./)

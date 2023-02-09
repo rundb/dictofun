@@ -89,6 +89,15 @@ void task_ble(void * context_ptr)
                     NRF_LOG_ERROR("task ble: pairing reset is not yet implemented");
                     break;
                 }
+                case Command::CONNECT_FS:
+                {
+                    ble_system.register_fs_communication_queues(
+                        context.command_to_mem_queue,
+                        context.status_from_mem_queue,
+                        context.data_from_mem_queue);
+                    ble_system.connect_fts_to_target_fs();
+                    break;
+                }
             }
         }
         if (led_state_request.is_active)

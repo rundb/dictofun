@@ -213,6 +213,7 @@ void launch_cli_command_ble_operation(const uint32_t command_id)
 {
     NRF_LOG_INFO("task state: launching BLE command %d", command_id);
     const ble::Command command = 
+        (command_id == 4) ? ble::Command::CONNECT_FS :
         (command_id == 3) ? ble::Command::RESET_PAIRING :
         (command_id == 2) ? ble::Command::STOP :
         ble::Command::START;

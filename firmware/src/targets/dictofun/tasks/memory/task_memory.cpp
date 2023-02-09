@@ -12,6 +12,9 @@
 #include "spi_flash.h"
 #include "boards.h"
 #include "block_api.h"
+#include "littlefs_access.h"
+
+#include "task_ble.h"
 
 #include "lfs.h"
 
@@ -51,7 +54,7 @@ const struct lfs_config lfs_configuration = {
     .read_size = 16,
     .prog_size = flash_page_size,
     .block_size = flash_sector_size,
-    .block_count = 4096,
+    .block_count = flash_sectors_count,
     .block_cycles = 500,
     .cache_size = flash_page_size,
     .lookahead_size = LOOKAHEAD_BUFFER_SIZE,
@@ -61,17 +64,22 @@ const struct lfs_config lfs_configuration = {
 };
 
 
-constexpr uint32_t cmd_wait_ticks{10};
+constexpr uint32_t cmd_wait_ticks{5};
+constexpr uint32_t ble_command_wait_ticks{5};
 
 void launch_test_1();
 void launch_test_2();
 void launch_test_3();
+
+static bool is_ble_access_allowed();
+void process_request_from_ble(Context& context, ble::CommandToMemory command_id);
 
 void task_memory(void * context_ptr)
 {
     NRF_LOG_INFO("task memory: initialized");
     Context& context = *(reinterpret_cast<Context *>(context_ptr));
     CommandQueueElement command;
+    ble::CommandToMemoryQueueElement command_from_ble;
 
     flash_spi.init(flash_spi_config);
     flash.init();
@@ -103,6 +111,87 @@ void task_memory(void * context_ptr)
                 launch_test_3();
             }
         }
+        const auto cmd_from_ble_queue_receive_status = xQueueReceive(
+            context.command_from_ble_queue,
+            reinterpret_cast<void *>(&command_from_ble),
+            ble_command_wait_ticks);
+        if (pdPASS == cmd_from_ble_queue_receive_status)
+        {
+            process_request_from_ble(context, command_from_ble.command_id);
+        }
+    }
+}
+
+// TODO: implement access 
+static bool is_ble_access_allowed()
+{
+    return true;
+}
+
+
+void process_request_from_ble(Context& context, ble::CommandToMemory command_id)
+{
+    ble::StatusFromMemoryQueueElement status{ble::StatusFromMemory::OK, 0};
+    if (!is_ble_access_allowed())
+    {
+        status.status = ble::StatusFromMemory::ERROR_PERMISSION_DENIED;
+        status.data_size = 0;
+        const auto send_result = xQueueSend(context.status_to_ble_queue, &status, 0);
+        if (pdTRUE != send_result)
+        {
+            NRF_LOG_ERROR("mem: failed to send response to BLE");
+        }
+        return;
+    }
+
+    ble::FileDataFromMemoryQueueElement data_queue_elem;
+    switch (command_id)
+    {
+        case ble::CommandToMemory::GET_FILES_LIST:
+        {
+            const auto mount_result = memory::filesystem::init_littlefs(lfs, lfs_configuration);
+            if (mount_result != result::Result::OK)
+            {
+                NRF_LOG_ERROR("mem: failed to mount littlefs");
+                status.status = ble::StatusFromMemory::ERROR_FS_CORRUPT;
+                status.data_size = 0;
+                break;
+            }
+            const auto ls_result = memory::filesystem::get_files_list(
+                lfs, 
+                data_queue_elem.size, 
+                data_queue_elem.data, 
+                ble::FileDataFromMemoryQueueElement::element_max_size);
+            if (result::Result::OK != ls_result)
+            {
+                NRF_LOG_ERROR("mem: failed to fetch files list");
+                status.status = ble::StatusFromMemory::ERROR_OTHER;
+                status.data_size = 0;
+            }
+            break;
+        }
+        default:
+        {
+            NRF_LOG_ERROR("mem from ble: command %d not yet implemented", command_id);
+            break;
+        }
+    }
+    const auto send_result = xQueueSend(context.status_to_ble_queue, &status, 0);
+    if (pdTRUE != send_result)
+    {
+        NRF_LOG_ERROR("mem: failed to send status to BLE");
+        return;
+    }
+    if (status.status != ble::StatusFromMemory::OK)
+    {
+        return;
+    }
+
+    const auto send_data_result = xQueueSend(context.data_to_ble_queue, &data_queue_elem, 0);
+    if (pdTRUE != send_data_result)
+    {
+        NRF_LOG_ERROR("mem: failed to send data to BLE");
+        return;
     }
 }
 
@@ -157,8 +246,6 @@ void launch_test_2()
     }
     NRF_LOG_INFO("read took %d ms", read_1_end_tick - read_1_start_tick);
 
-    vTaskDelay(100);
-
     // ==== Step 2: program a single page with predefined values
     for (auto i = 0UL; i < test_data_size; ++i)
     {
@@ -173,8 +260,6 @@ void launch_test_2()
         return;
     }
     NRF_LOG_INFO("prog took %d ms", prog_end_tick - prog_start_tick);
-
-    vTaskDelay(100);
 
     // ==== Step 3: read back the programmed content
     memset(test_data, 0, test_data_size);
@@ -198,8 +283,6 @@ void launch_test_2()
     }
     NRF_LOG_INFO("read 2 took %d ms", read_2_end_tick - read_2_start_tick);
 
-    vTaskDelay(100);
-
     // ==== Step 4: erase the sector we just programmed
     const auto erase_start_tick{xTaskGetTickCount()};
     const auto erase_res = flash.erase(test_area_start_address, test_erase_size);
@@ -211,8 +294,6 @@ void launch_test_2()
         return;
     }
     NRF_LOG_INFO("erase took %d ms", erase_end_tick - erase_start_tick);
-    
-    vTaskDelay(100);
 
     // ==== Step 5: verify that the test area has been erased.
     memset(test_data, 0, test_data_size);
@@ -279,6 +360,7 @@ void launch_test_3()
     {
         test_data[i] = i & 0xFF;
     }
+    NRF_LOG_INFO("mem: writing data to opened file");
     // Enforce overflow of a single sector size to provoke an erase operation
     size_t written_data_size{0};
     const auto write_start_tick{xTaskGetTickCount()};
@@ -288,7 +370,7 @@ void launch_test_3()
         written_data_size += sizeof(test_data);
         if (write_result!= sizeof(test_data))
         {
-            NRF_LOG_ERROR("lfs: failed to write into a file");
+            NRF_LOG_ERROR("lfs: failed to write into a file (%d)", write_result);
             return;
         }
     }

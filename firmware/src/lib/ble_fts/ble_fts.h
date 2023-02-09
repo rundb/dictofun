@@ -60,6 +60,13 @@ public:
     static FtsService& instance() { return *_instance;}
     static void on_ble_evt(ble_evt_t const * p_ble_evt, void * p_context);
 
+    void set_fs_interface(FileSystemInterface& fs_if) 
+    { 
+        // TODO: possibly need to a) check that operations of the given IF are closed and 
+        // b) restrict opportunity of interface change (f.e. only at the start of operation)
+        _fs_if = fs_if;
+    }
+
     void process();
 private:
     static FtsService * _instance;

@@ -193,7 +193,8 @@ void register_ble_control_callback(ble_control_callback callback)
 /// Following commands that are currently supported:
 /// 1. enable BLE operation
 /// 2. stop BLE operation
-/// 3. reset pairing - clears pairing information.
+/// 3. reset pairing - clears pairing information (currently unsupported)
+/// 4. connect real file system to the ble
 static void cmd_ble_commands(nrf_cli_t const * p_cli, const size_t argc, char ** argv)
 {
     if (argc < 2 || argc > 4)
@@ -203,7 +204,7 @@ static void cmd_ble_commands(nrf_cli_t const * p_cli, const size_t argc, char **
     }
     // TODO: add support for the second argument, if needed
     const int command_id = atoi(argv[1]);
-    if (command_id < 1 || command_id > 3)
+    if (command_id < 1 || command_id > 4)
     {
         nrf_cli_fprintf(p_cli, NRF_CLI_ERROR, "Wrong command ID\n", argc);
         return;
@@ -222,4 +223,4 @@ static void cmd_ble_commands(nrf_cli_t const * p_cli, const size_t argc, char **
     }
 }
 
-NRF_CLI_CMD_REGISTER(bletest, NULL, "Launch BLE command", cmd_ble_commands);
+NRF_CLI_CMD_REGISTER(ble, NULL, "Launch BLE command", cmd_ble_commands);
