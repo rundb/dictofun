@@ -94,5 +94,42 @@ result::Result get_files_list(lfs_t& lfs, uint32_t& data_size_bytes, uint8_t * b
     return result::Result::OK;
 }
 
+result::Result get_file_info(lfs_t& lfs, const char * name, uint8_t * buffer, uint32_t& data_size_bytes, uint32_t max_data_size)
+{
+    if (buffer == nullptr || max_data_size < 8)
+    {
+        return result::Result::ERROR_INVALID_PARAMETER;
+    }
+
+    lfs_info info;
+    lfs_dir_t dir;
+
+    const auto dir_open_result = lfs_dir_open(&lfs, &dir, ".");
+    if (dir_open_result != 0)
+    {
+        NRF_LOG_ERROR("failed to open dir ./");
+        return result::Result::ERROR_GENERAL;
+    }
+
+    const auto stat_result = lfs_stat(&lfs, name, &info);
+    if (stat_result < 0)
+    {
+        NRF_LOG_ERROR("lfs stat error(%d)", stat_result);
+        data_size_bytes = 0;
+        return result::Result::OK;
+    }
+    if (info.type != LFS_TYPE_REG)
+    {
+        // File not found use-case
+        data_size_bytes = 0;
+        return result::Result::OK;
+    }
+    // At this point we know the file size - info.size
+    data_size_bytes = snprintf(reinterpret_cast<char *>(buffer), max_data_size, "{\"s\":%lu}", info.size);
+
+    return result::Result::OK;
+
+}
+
 }
 }

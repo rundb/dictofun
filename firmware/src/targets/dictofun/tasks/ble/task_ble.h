@@ -7,6 +7,7 @@
 
 #include "FreeRTOS.h"
 #include "queue.h"
+#include "ble_fts.h"
 
 namespace ble
 {
@@ -58,6 +59,7 @@ enum class CommandToMemory
 struct CommandToMemoryQueueElement
 {
     CommandToMemory command_id;
+    ble::fts::file_id_type file_id;
 };
 
 enum class StatusFromMemory

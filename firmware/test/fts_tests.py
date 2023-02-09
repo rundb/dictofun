@@ -72,7 +72,13 @@ def check_files_list_getter(fts):
     logging.info("Target FTS Server provides following %d files" % len(files_list))
     for file in files_list:
         logging.info("\t%x" % file)
+    return files_list
 
+def check_files_info_getter(fts, files):
+    test_file_id = files[0]
+    file_info = fts.get_file_info(test_file_id)
+    logging.info("First file in the FS: %s" % str(file_info))
+    
 
 """
 Tests' launcher: executes all tests and prints their status to the log.
@@ -124,7 +130,8 @@ def launch_checks(dictofun):
         logging.error("failed to create FTS Client instance, error: %s" % str(e))
         exit(-1)
 
-    check_files_list_getter(fts)
+    files = check_files_list_getter(fts)
+    check_files_info_getter(fts, files)
 
 """
 Here all preparations (except for UART commands is performed)

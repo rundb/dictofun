@@ -20,4 +20,5 @@ target_link_libraries(task_system_state PUBLIC
     task_memory_interface
     task_ble_interface
     task_led_interface
+    ble_fts
 )
