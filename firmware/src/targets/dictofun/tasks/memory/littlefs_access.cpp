@@ -50,7 +50,7 @@ result::Result get_files_list(lfs_t& lfs, uint32_t& data_size_bytes, uint8_t * b
         NRF_LOG_ERROR("mem: dir open failed (%d)", dir_open_result);
         return result::Result::ERROR_GENERAL;
     }
-    // TODO: this is an issue: size of a file id is specified in multiple locations.
+
     static constexpr uint32_t single_entry_size{sizeof(ble::fts::file_id_type)};
     uint8_t buffer_pos{0};
     while (true) 
