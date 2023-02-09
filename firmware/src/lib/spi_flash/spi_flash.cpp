@@ -55,6 +55,7 @@ SpiFlash::Result SpiFlash::read(uint32_t address, uint8_t* data, uint32_t size)
         return Result::ERROR_INPUT;
     }
 
+    // TODO: consider reducing this delay to minimum (using more detailed ticks' source)
     _delay(1);
 
     // 1. fill in transaction header
