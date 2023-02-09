@@ -131,8 +131,6 @@ result::Result get_file_info(file_id_type file_id, uint8_t * file_data, uint32_t
     file_data_size = data.size;
     memcpy(file_data, data.data, data.size);
     return result::Result::OK;
-
-    return result::Result::ERROR_NOT_IMPLEMENTED;
 }
 
 result::Result open_file(file_id_type file_id, uint32_t& file_size)
