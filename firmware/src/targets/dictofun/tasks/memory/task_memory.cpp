@@ -14,8 +14,6 @@
 #include "block_api.h"
 #include "littlefs_access.h"
 
-// TODO: consider moving all data structure definitions to a single location 
-// instead of introducing dependencies between the tasks.
 #include "task_ble.h"
 
 #include "lfs.h"
@@ -124,6 +122,7 @@ void task_memory(void * context_ptr)
     }
 }
 
+// TODO: implement access 
 static bool is_ble_access_allowed()
 {
     return true;
@@ -132,7 +131,6 @@ static bool is_ble_access_allowed()
 
 void process_request_from_ble(Context& context, ble::CommandToMemory command_id)
 {
-    NRF_LOG_DEBUG("mem: rcvd request %d from BLE", command_id);
     ble::StatusFromMemoryQueueElement status{ble::StatusFromMemory::OK, 0};
     if (!is_ble_access_allowed())
     {
@@ -157,6 +155,7 @@ void process_request_from_ble(Context& context, ble::CommandToMemory command_id)
                 NRF_LOG_ERROR("mem: failed to mount littlefs");
                 status.status = ble::StatusFromMemory::ERROR_FS_CORRUPT;
                 status.data_size = 0;
+                break;
             }
             const auto ls_result = memory::filesystem::get_files_list(
                 lfs, 
