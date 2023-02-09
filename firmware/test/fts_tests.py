@@ -66,6 +66,14 @@ def test_fs_status_getter(fts):
         return -1
     return 0
 
+####################### Test functions (assuming that BLE subsystem runs in target mode) ######
+def check_files_list_getter(fts):
+    files_list = fts.get_files_list()
+    logging.info("Target FTS Server provides following %d files" % len(files_list))
+    for file in files_list:
+        logging.info("\t%x" % file)
+
+
 """
 Tests' launcher: executes all tests and prints their status to the log.
 Also returns -1, if any of the tests failed (so return value can be used in CI automation scripting)
@@ -103,6 +111,20 @@ def launch_tests(dictofun):
         logging.debug("fs status test: passed")
 
     return min(0, files_list_result, info_getter_result, data_getter_result, fs_status_getter_result)
+
+
+"""
+This method should be run after switching the dictofun into target mode (thus connecting littlefs and FTS)
+"""
+def launch_checks(dictofun):
+    fts = None
+    try:
+        fts = FtsClient(dictofun)
+    except Exception as e:
+        logging.error("failed to create FTS Client instance, error: %s" % str(e))
+        exit(-1)
+
+    check_files_list_getter(fts)
 
 """
 Here all preparations (except for UART commands is performed)
@@ -159,6 +181,8 @@ if __name__ == '__main__':
     if not dictofun is None:
         prepare_dictofun(dictofun, dictofun_control)
         test_execution_result = launch_tests(dictofun)
+        dictofun_control.issue_command("ble 4", 0.5)
+        launch_checks(dictofun)
         release_dictofun(dictofun, dictofun_control)
     else:
         logging.error("no dictofun discovered")

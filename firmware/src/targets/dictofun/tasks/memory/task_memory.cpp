@@ -177,7 +177,6 @@ void process_request_from_ble(Context& context, ble::CommandToMemory command_id)
             break;
         }
     }
-    NRF_LOG_DEBUG("status mem->ble");
     const auto send_result = xQueueSend(context.status_to_ble_queue, &status, 0);
     if (pdTRUE != send_result)
     {
@@ -189,7 +188,6 @@ void process_request_from_ble(Context& context, ble::CommandToMemory command_id)
         return;
     }
 
-    NRF_LOG_DEBUG("data mem->ble");
     const auto send_data_result = xQueueSend(context.data_to_ble_queue, &data_queue_elem, 0);
     if (pdTRUE != send_data_result)
     {
@@ -223,8 +221,7 @@ void launch_test_2()
 {
     NRF_LOG_INFO("task memory: launching read-program-read-erase-program test. \n"\
                     "Memory task shall not accept commands during the execution of this command.");
-    // constexpr uint32_t test_area_start_address{16*1024*1024-2*4096}; // second sector from the end.  
-    constexpr uint32_t test_area_start_address{0x27000}; 
+    constexpr uint32_t test_area_start_address{16*1024*1024-2*4096}; // second sector from the end.  
     constexpr uint32_t test_data_size{256};
     constexpr uint32_t test_erase_size{4096};
     uint8_t test_data[test_data_size]{0};

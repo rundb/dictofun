@@ -33,7 +33,6 @@ void register_filesystem_queues(QueueHandle_t command_queue, QueueHandle_t statu
     _command_to_fs_queue = command_queue;
     _status_from_fs_queue = status_queue;
     _data_from_fs_queue = data_queue;
-    NRF_LOG_DEBUG("ble fts: setting fs comm queue");
 }
 
 result::Result get_file_list(uint32_t& files_count, file_id_type * files_list_ptr)
@@ -47,7 +46,6 @@ result::Result get_file_list(uint32_t& files_count, file_id_type * files_list_pt
     ble::CommandToMemoryQueueElement cmd{ble::CommandToMemory::GET_FILES_LIST};
     ble::StatusFromMemoryQueueElement response;
 
-    NRF_LOG_DEBUG("ble: sending command to flash memory");
     const auto cmd_result = xQueueSend(_command_to_fs_queue, &cmd, 0);
     if (pdTRUE != cmd_result)
     {
@@ -67,7 +65,6 @@ result::Result get_file_list(uint32_t& files_count, file_id_type * files_list_pt
     }
     else
     {
-        NRF_LOG_DEBUG("ble::fts: received OK response from mem, waiting for the data");
     }
 
     // TODO: consider moving data element to a static memory, for performance reasons
@@ -80,9 +77,6 @@ result::Result get_file_list(uint32_t& files_count, file_id_type * files_list_pt
         NRF_LOG_ERROR("get file list: timed out recv data from mem");
         return result::Result::ERROR_GENERAL;
     }
-
-    // TODO: at this point send it to the BLE
-    NRF_LOG_DEBUG("glue: %d", data.size);
     
     files_count = data.size / sizeof(file_id_type);
     memcpy(files_list_ptr, data.data, data.size);
