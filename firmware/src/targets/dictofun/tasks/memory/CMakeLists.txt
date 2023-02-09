@@ -10,6 +10,7 @@ target_link_libraries(task_memory PRIVATE
     littlefs
     littlefs_integration
     task_ble_interface
+    ble_fts
 )
 
 target_link_libraries(task_memory PUBLIC 

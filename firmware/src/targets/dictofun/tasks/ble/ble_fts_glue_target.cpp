@@ -38,8 +38,8 @@ void register_filesystem_queues(QueueHandle_t command_queue, QueueHandle_t statu
 
 result::Result get_file_list(uint32_t& files_count, file_id_type * files_list_ptr)
 {
-    static constexpr uint32_t max_status_wait_time{10};
-    static constexpr uint32_t max_data_wait_time{100};
+    static constexpr uint32_t max_status_wait_time{100};
+    static constexpr uint32_t max_data_wait_time{30};
     if (!is_fs_communication_valid())
     {
         return result::Result::ERROR_GENERAL;
@@ -70,27 +70,22 @@ result::Result get_file_list(uint32_t& files_count, file_id_type * files_list_pt
         NRF_LOG_DEBUG("ble::fts: received OK response from mem, waiting for the data");
     }
 
-    uint32_t received_size{0};
-    const uint32_t expected_size{response.data_size};
-
     // TODO: consider moving data element to a static memory, for performance reasons
     ble::FileDataFromMemoryQueueElement data;
 
     // TODO: make sure to test cases of both short lists (fitting to the data element) and longer lists
-    // while (received_size < expected_size)
-    // {
-        const auto data_result = xQueueReceive(_data_from_fs_queue, &data, max_data_wait_time);
-        if (pdTRUE != data_result)
-        {
-            NRF_LOG_ERROR("get file list: timed out recv data from mem");
-            return result::Result::ERROR_GENERAL;
-        }
-        received_size += data.size;
-    // }
+    const auto data_result = xQueueReceive(_data_from_fs_queue, &data, max_data_wait_time);
+    if (pdTRUE != data_result)
+    {
+        NRF_LOG_ERROR("get file list: timed out recv data from mem");
+        return result::Result::ERROR_GENERAL;
+    }
 
     // TODO: at this point send it to the BLE
+    NRF_LOG_DEBUG("glue: %d", data.size);
     
-    files_count = 0;
+    files_count = data.size / sizeof(file_id_type);
+    memcpy(files_list_ptr, data.data, data.size);
     return result::Result::OK;
 }
 

@@ -177,11 +177,11 @@ void process_request_from_ble(Context& context, ble::CommandToMemory command_id)
             break;
         }
     }
-
+    NRF_LOG_DEBUG("status mem->ble");
     const auto send_result = xQueueSend(context.status_to_ble_queue, &status, 0);
     if (pdTRUE != send_result)
     {
-        NRF_LOG_ERROR("mem: failed to send response to BLE");
+        NRF_LOG_ERROR("mem: failed to send status to BLE");
         return;
     }
     if (status.status != ble::StatusFromMemory::OK)
@@ -189,7 +189,13 @@ void process_request_from_ble(Context& context, ble::CommandToMemory command_id)
         return;
     }
 
-    // Start processing of the request
+    NRF_LOG_DEBUG("data mem->ble");
+    const auto send_data_result = xQueueSend(context.data_to_ble_queue, &data_queue_elem, 0);
+    if (pdTRUE != send_data_result)
+    {
+        NRF_LOG_ERROR("mem: failed to send data to BLE");
+        return;
+    }
 }
 
 void launch_test_1()

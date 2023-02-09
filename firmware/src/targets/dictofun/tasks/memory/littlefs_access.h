@@ -13,6 +13,6 @@ namespace filesystem
 {
 
 result::Result init_littlefs(lfs_t& lfs, const lfs_config& config);
-result::Result get_files_list(lfs_t& lfs, uint32_t& count, uint8_t * buffer, uint32_t max_data_size);
+result::Result get_files_list(lfs_t& lfs, uint32_t& data_size_bytes, uint8_t * buffer, uint32_t max_data_size);
 }
 }

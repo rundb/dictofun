@@ -4,6 +4,9 @@
  */
 #include "littlefs_access.h"
 #include "nrf_log.h"
+#include <cstring>
+#include <algorithm>
+#include "ble_fts.h"
 
 namespace memory
 {
@@ -32,8 +35,13 @@ result::Result init_littlefs(lfs_t& lfs, const lfs_config& config)
     return result::Result::OK;
 }
 
-result::Result get_files_list(lfs_t& lfs, uint32_t& count, uint8_t * buffer, const uint32_t max_data_size)
+result::Result get_files_list(lfs_t& lfs, uint32_t& data_size_bytes, uint8_t * buffer, const uint32_t max_data_size)
 {
+    if (buffer == nullptr || max_data_size < 8)
+    {
+        return result::Result::ERROR_INVALID_PARAMETER;
+    }
+
     lfs_dir_t dir;
     lfs_info info;
     const auto dir_open_result = lfs_dir_open(&lfs, &dir, ".");
@@ -42,30 +50,48 @@ result::Result get_files_list(lfs_t& lfs, uint32_t& count, uint8_t * buffer, con
         NRF_LOG_ERROR("mem: dir open failed (%d)", dir_open_result);
         return result::Result::ERROR_GENERAL;
     }
-    auto dir_read_result = lfs_dir_read(&lfs, &dir, &info);
-    if (dir_read_result < 0)
+    // TODO: this is an issue: size of a file id is specified in multiple locations.
+    static constexpr uint32_t single_entry_size{sizeof(ble::fts::file_id_type)};
+    uint8_t buffer_pos{0};
+    while (true) 
     {
-        NRF_LOG_ERROR("mem: dir read failed (%d)", dir_read_result);
-        return result::Result::ERROR_GENERAL;
+        if (buffer_pos >= (max_data_size - single_entry_size))
+        {
+            NRF_LOG_WARNING("too many files in the filesystem. breaking at this point.")
+            break;
+        }
+        const auto dir_read_res = lfs_dir_read(&lfs, &dir, &info);
+        if (dir_read_res < 0) {
+            NRF_LOG_ERROR("dir read operation failed (%d)", dir_read_res);
+            return result::Result::ERROR_GENERAL;
+        }
+
+        if (dir_read_res == 0) {
+            break;
+        }
+
+        switch (info.type) 
+        {
+            case LFS_TYPE_REG:
+            {   
+                const uint32_t name_len = strlen(info.name);
+                memcpy(&buffer[buffer_pos], info.name, std::min(name_len,single_entry_size));
+                if (name_len < single_entry_size)
+                {
+                    memset(&buffer[buffer_pos + name_len], 0, single_entry_size - name_len);
+                }
+                buffer_pos += single_entry_size;
+                break;
+            }
+            default:
+            {
+                break;
+            }
+        }
     }
-    NRF_LOG_INFO("dir: %d %d %d %d", dir_read_result, dir.id, dir.type, dir.pos);
-    NRF_LOG_INFO("info: %d %d %s", info.type, info.size, info.name);
-    lfs_soff_t offset = lfs_dir_tell(&lfs, &dir);
-    const auto seek_result = lfs_dir_seek(&lfs, &dir, offset);
-    if (seek_result < 0)
-    {
-        NRF_LOG_ERROR("mem: dir seek failed (%d)", dir_read_result);
-        return result::Result::ERROR_GENERAL;
-    }
-    dir_read_result = lfs_dir_read(&lfs, &dir, &info);
-    if (dir_read_result < 0)
-    {
-        NRF_LOG_ERROR("mem: dir read failed (%d)", dir_read_result);
-        return result::Result::ERROR_GENERAL;
-    }
-    NRF_LOG_INFO("dir: %d %d %d %d", dir_read_result, dir.id, dir.type, dir.pos);
-    NRF_LOG_INFO("info: %d %d %s", info.type, info.size, info.name);
-    return result::Result::ERROR_NOT_IMPLEMENTED;
+
+    data_size_bytes = buffer_pos;
+    return result::Result::OK;
 }
 
 }
