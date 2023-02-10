@@ -70,12 +70,19 @@ constexpr uint32_t ble_command_wait_ticks{5};
 // This element allocated statically, as it's rather big (~260 bytes)
 ble::FileDataFromMemoryQueueElement data_queue_elem;
 
+static struct FileOperationContext
+{
+    ble::fts::file_id_type file_id{0};
+    bool is_file_open{false};
+} _file_operation_context;
+
 void launch_test_1();
 void launch_test_2();
 void launch_test_3();
 
 static bool is_ble_access_allowed();
 void process_request_from_ble(Context& context, ble::CommandToMemory command_id, ble::fts::file_id_type file_id);
+
 
 void task_memory(void * context_ptr)
 {
@@ -131,6 +138,8 @@ static bool is_ble_access_allowed()
     return true;
 }
 
+static constexpr uint32_t max_file_name_size{8 + 1};
+
 void convert_file_id_to_string(ble::fts::file_id_type file_id, char * buffer)
 {
     memcpy(buffer, &file_id, sizeof(ble::fts::file_id_type));
@@ -178,7 +187,6 @@ void process_request_from_ble(Context& context, ble::CommandToMemory command_id,
         }
         case ble::CommandToMemory::GET_FILE_INFO:
         {
-            static constexpr uint32_t max_file_name_size{8 + 1};
             char target_file_name[max_file_name_size] = {0};
             convert_file_id_to_string(file_id, target_file_name);
             const auto file_info_result = memory::filesystem::get_file_info(
@@ -199,6 +207,46 @@ void process_request_from_ble(Context& context, ble::CommandToMemory command_id,
                 NRF_LOG_ERROR("mem: file not found");
                 status.status = ble::StatusFromMemory::ERROR_FILE_NOT_FOUND;
             }
+            break;
+        }
+        case ble::CommandToMemory::OPEN_FILE:
+        {
+            if (_file_operation_context.is_file_open)
+            {
+                status.status = ble::StatusFromMemory::ERROR_FILE_ALREADY_OPEN;
+                status.data_size = 0;
+                break;
+            }
+            char target_file_name[max_file_name_size] = {0};
+            convert_file_id_to_string(file_id, target_file_name);
+            const auto file_open_result = memory::filesystem::open_file(lfs, target_file_name, status.data_size);
+            if (result::Result::OK != file_open_result)
+            {
+                status.status = ble::StatusFromMemory::ERROR_FILE_NOT_FOUND;
+                break;
+            }
+            _file_operation_context.is_file_open = true;
+            _file_operation_context.file_id = file_id;
+            break;
+        }
+        case ble::CommandToMemory::CLOSE_FILE:
+        {
+            if (!_file_operation_context.is_file_open || file_id != _file_operation_context.file_id)
+            {
+                status.status = ble::StatusFromMemory::ERROR_OTHER;
+                break;
+            }
+            char target_file_name[max_file_name_size] = {0};
+            convert_file_id_to_string(file_id, target_file_name);
+            const auto file_close_result = memory::filesystem::close_file(lfs, target_file_name);
+            if (result::Result::OK != file_close_result)
+            {
+                status.status = ble::StatusFromMemory::ERROR_FILE_NOT_FOUND;
+                break;
+            }
+            _file_operation_context.is_file_open = false;
+            _file_operation_context.file_id = 0;
+            
             break;
         }
         default:

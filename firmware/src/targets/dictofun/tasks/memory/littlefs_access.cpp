@@ -13,6 +13,8 @@ namespace memory
 namespace filesystem
 {
 
+static lfs_file_t _active_file;
+
 result::Result init_littlefs(lfs_t& lfs, const lfs_config& config)
 {
     auto err = lfs_mount(&lfs, &config);
@@ -129,6 +131,43 @@ result::Result get_file_info(lfs_t& lfs, const char * name, uint8_t * buffer, ui
 
     return result::Result::OK;
 
+}
+
+result::Result open_file(lfs_t& lfs, const char * name, uint32_t& file_size_bytes)
+{
+    lfs_info info;
+    const auto stat_result = lfs_stat(&lfs, name, &info);
+    if (stat_result < 0)
+    {
+        NRF_LOG_ERROR("open: lfs stat error(%d)", stat_result);
+        file_size_bytes = 0;
+        return result::Result::OK;
+    }
+    if (info.type != LFS_TYPE_REG)
+    {
+        // File not found use-case
+        file_size_bytes = 0;
+        return result::Result::ERROR_INVALID_PARAMETER;
+    }
+    file_size_bytes = info.size;
+    const auto open_result = lfs_file_open(&lfs,&_active_file, name, LFS_O_RDONLY);
+    if (open_result < 0)
+    {
+        NRF_LOG_ERROR("failed to open file %s", name);
+        return result::Result::ERROR_GENERAL;
+    }
+    return result::Result::OK;
+}
+
+result::Result close_file(lfs_t& lfs, const char * name)
+{
+    const auto close_result = lfs_file_close(&lfs,&_active_file);
+    if (close_result < 0)
+    {
+        NRF_LOG_ERROR("failed to close active file");
+        return result::Result::ERROR_GENERAL;
+    }
+    return result::Result::OK;
 }
 
 }

@@ -52,7 +52,9 @@ enum class CommandToMemory
 {
     GET_FILES_LIST,
     GET_FILE_INFO,
+    OPEN_FILE,
     GET_FILE_DATA,
+    CLOSE_FILE,
     GET_FS_STATUS,
 };
 
@@ -68,6 +70,7 @@ enum class StatusFromMemory
     ERROR_PERMISSION_DENIED,
     ERROR_FILE_NOT_FOUND,
     ERROR_FS_CORRUPT,
+    ERROR_FILE_ALREADY_OPEN,
     ERROR_OTHER,
 };
 
