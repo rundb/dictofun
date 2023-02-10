@@ -31,7 +31,7 @@ class FtsClient:
         self.data_char = dictofun.get_characteristic_by_uuid(self.fts_file_data_char_uuid)
         self.fs_status = dictofun.get_characteristic_by_uuid(self.fts_fs_status_char_uuid)
         self.status = dictofun.get_characteristic_by_uuid(self.fts_status_char_uuid)
-        if self.cp_char is None or self.status is None: #or self.list_char is None or self.data_char is None or self.fs_status is None or self.status is None:
+        if self.cp_char is None  or self.list_char is None or self.data_char is None or self.fs_status is None or self.status is None:
             if self.cp_char is None:
                 logging.error("cp char not resolved")
             if self.list_char is None:
