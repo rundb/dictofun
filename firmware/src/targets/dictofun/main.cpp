@@ -38,7 +38,7 @@ application::TaskDescriptor<256,  2> audio_task;
 application::TaskDescriptor<256,  1> audio_tester_task;
 application::TaskDescriptor<256,  1> log_task;
 application::TaskDescriptor<256,  3> systemstate_task;
-application::TaskDescriptor<1500, 2> memory_task;
+application::TaskDescriptor<1024, 2> memory_task;
 application::TaskDescriptor<1024,  2> ble_task;
 application::TaskDescriptor<96,   1>  led_task;
 
@@ -95,8 +95,6 @@ void latch_ldo_enable()
 
 int main()
 {
-    SCB->SHCSR |= SCB_SHCSR_MEMFAULTENA_Msk | SCB_SHCSR_BUSFAULTENA_Msk | SCB_SHCSR_USGFAULTENA_Msk;
-
     latch_ldo_enable();
 
     const auto err_code = nrf_drv_clock_init();

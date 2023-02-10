@@ -169,7 +169,7 @@ result::Result open_file(lfs_t& lfs, const char * name, uint32_t& file_size_byte
 
 result::Result get_file_data(lfs_t& lfs, uint8_t * buffer, uint32_t& actual_size, const uint32_t max_data_size)
 {
-    if (buffer == nullptr || max_data_size == 8)
+    if (buffer == nullptr || max_data_size == 0)
     {
         return result::Result::ERROR_INVALID_PARAMETER;
     }
