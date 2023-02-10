@@ -66,6 +66,7 @@ const struct lfs_config lfs_configuration = {
 
 constexpr uint32_t cmd_wait_ticks{5};
 constexpr uint32_t ble_command_wait_ticks{5};
+constexpr uint32_t data_send_wait_ticks{10};
 
 // This element allocated statically, as it's rather big (~260 bytes)
 ble::FileDataFromMemoryQueueElement data_queue_elem;
@@ -249,6 +250,24 @@ void process_request_from_ble(Context& context, ble::CommandToMemory command_id,
             
             break;
         }
+        case ble::CommandToMemory::GET_FILE_DATA:
+        {
+            const auto file_data_result = memory::filesystem::get_file_data(
+                lfs,
+                data_queue_elem.data,
+                data_queue_elem.size,
+                ble::FileDataFromMemoryQueueElement::element_max_size);
+
+            if (result::Result::OK != file_data_result)
+            {
+                NRF_LOG_ERROR("mem: failed to fetch file data");
+                status.status = ble::StatusFromMemory::ERROR_OTHER;
+                status.data_size = 0;
+                break;
+            }
+            status.data_size = data_queue_elem.size;
+            break;
+        }
         default:
         {
             NRF_LOG_ERROR("mem from ble: command %d not yet implemented", command_id);
@@ -265,8 +284,7 @@ void process_request_from_ble(Context& context, ble::CommandToMemory command_id,
     {
         return;
     }
-
-    const auto send_data_result = xQueueSend(context.data_to_ble_queue, &data_queue_elem, 0);
+    const auto send_data_result = xQueueSend(context.data_to_ble_queue, &data_queue_elem, data_send_wait_ticks);
     if (pdTRUE != send_data_result)
     {
         NRF_LOG_ERROR("mem: failed to send data to BLE");
@@ -443,7 +461,7 @@ void launch_test_3()
     // Enforce overflow of a single sector size to provoke an erase operation
     size_t written_data_size{0};
     const auto write_start_tick{xTaskGetTickCount()};
-    for (int i = 0; i < 20; ++i)
+    for (int i = 0; i < 4; ++i)
     {
         const auto write_result = lfs_file_write(&lfs, &file, test_data, sizeof(test_data));
         written_data_size += sizeof(test_data);

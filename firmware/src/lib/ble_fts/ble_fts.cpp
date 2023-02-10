@@ -440,7 +440,6 @@ void FtsService::process()
             else
             {
                 const auto continue_result = continue_sending_file_data();
-                NRF_LOG_DEBUG("sent %d of %d", _transaction_ctx.file_sent_size, _transaction_ctx.file_size);
                 if (result::Result::OK != continue_result)
                 {
                     _context.active_command = FtsService::ControlPointOpcode::IDLE;
@@ -666,7 +665,7 @@ result::Result FtsService::send_file_data()
         return open_result;
     }
 
-    NRF_LOG_DEBUG("ble::fts::sending %d bytes", file_size);
+    NRF_LOG_DEBUG("ble::fts::file size %d bytes", file_size);
 
     // 2. Fill in the file size data to the transaction context
     _transaction_ctx.idx = 0;
@@ -685,6 +684,9 @@ result::Result FtsService::send_file_data()
         (void)update_general_status(GeneralStatus::FS_CORRUPT, 0);
         return read_result;
     }
+
+    _transaction_ctx.idx = 0;
+    _transaction_ctx.file_sent_size = 0;
 
     // 4. Kick off data packets push
     const auto push_result = push_data_packets(ControlPointOpcode::REQ_FILE_DATA);

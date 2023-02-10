@@ -12,8 +12,12 @@ namespace memory
 {
 namespace filesystem
 {
-
+// This is a workaround to keep state of the active file between the calls
+// see https://github.com/littlefs-project/littlefs/issues/304 for reference
+static constexpr size_t active_file_buffer_size{256};
+static uint8_t _active_file_buffer[active_file_buffer_size];
 static lfs_file_t _active_file;
+static lfs_file_config _active_file_config;
 
 result::Result init_littlefs(lfs_t& lfs, const lfs_config& config)
 {
@@ -150,12 +154,32 @@ result::Result open_file(lfs_t& lfs, const char * name, uint32_t& file_size_byte
         return result::Result::ERROR_INVALID_PARAMETER;
     }
     file_size_bytes = info.size;
-    const auto open_result = lfs_file_open(&lfs,&_active_file, name, LFS_O_RDONLY);
-    if (open_result < 0)
+    memset(&_active_file_config, 0, sizeof(_active_file_config));
+    _active_file_config.buffer = _active_file_buffer;
+    _active_file_config.attr_count = 0;
+    const auto config_res = lfs_file_opencfg(&lfs, &_active_file, name, LFS_O_RDONLY, &_active_file_config);
+
+    if (config_res < 0)
     {
         NRF_LOG_ERROR("failed to open file %s", name);
         return result::Result::ERROR_GENERAL;
     }
+    return result::Result::OK;
+}
+
+result::Result get_file_data(lfs_t& lfs, uint8_t * buffer, uint32_t& actual_size, const uint32_t max_data_size)
+{
+    if (buffer == nullptr || max_data_size == 8)
+    {
+        return result::Result::ERROR_INVALID_PARAMETER;
+    }
+    const auto result = lfs_file_read(&lfs, &_active_file, buffer, max_data_size);
+    if (result < 0)
+    {
+        NRF_LOG_ERROR("read err(%d)", result);
+        return result::Result::ERROR_GENERAL;
+    }
+    actual_size = result;
     return result::Result::OK;
 }
 

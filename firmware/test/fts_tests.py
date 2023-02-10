@@ -78,6 +78,11 @@ def check_files_info_getter(fts, files):
     test_file_id = files[0]
     file_info = fts.get_file_info(test_file_id)
     logging.info("First file in the FS: %s" % str(file_info))
+    return file_info["size"]
+
+def check_file_data_getter(fts, file, size):
+    file_data = fts.get_file_data(file, size)
+    logging.info("file size: %d" % len(file_data))
     
 
 """
@@ -131,7 +136,8 @@ def launch_checks(dictofun):
         exit(-1)
 
     files = check_files_list_getter(fts)
-    check_files_info_getter(fts, files)
+    file0_size = check_files_info_getter(fts, files)
+    check_file_data_getter(fts, files[0], file0_size)
 
 """
 Here all preparations (except for UART commands is performed)

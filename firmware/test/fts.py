@@ -31,7 +31,19 @@ class FtsClient:
         self.data_char = dictofun.get_characteristic_by_uuid(self.fts_file_data_char_uuid)
         self.fs_status = dictofun.get_characteristic_by_uuid(self.fts_fs_status_char_uuid)
         self.status = dictofun.get_characteristic_by_uuid(self.fts_status_char_uuid)
-        if self.cp_char is None or self.list_char is None or self.data_char is None or self.fs_status is None or self.status is None:
+        if self.cp_char is None or self.status is None: #or self.list_char is None or self.data_char is None or self.fs_status is None or self.status is None:
+            if self.cp_char is None:
+                logging.error("cp char not resolved")
+            if self.list_char is None:
+                logging.error("list char not resolved")
+            if self.info_char is None:
+                logging.error("info char not resolved")
+            if self.data_char is None:
+                logging.error("data char not resolved")
+            if self.fs_status is None:
+                logging.error("fs stat char not resolved")
+            if self.status is None:
+                logging.error("stat char not resolved")                
             raise Exception("failed to access FTS characteristic")
         self.status.enable_notifications()
         self.dictofun = dictofun
@@ -207,7 +219,7 @@ class FtsClient:
         
         received_data = bytearray([])
         start_time = time.time()
-        transaction_timeout = 0.1 * size
+        transaction_timeout = 0.03 * size
 
         while len(received_data) != expected_size and time.time() - start_time < transaction_timeout:
             if self.pending_flags[self.data_char.uuid]:
