@@ -25,6 +25,7 @@ static QueueHandle_t _data_from_fs_queue{nullptr};
 
 static constexpr uint32_t max_status_wait_time{100};
 static constexpr uint32_t max_short_data_wait_time{30};
+static constexpr uint32_t max_long_data_wait_time{200};
 
 // this queue element is allocated statically, as it's rather huge (~260 bytes) and it's better to avoid putting it on stack
 ble::FileDataFromMemoryQueueElement data_from_memory_queue_element;
@@ -133,31 +134,124 @@ result::Result get_file_info(file_id_type file_id, uint8_t * file_data, uint32_t
     return result::Result::OK;
 }
 
-result::Result open_file(file_id_type file_id, uint32_t& file_size)
+result::Result open_file(const file_id_type file_id, uint32_t& file_size)
 {
     if (!is_fs_communication_valid())
     {
         return result::Result::ERROR_GENERAL;
     }
-    return result::Result::ERROR_NOT_IMPLEMENTED;
+
+    ble::CommandToMemoryQueueElement cmd{ble::CommandToMemory::OPEN_FILE, file_id};
+    ble::StatusFromMemoryQueueElement response;
+
+    const auto cmd_result = xQueueSend(_command_to_fs_queue, &cmd, 0);
+    if (pdTRUE != cmd_result)
+    {
+        NRF_LOG_ERROR("open file: failed to send cmd to mem");
+        return result::Result::ERROR_GENERAL;
+    }
+    const auto status_result = xQueueReceive(_status_from_fs_queue, &response, max_status_wait_time);
+    if (pdTRUE != status_result)
+    {
+        NRF_LOG_ERROR("open file: timed out recv status from mem");
+        return result::Result::ERROR_GENERAL; 
+    }
+    if (response.status != ble::StatusFromMemory::OK)
+    {
+        NRF_LOG_ERROR("open file: recv error status(%d)", static_cast<int>(response.status));
+        return result::Result::ERROR_GENERAL;
+    }
+    else
+    {
+    }
+    NRF_LOG_DEBUG("opened file with size %d", response.data_size);
+    file_size = response.data_size;
+    return result::Result::OK;
 }
 
-result::Result close_file(file_id_type file_id)
+result::Result close_file(const file_id_type file_id)
 {
     if (!is_fs_communication_valid())
     {
         return result::Result::ERROR_GENERAL;
     }
-    return result::Result::ERROR_NOT_IMPLEMENTED;
+    ble::CommandToMemoryQueueElement cmd{ble::CommandToMemory::CLOSE_FILE, file_id};
+    ble::StatusFromMemoryQueueElement response;
+
+    const auto cmd_result = xQueueSend(_command_to_fs_queue, &cmd, 0);
+    if (pdTRUE != cmd_result)
+    {
+        NRF_LOG_ERROR("close file: failed to send cmd to mem");
+        return result::Result::ERROR_GENERAL;
+    }
+    const auto status_result = xQueueReceive(_status_from_fs_queue, &response, max_status_wait_time);
+    if (pdTRUE != status_result)
+    {
+        NRF_LOG_ERROR("close file: timed out recv status from mem");
+        return result::Result::ERROR_GENERAL; 
+    }
+    if (response.status != ble::StatusFromMemory::OK)
+    {
+        NRF_LOG_ERROR("close file: recv error status(%d)", static_cast<int>(response.status));
+        return result::Result::ERROR_GENERAL;
+    }
+    else
+    {
+    }
+    NRF_LOG_DEBUG("closed file");
+    return result::Result::OK;
 }
 
-result::Result get_data(file_id_type file_id, uint8_t * buffer, uint32_t& actual_size, uint32_t max_size)
+result::Result get_data(const file_id_type file_id, uint8_t * buffer, uint32_t& actual_size, const uint32_t max_size)
 {
     if (!is_fs_communication_valid())
     {
         return result::Result::ERROR_GENERAL;
     }
-    return result::Result::ERROR_NOT_IMPLEMENTED;
+    if (buffer == nullptr || max_size == 0)
+    {
+        return result::Result::ERROR_INVALID_PARAMETER;
+    }
+
+    xQueueReset(_data_from_fs_queue);
+
+    ble::CommandToMemoryQueueElement cmd{ble::CommandToMemory::GET_FILE_DATA, file_id};
+    ble::StatusFromMemoryQueueElement response;
+
+    const auto cmd_result = xQueueSend(_command_to_fs_queue, &cmd, 0);
+    if (pdTRUE != cmd_result)
+    {
+        NRF_LOG_ERROR("get file data: failed to send cmd to mem");
+        return result::Result::ERROR_GENERAL;
+    }
+    const auto status_result = xQueueReceive(_status_from_fs_queue, &response, max_status_wait_time);
+    if (pdTRUE != status_result)
+    {
+        NRF_LOG_ERROR("get file data: timed out recv status from mem");
+        return result::Result::ERROR_GENERAL; 
+    }
+    if (response.status != ble::StatusFromMemory::OK)
+    {
+        NRF_LOG_ERROR("get file data: recv error status(%d)", static_cast<int>(response.status));
+        return result::Result::ERROR_GENERAL;
+    }
+    else
+    {
+    }
+    ble::FileDataFromMemoryQueueElement& data{data_from_memory_queue_element};
+    data.size = 0;
+    const auto data_result = xQueueReceive(_data_from_fs_queue, &data, max_long_data_wait_time);
+    if (pdTRUE != data_result)
+    {
+        NRF_LOG_ERROR("get file data: timed out recv data from mem");
+        return result::Result::ERROR_GENERAL;
+    }
+    
+    actual_size = data.size;
+
+    memcpy(buffer, data.data, data.size);
+
+    return result::Result::OK;
 }
 
 result::Result fs_status(FileSystemInterface::FSStatus& status)

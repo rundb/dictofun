@@ -66,9 +66,16 @@ const struct lfs_config lfs_configuration = {
 
 constexpr uint32_t cmd_wait_ticks{5};
 constexpr uint32_t ble_command_wait_ticks{5};
+constexpr uint32_t data_send_wait_ticks{10};
 
 // This element allocated statically, as it's rather big (~260 bytes)
 ble::FileDataFromMemoryQueueElement data_queue_elem;
+
+static struct FileOperationContext
+{
+    ble::fts::file_id_type file_id{0};
+    bool is_file_open{false};
+} _file_operation_context;
 
 void launch_test_1();
 void launch_test_2();
@@ -76,6 +83,7 @@ void launch_test_3();
 
 static bool is_ble_access_allowed();
 void process_request_from_ble(Context& context, ble::CommandToMemory command_id, ble::fts::file_id_type file_id);
+
 
 void task_memory(void * context_ptr)
 {
@@ -131,6 +139,8 @@ static bool is_ble_access_allowed()
     return true;
 }
 
+static constexpr uint32_t max_file_name_size{8 + 1};
+
 void convert_file_id_to_string(ble::fts::file_id_type file_id, char * buffer)
 {
     memcpy(buffer, &file_id, sizeof(ble::fts::file_id_type));
@@ -178,7 +188,6 @@ void process_request_from_ble(Context& context, ble::CommandToMemory command_id,
         }
         case ble::CommandToMemory::GET_FILE_INFO:
         {
-            static constexpr uint32_t max_file_name_size{8 + 1};
             char target_file_name[max_file_name_size] = {0};
             convert_file_id_to_string(file_id, target_file_name);
             const auto file_info_result = memory::filesystem::get_file_info(
@@ -201,6 +210,64 @@ void process_request_from_ble(Context& context, ble::CommandToMemory command_id,
             }
             break;
         }
+        case ble::CommandToMemory::OPEN_FILE:
+        {
+            if (_file_operation_context.is_file_open)
+            {
+                status.status = ble::StatusFromMemory::ERROR_FILE_ALREADY_OPEN;
+                status.data_size = 0;
+                break;
+            }
+            char target_file_name[max_file_name_size] = {0};
+            convert_file_id_to_string(file_id, target_file_name);
+            const auto file_open_result = memory::filesystem::open_file(lfs, target_file_name, status.data_size);
+            if (result::Result::OK != file_open_result)
+            {
+                status.status = ble::StatusFromMemory::ERROR_FILE_NOT_FOUND;
+                break;
+            }
+            _file_operation_context.is_file_open = true;
+            _file_operation_context.file_id = file_id;
+            break;
+        }
+        case ble::CommandToMemory::CLOSE_FILE:
+        {
+            if (!_file_operation_context.is_file_open || file_id != _file_operation_context.file_id)
+            {
+                status.status = ble::StatusFromMemory::ERROR_OTHER;
+                break;
+            }
+            char target_file_name[max_file_name_size] = {0};
+            convert_file_id_to_string(file_id, target_file_name);
+            const auto file_close_result = memory::filesystem::close_file(lfs, target_file_name);
+            if (result::Result::OK != file_close_result)
+            {
+                status.status = ble::StatusFromMemory::ERROR_FILE_NOT_FOUND;
+                break;
+            }
+            _file_operation_context.is_file_open = false;
+            _file_operation_context.file_id = 0;
+            
+            break;
+        }
+        case ble::CommandToMemory::GET_FILE_DATA:
+        {
+            const auto file_data_result = memory::filesystem::get_file_data(
+                lfs,
+                data_queue_elem.data,
+                data_queue_elem.size,
+                ble::FileDataFromMemoryQueueElement::element_max_size);
+
+            if (result::Result::OK != file_data_result)
+            {
+                NRF_LOG_ERROR("mem: failed to fetch file data");
+                status.status = ble::StatusFromMemory::ERROR_OTHER;
+                status.data_size = 0;
+                break;
+            }
+            status.data_size = data_queue_elem.size;
+            break;
+        }
         default:
         {
             NRF_LOG_ERROR("mem from ble: command %d not yet implemented", command_id);
@@ -217,8 +284,7 @@ void process_request_from_ble(Context& context, ble::CommandToMemory command_id,
     {
         return;
     }
-
-    const auto send_data_result = xQueueSend(context.data_to_ble_queue, &data_queue_elem, 0);
+    const auto send_data_result = xQueueSend(context.data_to_ble_queue, &data_queue_elem, data_send_wait_ticks);
     if (pdTRUE != send_data_result)
     {
         NRF_LOG_ERROR("mem: failed to send data to BLE");
@@ -395,7 +461,7 @@ void launch_test_3()
     // Enforce overflow of a single sector size to provoke an erase operation
     size_t written_data_size{0};
     const auto write_start_tick{xTaskGetTickCount()};
-    for (int i = 0; i < 20; ++i)
+    for (int i = 0; i < 4; ++i)
     {
         const auto write_result = lfs_file_write(&lfs, &file, test_data, sizeof(test_data));
         written_data_size += sizeof(test_data);
