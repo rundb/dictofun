@@ -8,11 +8,18 @@
 #include "FreeRTOS.h"
 #include "queue.h"
 
+#include "spi_flash.h"
+#include "lfs.h"
+
 namespace memory
 {
 bool isMemoryErased();
 
+
 void task_memory(void * context_ptr);
+void launch_test_1(flash::SpiFlash& flash);
+void launch_test_2(flash::SpiFlash& flash);
+void launch_test_3(lfs_t& lfs, const lfs_config& lfs_configuration);
 
 enum class Command
 {
