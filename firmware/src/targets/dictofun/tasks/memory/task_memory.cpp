@@ -77,9 +77,6 @@ static struct FileOperationContext
     bool is_file_open{false};
 } _file_operation_context;
 
-void launch_test_1();
-void launch_test_2();
-void launch_test_3();
 
 static bool is_ble_access_allowed();
 void process_request_from_ble(Context& context, ble::CommandToMemory command_id, ble::fts::file_id_type file_id);
@@ -111,15 +108,15 @@ void task_memory(void * context_ptr)
         {
             if (command.command_id == Command::LAUNCH_TEST_1)
             {
-                launch_test_1();
+                launch_test_1(flash);
             }
             else if (command.command_id == Command::LAUNCH_TEST_2)
             {
-                launch_test_2();
+                launch_test_2(flash);
             }
             else if (command.command_id == Command::LAUNCH_TEST_3)
             {
-                launch_test_3();
+                launch_test_3(lfs, lfs_configuration);
             }
         }
         const auto cmd_from_ble_queue_receive_status = xQueueReceive(
@@ -303,236 +300,6 @@ void process_request_from_ble(Context& context, ble::CommandToMemory command_id,
         NRF_LOG_ERROR("mem: failed to send data to BLE");
         return;
     }
-}
-
-void launch_test_1()
-{
-    NRF_LOG_INFO("task memory: launching chip erase. Memory task shall not accept commands during the execution of this command.");
-    const auto start_tick = xTaskGetTickCount();
-    flash.eraseChip();
-    static constexpr uint32_t max_chip_erase_duration{50000};
-    while (flash.isBusy() && (xTaskGetTickCount() - start_tick) < max_chip_erase_duration)
-    {
-        vTaskDelay(100);
-    }
-    const auto end_tick = xTaskGetTickCount();
-    if ((end_tick - start_tick) > max_chip_erase_duration)
-    {
-        NRF_LOG_WARNING("task memory: chip erase timed out");
-    }
-    else
-    {
-        NRF_LOG_INFO("task memory: chip erase took %d ms", end_tick - start_tick);
-    }
-}
-
-void launch_test_2()
-{
-    NRF_LOG_INFO("task memory: launching read-program-read-erase-program test. \n"\
-                    "Memory task shall not accept commands during the execution of this command.");
-    constexpr uint32_t test_area_start_address{16*1024*1024-2*4096}; // second sector from the end.  
-    constexpr uint32_t test_data_size{256};
-    constexpr uint32_t test_erase_size{4096};
-    uint8_t test_data[test_data_size]{0};
-
-    // ===== Step 1: read the current content of the memory
-    const auto read_1_start_tick{xTaskGetTickCount()};
-    const auto read_1_res = flash.read(test_area_start_address, test_data, test_data_size);
-    const auto read_1_end_tick{xTaskGetTickCount()};
-    if (memory::SpiNorFlashIf::Result::OK != read_1_res)
-    {
-        NRF_LOG_ERROR("mem: failed to read flash memory");
-        return;
-    }
-    bool is_area_erased{true};
-    for (auto i = 0UL; i < test_data_size; ++i)
-    {
-        if (test_data[i] != 0xFF) is_area_erased = false;
-    }
-    if (!is_area_erased)
-    {
-        NRF_LOG_ERROR("mem: test area is not erased. aborting");
-        return;
-    }
-    NRF_LOG_INFO("read took %d ms", read_1_end_tick - read_1_start_tick);
-
-    // ==== Step 2: program a single page with predefined values
-    for (auto i = 0UL; i < test_data_size; ++i)
-    {
-        test_data[i] = i;
-    }
-    const auto prog_start_tick{xTaskGetTickCount()};
-    const auto program_res = flash.program(test_area_start_address, test_data, test_data_size);
-    const auto prog_end_tick{xTaskGetTickCount()};
-    if (memory::SpiNorFlashIf::Result::OK != program_res)
-    {
-        NRF_LOG_ERROR("mem: failed to read flash memory");
-        return;
-    }
-    NRF_LOG_INFO("prog took %d ms", prog_end_tick - prog_start_tick);
-
-    // ==== Step 3: read back the programmed content
-    memset(test_data, 0, test_data_size);
-    const auto read_2_start_tick{xTaskGetTickCount()};
-    const auto read_2_res = flash.read(test_area_start_address, test_data, test_data_size);
-    const auto read_2_end_tick{xTaskGetTickCount()};
-    if (memory::SpiNorFlashIf::Result::OK != read_2_res)
-    {
-        NRF_LOG_ERROR("mem: failed to read flash memory");
-        return;
-    }
-    bool is_area_programmed{true};
-    for (auto i = 0UL; i < test_data_size; ++i)
-    {
-        if (test_data[i] != i) is_area_programmed = false;
-    }
-    if (!is_area_programmed)
-    {
-        NRF_LOG_ERROR("mem: test area has not been programmed. aborting");
-        return;
-    }
-    NRF_LOG_INFO("read 2 took %d ms", read_2_end_tick - read_2_start_tick);
-
-    // ==== Step 4: erase the sector we just programmed
-    const auto erase_start_tick{xTaskGetTickCount()};
-    const auto erase_res = flash.erase(test_area_start_address, test_erase_size);
-    const auto erase_end_tick{xTaskGetTickCount()};
-
-    if (memory::SpiNorFlashIf::Result::OK != erase_res)
-    {
-        NRF_LOG_ERROR("mem: failed to erase sector");
-        return;
-    }
-    NRF_LOG_INFO("erase took %d ms", erase_end_tick - erase_start_tick);
-
-    // ==== Step 5: verify that the test area has been erased.
-    memset(test_data, 0, test_data_size);
-    const auto read_3_start_tick{xTaskGetTickCount()};
-    const auto read_3_res = flash.read(test_area_start_address, test_data, test_data_size);
-    const auto read_3_end_tick{xTaskGetTickCount()};
-    if (memory::SpiNorFlashIf::Result::OK != read_3_res)
-    {
-        NRF_LOG_ERROR("mem: failed to read flash memory");
-        return;
-    }
-    is_area_erased = true;
-    for (auto i = 0UL; i < test_data_size; ++i)
-    {
-        if (test_data[i] != 0xFF) 
-        {
-            is_area_erased = false;
-            NRF_LOG_ERROR("mem: %x@%x", test_data[i], i);
-            break;
-        }
-    }
-    if (!is_area_erased)
-    {
-        NRF_LOG_ERROR("mem: test area is not erased. aborting");
-        return;
-    }
-    NRF_LOG_INFO("read3 took %d ms", read_3_end_tick - read_3_start_tick);
-}
-
-void launch_test_3()
-{
-    const auto test_start_tick{xTaskGetTickCount()};
-    NRF_LOG_INFO("mem: launching simple LFS operation test");
-    // ============ Step 1: initialize the FS (and format it, if necessary)
-    auto err = lfs_mount(&lfs, &lfs_configuration);
-    if (err != 0)
-    {
-        NRF_LOG_INFO("mem: formatting FS");
-        err = lfs_format(&lfs, &lfs_configuration);
-        if (err != 0)
-        {
-            NRF_LOG_ERROR("mem: failed to format LFS");
-            return;
-        }
-        err = lfs_mount(&lfs, &lfs_configuration);
-        if (err != 0)
-        {
-            NRF_LOG_ERROR("mem: failed to mount LFS after formatting");
-            return;
-        }
-    }
-    // ============ Step 2: create a file and write content into it
-    NRF_LOG_INFO("mem: creating file");
-    lfs_file_t file;
-    const auto create_result = lfs_file_open(&lfs, &file, "rec0", LFS_O_WRONLY | LFS_O_CREAT);
-    if (create_result!= 0)
-    {
-        NRF_LOG_ERROR("lfs: failed to create a file (err=%d)", create_result);
-    }
-
-    constexpr size_t test_data_size{512};
-    uint8_t test_data[test_data_size];
-    for (size_t i = 0; i < test_data_size; ++i)
-    {
-        test_data[i] = i & 0xFF;
-    }
-    NRF_LOG_INFO("mem: writing data to opened file");
-    // Enforce overflow of a single sector size to provoke an erase operation
-    size_t written_data_size{0};
-    const auto write_start_tick{xTaskGetTickCount()};
-    for (int i = 0; i < 4; ++i)
-    {
-        const auto write_result = lfs_file_write(&lfs, &file, test_data, sizeof(test_data));
-        written_data_size += sizeof(test_data);
-        if (write_result!= sizeof(test_data))
-        {
-            NRF_LOG_ERROR("lfs: failed to write into a file (%d)", write_result);
-            return;
-        }
-    }
-    const auto write_end_tick{xTaskGetTickCount()};
-    
-    // ============ Step 3: close the file
-    NRF_LOG_INFO("mem: closing file");
-    const auto close_result_1 = lfs_file_close(&lfs, &file);
-    if (close_result_1!= 0)
-    {
-        NRF_LOG_ERROR("lfs: failed to close file after writing");
-        return;
-    }
-    memset(test_data, 0, test_data_size);
-    // ============ Step 4: open the file for read
-    NRF_LOG_INFO("mem: opening file for read");
-    const auto open_to_read_result = lfs_file_open(&lfs, &file, "rec0", LFS_O_RDONLY);
-    if (open_to_read_result!= 0)
-    {
-        NRF_LOG_ERROR("lfs: failed to open file for reading");
-        return;
-    }
-    const auto read_result = lfs_file_read(&lfs, &file, test_data, sizeof(test_data));
-    if (read_result != sizeof(test_data))
-    {
-        NRF_LOG_ERROR("lfs: failed to read file content");
-        return;
-    }
-
-    // ============ Step 5: close the file
-    NRF_LOG_INFO("mem: closing file");
-    const auto close_result_2 = lfs_file_close(&lfs, &file);
-    if (close_result_2 != 0)
-    {
-        NRF_LOG_ERROR("lfs: failed to close file after opening");
-        return;
-    }
-
-    // ============ Step 6: validate a portion of the file
-    if (test_data[1] != 1 || test_data[9] != 9 || test_data[15] != 15)
-    {
-        NRF_LOG_ERROR("lfs: failed to validate file content");
-        return;
-    }
-    lfs_unmount(&lfs);
-    const auto test_end_tick{xTaskGetTickCount()};
-    NRF_LOG_INFO("LFS test took %d ms", (test_end_tick - test_start_tick));
-    NRF_LOG_INFO("LFS write throughput: %d ms, %d bytes, %d bytes/ms", 
-        (write_end_tick - write_start_tick + 1),  
-        written_data_size,
-        written_data_size / (write_end_tick - write_start_tick + 1)
-        );
 }
 
 }
