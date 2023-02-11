@@ -268,6 +268,19 @@ void process_request_from_ble(Context& context, ble::CommandToMemory command_id,
             status.data_size = data_queue_elem.size;
             break;
         }
+        case ble::CommandToMemory::GET_FS_STATUS:
+        {
+            const auto fs_stat_result = memory::filesystem::get_fs_stat(lfs, data_queue_elem.data, lfs_configuration);
+            if (result::Result::OK != fs_stat_result)
+            {
+                NRF_LOG_ERROR("mem: failed to fetch fs stat");
+                status.status = ble::StatusFromMemory::ERROR_OTHER;
+                status.data_size = 0;
+                break;
+            }
+            status.data_size = sizeof(ble::fts::FileSystemInterface::FSStatus);
+            data_queue_elem.size = status.data_size;
+        }
         default:
         {
             NRF_LOG_ERROR("mem from ble: command %d not yet implemented", command_id);

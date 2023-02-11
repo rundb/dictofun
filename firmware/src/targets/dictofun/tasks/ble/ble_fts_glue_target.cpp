@@ -260,7 +260,44 @@ result::Result fs_status(FileSystemInterface::FSStatus& status)
     {
         return result::Result::ERROR_GENERAL;
     }
-    return result::Result::ERROR_NOT_IMPLEMENTED;
+
+    ble::CommandToMemoryQueueElement cmd{ble::CommandToMemory::GET_FS_STATUS, 0};
+    ble::StatusFromMemoryQueueElement response;
+
+    const auto cmd_result = xQueueSend(_command_to_fs_queue, &cmd, 0);
+    if (pdTRUE != cmd_result)
+    {
+        NRF_LOG_ERROR("fs stat: failed to send cmd to mem");
+        return result::Result::ERROR_GENERAL;
+    }
+    const auto status_result = xQueueReceive(_status_from_fs_queue, &response, max_status_wait_time);
+    if (pdTRUE != status_result)
+    {
+        NRF_LOG_ERROR("fs stat: timed out recv status from mem");
+        return result::Result::ERROR_GENERAL; 
+    }
+    if (response.status != ble::StatusFromMemory::OK)
+    {
+        NRF_LOG_ERROR("fs stat: recv error status(%d)", static_cast<int>(response.status));
+        return result::Result::ERROR_GENERAL;
+    }
+    
+    ble::FileDataFromMemoryQueueElement& data{data_from_memory_queue_element};
+
+    const auto data_result = xQueueReceive(_data_from_fs_queue, &data, max_short_data_wait_time);
+    if (pdTRUE != data_result)
+    {
+        NRF_LOG_ERROR("fs stat: timed out recv data from mem");
+        return result::Result::ERROR_GENERAL;
+    }
+    
+    if (data.size != sizeof(status))
+    {
+        NRF_LOG_ERROR("fs stat: struct size mismatch")
+    }
+
+    memcpy(&status, data.data, sizeof(status));
+    return result::Result::OK;
 }
 
 FileSystemInterface dictofun_fs_if
