@@ -194,5 +194,60 @@ result::Result close_file(lfs_t& lfs, const char * name)
     return result::Result::OK;
 }
 
+result::Result get_fs_stat(lfs_t& lfs, uint8_t * buffer, const lfs_config&  config)
+{
+    if (buffer == nullptr)
+    {
+        return result::Result::ERROR_INVALID_PARAMETER;
+    }
+    ble::fts::FileSystemInterface::FSStatus fs_stat;
+    const auto lfs_fs_size_result = lfs_fs_size(&lfs);
+    if (lfs_fs_size_result < 0)
+    {
+        return result::Result::ERROR_GENERAL;
+    }
+    fs_stat.occupied_space = lfs_fs_size_result * config.block_size;
+    fs_stat.free_space = config.block_size * config.block_count;
+
+    // Count files, algorithm taken from get_files_list
+    lfs_dir_t dir;
+    lfs_info info;
+    const auto dir_open_result = lfs_dir_open(&lfs, &dir, ".");
+    if (dir_open_result != 0)
+    {
+        NRF_LOG_ERROR("mem: dir open failed (%d)", dir_open_result);
+        return result::Result::ERROR_GENERAL;
+    }
+
+    while (true) 
+    {
+        const auto dir_read_res = lfs_dir_read(&lfs, &dir, &info);
+        if (dir_read_res < 0) {
+            NRF_LOG_ERROR("dir read operation failed (%d)", dir_read_res);
+            return result::Result::ERROR_GENERAL;
+        }
+
+        if (dir_read_res == 0) {
+            break;
+        }
+
+        switch (info.type) 
+        {
+            case LFS_TYPE_REG:
+            {   
+                ++fs_stat.files_count;
+                break;
+            }
+            default:
+            {
+                break;
+            }
+        }
+    }
+
+    memcpy(buffer, &fs_stat, sizeof(fs_stat));
+    return result::Result::OK;
+}
+
 }
 }

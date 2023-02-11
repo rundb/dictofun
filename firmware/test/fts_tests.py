@@ -83,6 +83,10 @@ def check_files_info_getter(fts, files):
 def check_file_data_getter(fts, file, size):
     file_data = fts.get_file_data(file, size)
     logging.info("file size: %d" % len(file_data))
+
+def check_fs_stat_getter(fts):
+    fs_stat = fts.get_fs_status()
+    logging.info("fs stat: " + str(fs_stat))
     
 
 """
@@ -136,6 +140,7 @@ def launch_checks(dictofun):
         exit(-1)
 
     files = check_files_list_getter(fts)
+    check_fs_stat_getter(fts)
     file0_size = check_files_info_getter(fts, files)
     check_file_data_getter(fts, files[0], file0_size)
 
