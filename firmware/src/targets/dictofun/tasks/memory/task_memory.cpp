@@ -169,7 +169,6 @@ void process_request_from_ble(Context& context, ble::CommandToMemory command_id,
                 status.status = ble::StatusFromMemory::ERROR_OTHER;
                 status.data_size = 0;
             }
-            NRF_LOG_DEBUG("ROTU files list fetched (size %d)", data_queue_elem.size);
             break;
         }
         case ble::CommandToMemory::GET_FILE_INFO:

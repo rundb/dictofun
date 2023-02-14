@@ -198,9 +198,9 @@ if __name__ == '__main__':
     test_execution_result = 0
     if not dictofun is None:
         prepare_dictofun(dictofun, dictofun_control)
-        # test_execution_result = launch_tests(dictofun)
-        dictofun_control.issue_command("ble 4", 0.5)
-        launch_checks(dictofun)
+        test_execution_result = launch_tests(dictofun)
+        # dictofun_control.issue_command("ble 4", 0.5)
+        # launch_checks(dictofun)
         release_dictofun(dictofun, dictofun_control)
     else:
         logging.error("no dictofun discovered")
