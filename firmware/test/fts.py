@@ -220,11 +220,18 @@ class FtsClient:
         received_data = bytearray([])
         start_time = time.time()
         transaction_timeout = 0.03 * size
+        logging.debug("operation timeout: " + str(transaction_timeout))
+        last_statistic_print_timestamp = time.time()
+        printout_period = 10
 
         while len(received_data) != expected_size and time.time() - start_time < transaction_timeout:
             if self.pending_flags[self.data_char.uuid]:
                 received_data += self.values[self.data_char.uuid]
                 self.pending_flags[self.data_char.uuid] = False
+            if time.time() -  last_statistic_print_timestamp >= printout_period:
+                logging.info("received " + str(100.0 * len(received_data) / expected_size) + "%% of file")
+                last_statistic_print_timestamp = time.time()
+            time.sleep(0.05)
         
         if time.time() - start_time >= transaction_timeout:
             logging.error("file info: transaction timeout. Received %d out of %d bytes" % (len(received_data), expected_size) )

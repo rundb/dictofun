@@ -47,10 +47,14 @@ void record_end_callback(TimerHandle_t timer)
 {
     context->is_record_active = false;
     audio::CommandQueueElement cmd{audio::Command::RECORD_STOP};
-    const auto record_stop_status = xQueueSend(
-        context->audio_commands_handle,
-        reinterpret_cast<void *>(&cmd), 
-        0);
+    xQueueSend(context->audio_commands_handle, reinterpret_cast<void *>(&cmd), 0);
+    audio::StatusQueueElement response;
+    static constexpr uint32_t file_closure_max_wait_time{500};
+    const auto record_stop_status_result = xQueueReceive(context->audio_status_handle, reinterpret_cast<void *>(&response), file_closure_max_wait_time);
+    if (pdTRUE != record_stop_status_result)
+    {
+        NRF_LOG_ERROR("state: timed out to wait record close");
+    }
 
     if (_should_record_be_stored)
     {
@@ -248,7 +252,13 @@ void launch_cli_command_ble_operation(const uint32_t command_id)
         (command_id == 3) ? ble::Command::RESET_PAIRING :
         (command_id == 2) ? ble::Command::STOP :
         ble::Command::START;
-    
+    if (command == ble::Command::CONNECT_FS)
+    {
+        // When connection to filesystem is established, ownership of memory should be changed
+        memory::CommandQueueElement command_to_memory{memory::Command::SELECT_OWNER_BLE, {0, 0}};
+        xQueueSend(context->memory_commands_handle, reinterpret_cast<void *>(&command_to_memory), 0);
+    }
+
     ble::CommandQueueElement cmd{command};
     const auto ble_comm_status = xQueueSend(
         context->ble_commands_handle,

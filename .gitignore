@@ -20,3 +20,5 @@ keys
 *.o
 *.kicad_prl
 __pycache__
+*.wav
+*.bin

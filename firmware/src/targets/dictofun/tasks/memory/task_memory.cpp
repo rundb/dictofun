@@ -401,6 +401,7 @@ void process_request_from_state(Context& context, const Command command_id)
             {
                 NRF_LOG_ERROR("lfs: init failed");
             }
+            NRF_LOG_INFO("mem: owner changed to ble");
             _memory_owner = MemoryOwner::BLE;
             break;
         }
@@ -416,6 +417,7 @@ void process_request_from_state(Context& context, const Command command_id)
             {
                 NRF_LOG_ERROR("lfs: init failed");
             }
+            NRF_LOG_INFO("mem: owner changed to audio");
             _memory_owner = MemoryOwner::AUDIO;
             break;
         }
