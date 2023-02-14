@@ -7,3 +7,4 @@ set(NRF5_LINKER_SCRIPT "${PROJECT_SOURCE_DIR}/src/targets/dictofun/dictofun_link
 set(NRF5_SDKCONFIG_PATH "${PROJECT_SOURCE_DIR}/src/targets/dictofun/config")
 set(FREERTOS_CONFIG_PATH "${PROJECT_SOURCE_DIR}/src/targets/dictofun/config")
 set(NRF5_STACK_SIZE "8192")
+set(NRF5_TARGET_FAMILY "nrf52")

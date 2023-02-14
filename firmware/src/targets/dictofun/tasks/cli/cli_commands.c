@@ -161,7 +161,7 @@ static void cmd_test_memory(nrf_cli_t const * p_cli, const size_t argc, char ** 
         return;
     }
     const int test_id = atoi(argv[1]);
-    if (test_id < 1 || test_id > 3)
+    if (test_id < 1 || test_id > 4)
     {
         nrf_cli_fprintf(p_cli, NRF_CLI_ERROR, "Wrong test ID\n", argc);
         return;

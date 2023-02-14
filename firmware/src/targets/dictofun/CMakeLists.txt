@@ -52,6 +52,8 @@ target_link_libraries(dictofun_main PRIVATE
     nrf5_nrfx_prs
     nrf5_pwr_mgmt
     nrf5_sortlist
+    nrf5_hardfault
+    nrf5_hardfault_handler
 )
 
 add_custom_command(TARGET dictofun_main
