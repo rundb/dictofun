@@ -13,6 +13,7 @@
 #include "boards.h"
 #include "block_api.h"
 #include "littlefs_access.h"
+#include <cstdlib>
 
 #include "task_ble.h"
 
@@ -36,8 +37,8 @@ constexpr uint32_t flash_sector_size{4096};
 constexpr uint32_t flash_total_size{16*1024*1024-4096};
 constexpr uint32_t flash_sectors_count{flash_total_size / flash_sector_size};
 
-constexpr size_t CACHE_SIZE{2 * flash_page_size};
-constexpr size_t LOOKAHEAD_BUFFER_SIZE{16};
+constexpr size_t CACHE_SIZE{flash_page_size};
+constexpr size_t LOOKAHEAD_BUFFER_SIZE{64};
 uint8_t prog_buffer[CACHE_SIZE];
 uint8_t read_buffer[CACHE_SIZE];
 uint8_t lookahead_buffer[CACHE_SIZE];
@@ -56,7 +57,7 @@ const struct lfs_config lfs_configuration = {
     .block_size = flash_sector_size,
     .block_count = flash_sectors_count,
     .block_cycles = 500,
-    .cache_size = flash_page_size,
+    .cache_size = CACHE_SIZE,
     .lookahead_size = LOOKAHEAD_BUFFER_SIZE,
     .read_buffer = read_buffer,
     .prog_buffer = prog_buffer,
@@ -80,7 +81,7 @@ static struct FileOperationContext
 
 static bool is_ble_access_allowed();
 void process_request_from_ble(Context& context, ble::CommandToMemory command_id, ble::fts::file_id_type file_id);
-
+void process_request_from_state(Context& context, Command command_id);
 
 void task_memory(void * context_ptr)
 {
@@ -98,6 +99,12 @@ void task_memory(void * context_ptr)
     
     memory::block_device::register_flash_device(&flash, flash_sector_size, flash_page_size, flash_total_size);
 
+    const auto init_result = memory::filesystem::init_littlefs(lfs, lfs_configuration);
+    if (result::Result::OK != init_result)
+    {
+        NRF_LOG_ERROR("mem: failed to mount littlefs");
+    }
+
     while(1)
     {
         const auto cmd_queue_receive_status = xQueueReceive(
@@ -106,18 +113,7 @@ void task_memory(void * context_ptr)
             cmd_wait_ticks);
         if (pdPASS == cmd_queue_receive_status)
         {
-            if (command.command_id == Command::LAUNCH_TEST_1)
-            {
-                launch_test_1(flash);
-            }
-            else if (command.command_id == Command::LAUNCH_TEST_2)
-            {
-                launch_test_2(flash);
-            }
-            else if (command.command_id == Command::LAUNCH_TEST_3)
-            {
-                launch_test_3(lfs, lfs_configuration);
-            }
+            process_request_from_state(context, command.command_id);
         }
         const auto cmd_from_ble_queue_receive_status = xQueueReceive(
             context.command_from_ble_queue,
@@ -162,14 +158,6 @@ void process_request_from_ble(Context& context, ble::CommandToMemory command_id,
     {
         case ble::CommandToMemory::GET_FILES_LIST:
         {
-            const auto mount_result = memory::filesystem::init_littlefs(lfs, lfs_configuration);
-            if (mount_result != result::Result::OK)
-            {
-                NRF_LOG_ERROR("mem: failed to mount littlefs");
-                status.status = ble::StatusFromMemory::ERROR_FS_CORRUPT;
-                status.data_size = 0;
-                break;
-            }
             const auto ls_result = memory::filesystem::get_files_list(
                 lfs, 
                 data_queue_elem.size, 
@@ -300,6 +288,65 @@ void process_request_from_ble(Context& context, ble::CommandToMemory command_id,
         NRF_LOG_ERROR("mem: failed to send data to BLE");
         return;
     }
+}
+
+void process_request_from_state(Context& context, const Command command_id)
+{
+    switch (command_id)
+    {
+        case Command::MOUNT_LFS:
+        {
+            const auto init_result = memory::filesystem::init_littlefs(lfs, lfs_configuration);
+            if (result::Result::OK != init_result)
+            {
+                NRF_LOG_ERROR("mem: failed to mount littlefs");
+            }
+            break;
+        }
+        case Command::CREATE_RECORD:
+        {
+            NRF_LOG_ERROR("mem: create rec - not implemented");
+            break;
+        }
+        case Command::CLOSE_WRITTEN_FILE:
+        {
+            NRF_LOG_ERROR("mem: close rec - not implemented");
+            break;
+        }
+        case Command::LAUNCH_TEST_1:
+        {
+            launch_test_1(flash);
+            break;
+        }
+        case Command::LAUNCH_TEST_2:
+        {
+            launch_test_2(flash);
+            break;
+        }
+        case Command::LAUNCH_TEST_3:
+        {
+            launch_test_3(lfs, lfs_configuration);
+            break;
+        }
+        case Command::LAUNCH_TEST_4:
+        {
+            launch_test_4(lfs);
+            break;
+        }
+    }
+}
+
+void generate_next_file_name(char * name)
+{
+    if (strlen(name) != 8)
+    {
+        NRF_LOG_ERROR("wrong file name specified. aborting");
+        return;
+    }
+    const auto last_id = (name[6] - '0') * 10 + (name[7] - '0');
+    const auto next_id = last_id + 1;
+    name[6] = ((next_id / 10) % 10) + '0';
+    name[7] =  (next_id % 10) + '0';
 }
 
 }

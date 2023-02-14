@@ -10,6 +10,7 @@
 
 #include "lfs.h"
 
+
 namespace
 {
 
@@ -89,6 +90,39 @@ TEST(LittleFsTest, BasicFormat)
         EXPECT_EQ(test_data[1], 1);
         EXPECT_EQ(test_data[8], 8);
         EXPECT_EQ(test_data[15], 15);
+    }
+}
+
+TEST(LittleFsTest, StaticWrite)
+{
+    memory::block_device::sim::InRamFlash inram_flash{sim_sector_size, sim_page_size, sim_total_size};
+    memory::block_device::register_flash_device(&inram_flash, sim_sector_size, sim_page_size, sim_total_size);
+    
+    int err = lfs_format(&lfs, &lfs_configuration);
+    err = lfs_mount(&lfs, &lfs_configuration);
+    EXPECT_EQ(err, 0);
+
+    static constexpr size_t active_file_buffer_size{512};
+    static uint8_t _active_file_buffer[active_file_buffer_size]{0};
+    static lfs_file_t _active_file;
+    static lfs_file_config _active_file_config;
+
+    {
+        memset(&_active_file_config, 0, sizeof(_active_file_config));
+        _active_file_config.buffer = _active_file_buffer;
+        _active_file_config.attr_count = 0;
+        const auto create_result = lfs_file_opencfg(&lfs, &_active_file, "record00", LFS_O_WRONLY | LFS_O_CREAT, &_active_file_config);
+        EXPECT_EQ(create_result, 0);
+    }
+    {
+        uint8_t test_data[256];
+        memset(test_data, 0xef, sizeof(test_data));
+        const auto write_result = lfs_file_write(&lfs, &_active_file, test_data, sizeof(test_data));
+        EXPECT_EQ(write_result, sizeof(test_data));
+    }
+    {
+        const auto close_result = lfs_file_close(&lfs, &_active_file);
+        EXPECT_EQ(close_result, 0);
     }
 }
 

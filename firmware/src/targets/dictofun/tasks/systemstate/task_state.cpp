@@ -194,6 +194,7 @@ void launch_cli_command_memory_test(const uint32_t test_id)
 {
     NRF_LOG_INFO("task state: launching memory test %d", test_id);
     const memory::Command command_id = 
+        (test_id == 4) ? memory::Command::LAUNCH_TEST_4 :
         (test_id == 3) ? memory::Command::LAUNCH_TEST_3 :
         (test_id == 2) ? memory::Command::LAUNCH_TEST_2 :
         memory::Command::LAUNCH_TEST_1;
