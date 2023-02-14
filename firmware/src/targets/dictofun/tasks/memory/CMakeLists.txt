@@ -10,6 +10,9 @@ target_link_libraries(task_memory PRIVATE
     spi_flash
     task_ble_interface
     ble_fts
+    # TODO: get rid of this dependency
+    microphone_pdm
+    task_audio_interface
 )
 
 target_link_libraries(task_memory PUBLIC 

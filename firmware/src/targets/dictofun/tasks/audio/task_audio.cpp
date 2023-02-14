@@ -19,7 +19,10 @@ namespace audio
 
 CommandQueueElement audio_command_buffer;
 constexpr TickType_t audio_command_wait_passive_ticks{10};
-constexpr TickType_t audio_command_wait_active_ticks{0};
+constexpr TickType_t audio_command_wait_active_ticks{2};
+
+static uint32_t recorded_data_size{0};
+static uint32_t lost_data_size{0};
 
 audio::microphone::PdmMicrophone<pdm_sample_size> pdm_mic{CONFIG_IO_PDM_CLK, CONFIG_IO_PDM_DATA};
 audio::AudioProcessor<audio::microphone::PdmMicrophone<pdm_sample_size>::SampleType> audio_processor{pdm_mic};
@@ -55,7 +58,7 @@ void task_audio(void * context_ptr)
             {
                 context.is_recording_active = false;
                 audio_processor.stop();
-                NRF_LOG_INFO("audio: received record_stop command");
+                NRF_LOG_INFO("audio: received record_stop command. recorded %d bytes, lost %d", recorded_data_size, lost_data_size);
             }
         }
         const auto cyclic_call_result = audio_processor.cyclic();
@@ -69,9 +72,11 @@ void task_audio(void * context_ptr)
                 0);
             if (pdPASS != data_queue_send_result)
             {
-                NRF_LOG_ERROR("audio: data queue send has failed");
+                NRF_LOG_WARNING("audio: data lost");
                 // TODO: it may be needed to abort the whole record process here.
+                lost_data_size += sizeof(sample);
             }
+            recorded_data_size += sizeof(sample);
         }
     }
 }

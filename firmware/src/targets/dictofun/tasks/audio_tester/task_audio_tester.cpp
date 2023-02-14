@@ -42,11 +42,12 @@ void task_audio_tester(void * context_ptr)
     float last_sample_average{0.0};
     float last_sample_deviation{0.0};
     bool is_tester_active{false};
+    NRF_LOG_INFO("task_autest: initialized");
     while(1)
     {
         if (is_tester_active)
         {
-            const auto data_result = xQueueReceive(context.data_queue, reinterpret_cast<void *>(buffer), 10);
+            const auto data_result = xQueueReceive(context.data_queue, reinterpret_cast<void *>(buffer), 2);
             if (pdPASS == data_result)
             {
                 received_samples_count++;
@@ -55,9 +56,10 @@ void task_audio_tester(void * context_ptr)
             }
         }
 
-        const auto commands_result = xQueueReceive(context.commands_queue, reinterpret_cast<void *>(&command), 1);
+        const auto commands_result = xQueueReceive(context.commands_queue, reinterpret_cast<void *>(&command), 2);
         if (pdPASS == commands_result)
         {
+            NRF_LOG_INFO("autest: received command %d", command.should_enable_tester);
             is_tester_active = command.should_enable_tester;
             if (!command.should_enable_tester)
             {

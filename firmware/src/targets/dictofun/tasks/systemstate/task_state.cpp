@@ -26,6 +26,7 @@ namespace systemstate
 
 logger::CliCommandQueueElement cli_command_buffer;
 ble::RequestQueueElement ble_requests_buffer;
+bool _should_record_be_stored{false};
 
 constexpr TickType_t cli_command_wait_ticks_type{10};
 constexpr TickType_t ble_request_wait_ticks_type{1};
@@ -51,12 +52,25 @@ void record_end_callback(TimerHandle_t timer)
         reinterpret_cast<void *>(&cmd), 
         0);
 
-    audio::tester::ControlQueueElement tester_cmd;
-    tester_cmd.should_enable_tester = false;
-    const auto tester_start_status = xQueueSend(
-        context->audio_tester_commands_handle,
-        reinterpret_cast<void *>(&tester_cmd), 
-        0);
+    if (_should_record_be_stored)
+    {
+        memory::CommandQueueElement cmd{memory::Command::CLOSE_WRITTEN_FILE, {0,0}};
+        const auto create_file_res = xQueueSend(context->memory_commands_handle, reinterpret_cast<void *>(&cmd), 0);
+        if (create_file_res != pdPASS)
+        {
+            NRF_LOG_ERROR("task state: failed to request file closure");
+            return;
+        }
+    }
+    else
+    {
+        audio::tester::ControlQueueElement tester_cmd;
+        tester_cmd.should_enable_tester = false;
+        const auto tester_start_status = xQueueSend(
+            context->audio_tester_commands_handle,
+            reinterpret_cast<void *>(&tester_cmd), 
+            0);
+    }
 }
 
 result::Result launch_record_timer(const TickType_t record_duration)
@@ -149,6 +163,26 @@ void launch_cli_command_record(const uint32_t duration, bool should_store_the_re
     NRF_LOG_INFO("task: received command from CLI");
     if (is_record_start_by_cli_allowed())
     {
+        _should_record_be_stored = should_store_the_record;
+        if (should_store_the_record)
+        {
+            memory::CommandQueueElement cmd{memory::Command::CREATE_RECORD, {0,0}};
+            const auto create_file_res = xQueueSend(context->memory_commands_handle, reinterpret_cast<void *>(&cmd), 0);
+            if (create_file_res != pdPASS)
+            {
+                NRF_LOG_ERROR("task state: failed to request file creation");
+                return;
+            }
+            memory::StatusQueueElement response;
+            static constexpr uint32_t file_creation_wait_time{500};
+            const auto create_file_response_res = xQueueReceive(context->memory_status_handle, reinterpret_cast<void*>(&response), file_creation_wait_time);
+            if (create_file_response_res != pdPASS)
+            {
+                NRF_LOG_ERROR("task state: response from mem timeout. Record won't be started");
+                return;
+            }
+        }
+
         audio::CommandQueueElement cmd{audio::Command::RECORD_START};
         const auto record_start_status = xQueueSend(
             context->audio_commands_handle,
@@ -170,10 +204,6 @@ void launch_cli_command_record(const uint32_t duration, bool should_store_the_re
                 context->audio_tester_commands_handle,
                 reinterpret_cast<void *>(&cmd), 
                 0);
-        }
-        else
-        {
-            // enable the storage module, if necessary
         }
         
         constexpr TickType_t ticks_per_second{1000};
@@ -218,6 +248,7 @@ void launch_cli_command_ble_operation(const uint32_t command_id)
         (command_id == 3) ? ble::Command::RESET_PAIRING :
         (command_id == 2) ? ble::Command::STOP :
         ble::Command::START;
+    
     ble::CommandQueueElement cmd{command};
     const auto ble_comm_status = xQueueSend(
         context->ble_commands_handle,

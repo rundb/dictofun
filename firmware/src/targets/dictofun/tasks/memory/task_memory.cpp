@@ -14,6 +14,9 @@
 #include "block_api.h"
 #include "littlefs_access.h"
 #include <cstdlib>
+// TODO: this dependency here is really bad
+#include "microphone_pdm.h"
+#include "task_audio.h"
 
 #include "task_ble.h"
 
@@ -43,6 +46,13 @@ uint8_t prog_buffer[CACHE_SIZE];
 uint8_t read_buffer[CACHE_SIZE];
 uint8_t lookahead_buffer[CACHE_SIZE];
 
+enum class MemoryOwner
+{
+    AUDIO,
+    BLE,
+};
+static MemoryOwner _memory_owner{MemoryOwner::AUDIO};
+
 lfs_t lfs;
 
 const struct lfs_config lfs_configuration = {
@@ -65,12 +75,17 @@ const struct lfs_config lfs_configuration = {
 };
 
 
-constexpr uint32_t cmd_wait_ticks{5};
+constexpr uint32_t cmd_wait_idle_ticks{5};
+constexpr uint32_t cmd_wait_fast_ticks{1};
 constexpr uint32_t ble_command_wait_ticks{5};
 constexpr uint32_t data_send_wait_ticks{10};
+constexpr uint32_t audio_data_wait_ticks{10};
 
 // This element allocated statically, as it's rather big (~260 bytes)
 ble::FileDataFromMemoryQueueElement data_queue_elem;
+
+// Single audio sample from audio module
+audio::microphone::PdmMicrophone<audio::pdm_sample_size>::SampleType audio_data_queue_element;
 
 static struct FileOperationContext
 {
@@ -78,6 +93,9 @@ static struct FileOperationContext
     bool is_file_open{false};
 } _file_operation_context;
 
+char active_record_name[sizeof(ble::fts::file_id_type) + 1]{0};
+
+static uint32_t written_record_size{0};
 
 static bool is_ble_access_allowed();
 void process_request_from_ble(Context& context, ble::CommandToMemory command_id, ble::fts::file_id_type file_id);
@@ -110,26 +128,50 @@ void task_memory(void * context_ptr)
         const auto cmd_queue_receive_status = xQueueReceive(
             context.command_queue,
             reinterpret_cast<void *>(&command),
-            cmd_wait_ticks);
+            _file_operation_context.is_file_open ? cmd_wait_fast_ticks : cmd_wait_idle_ticks);
         if (pdPASS == cmd_queue_receive_status)
         {
             process_request_from_state(context, command.command_id);
         }
-        const auto cmd_from_ble_queue_receive_status = xQueueReceive(
-            context.command_from_ble_queue,
-            reinterpret_cast<void *>(&command_from_ble),
-            ble_command_wait_ticks);
-        if (pdPASS == cmd_from_ble_queue_receive_status)
+        if (_memory_owner == MemoryOwner::BLE)
         {
-            process_request_from_ble(context, command_from_ble.command_id, command_from_ble.file_id);
+            const auto cmd_from_ble_queue_receive_status = xQueueReceive(
+                context.command_from_ble_queue,
+                reinterpret_cast<void *>(&command_from_ble),
+                ble_command_wait_ticks);
+            if (pdPASS == cmd_from_ble_queue_receive_status)
+            {
+                process_request_from_ble(context, command_from_ble.command_id, command_from_ble.file_id);
+            }
+        }
+        else 
+        {
+            if (_file_operation_context.is_file_open)
+            {
+                const auto audio_data_receive_status = xQueueReceive(
+                    context.audio_data_queue,
+                    reinterpret_cast<void *>(&audio_data_queue_element),
+                    audio_data_wait_ticks);
+                if (pdPASS == audio_data_receive_status)
+                {
+                    const auto write_result = memory::filesystem::write_data(lfs, audio_data_queue_element.data, sizeof(audio_data_queue_element));
+                    if (result::Result::OK != write_result)
+                    {
+                        NRF_LOG_ERROR("mem: data write failed");
+                    }
+                    else
+                    {
+                        written_record_size += sizeof(audio_data_queue_element);
+                    }
+                }   
+            }
         }
     }
 }
 
-// TODO: implement access 
 static bool is_ble_access_allowed()
 {
-    return true;
+    return _memory_owner == MemoryOwner::BLE;
 }
 
 static constexpr uint32_t max_file_name_size{8 + 1};
@@ -305,12 +347,76 @@ void process_request_from_state(Context& context, const Command command_id)
         }
         case Command::CREATE_RECORD:
         {
-            NRF_LOG_ERROR("mem: create rec - not implemented");
+            uint32_t tmp_length{0};
+            const auto name_read_result = memory::filesystem::get_latest_file_name(lfs, active_record_name, tmp_length);
+            if (result::Result::OK != name_read_result)
+            {
+                NRF_LOG_ERROR("failed to read latest record name. aborting the test");
+                StatusQueueElement response{Command::CREATE_RECORD, Status::ERROR_GENERAL};
+                xQueueSend(context.status_queue, reinterpret_cast<void *>(&response), 0);
+                return;
+            }
+            memory::generate_next_file_name(active_record_name);
+
+            const auto create_result = memory::filesystem::create_file(lfs, active_record_name);
+            if (result::Result::OK != create_result)
+            {
+                NRF_LOG_ERROR("lfs: failed to create a new rec");
+                StatusQueueElement response{Command::CREATE_RECORD, Status::ERROR_GENERAL};
+                xQueueSend(context.status_queue, reinterpret_cast<void *>(&response), 0);
+                return;
+            }
+            NRF_LOG_DEBUG("created record [%s]", active_record_name);
+            _file_operation_context.is_file_open = true;
+            StatusQueueElement response{Command::CREATE_RECORD, Status::OK};
+            xQueueSend(context.status_queue, reinterpret_cast<void *>(&response), 0);
             break;
         }
         case Command::CLOSE_WRITTEN_FILE:
         {
-            NRF_LOG_ERROR("mem: close rec - not implemented");
+            NRF_LOG_INFO("mem: closing file");
+            const auto close_result = memory::filesystem::close_file(lfs, active_record_name);
+            if (close_result != result::Result::OK)
+            {
+                NRF_LOG_ERROR("lfs: failed to close file after writing");
+                StatusQueueElement response{Command::CLOSE_WRITTEN_FILE, Status::ERROR_GENERAL};
+                xQueueSend(context.status_queue, reinterpret_cast<void *>(&response), 0);
+                return;
+            }
+            NRF_LOG_DEBUG("closed record. written size = %d bytes", written_record_size);
+            _file_operation_context.is_file_open = false;
+            StatusQueueElement response{Command::CLOSE_WRITTEN_FILE, Status::OK};
+            xQueueSend(context.status_queue, reinterpret_cast<void *>(&response), 0);
+            break;
+        }
+        case Command::SELECT_OWNER_BLE:
+        {
+            const auto deinit_result = memory::filesystem::deinit_littlefs(lfs);
+            if (result::Result::OK != deinit_result)
+            {
+                NRF_LOG_ERROR("lfs: deinit failed");
+            }
+            const auto init_result = memory::filesystem::init_littlefs(lfs, lfs_configuration);
+            if (result::Result::OK != init_result)
+            {
+                NRF_LOG_ERROR("lfs: init failed");
+            }
+            _memory_owner = MemoryOwner::BLE;
+            break;
+        }
+        case Command::SELECT_OWNER_AUDIO:
+        {
+            const auto deinit_result = memory::filesystem::deinit_littlefs(lfs);
+            if (result::Result::OK != deinit_result)
+            {
+                NRF_LOG_ERROR("lfs: deinit failed");
+            }
+            const auto init_result = memory::filesystem::init_littlefs(lfs, lfs_configuration);
+            if (result::Result::OK != init_result)
+            {
+                NRF_LOG_ERROR("lfs: init failed");
+            }
+            _memory_owner = MemoryOwner::AUDIO;
             break;
         }
         case Command::LAUNCH_TEST_1:

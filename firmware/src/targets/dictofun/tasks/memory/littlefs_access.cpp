@@ -19,6 +19,7 @@ static uint8_t _active_file_buffer[active_file_buffer_size]{0};
 static lfs_file_t _active_file;
 static lfs_dir_t _active_dir;
 static lfs_file_config _active_file_config;
+static bool _is_file_open{false};
 
 result::Result init_littlefs(lfs_t& lfs, const lfs_config& config)
 {
@@ -44,6 +45,26 @@ result::Result init_littlefs(lfs_t& lfs, const lfs_config& config)
     if (dir_open_result != 0)
     {
         NRF_LOG_ERROR("failed to open dir ./");
+        return result::Result::ERROR_GENERAL;
+    }
+    return result::Result::OK;
+}
+
+result::Result deinit_littlefs(lfs_t& lfs)
+{
+    if (_is_file_open)
+    {
+        const auto close_result = close_file(lfs, nullptr);
+        if (result::Result::OK != close_result)
+        {
+            NRF_LOG_ERROR("failed to close active file at deinit stage");
+        }
+        _is_file_open = false;
+    }
+    const auto unmount_result = lfs_unmount(&lfs);
+    if (unmount_result < 0)
+    {
+        NRF_LOG_ERROR("failed to unmount LFS (%d)", unmount_result);
         return result::Result::ERROR_GENERAL;
     }
     return result::Result::OK;
@@ -170,6 +191,7 @@ result::Result open_file(lfs_t& lfs, const char * name, uint32_t& file_size_byte
         NRF_LOG_ERROR("failed to open file %s", name);
         return result::Result::ERROR_GENERAL;
     }
+    _is_file_open = true;
     return result::Result::OK;
 }
 
@@ -198,6 +220,7 @@ result::Result close_file(lfs_t& lfs, const char * name)
         NRF_LOG_ERROR("failed to close active file");
         return result::Result::ERROR_GENERAL;
     }
+    _is_file_open = false;
     return result::Result::OK;
 }
 
@@ -273,7 +296,7 @@ result::Result get_latest_file_name(lfs_t& lfs, char * name, uint32_t& name_len)
     }
 
     static constexpr uint32_t single_entry_size{sizeof(ble::fts::file_id_type)};
-    char tmp[single_entry_size + 1] = "00000000";
+    char tmp[single_entry_size + 1] = "record00";
     while (true) 
     {
         const auto dir_read_res = lfs_dir_read(&lfs, &_active_dir, &info);
@@ -321,6 +344,7 @@ result::Result create_file(lfs_t& lfs, const char * name)
         NRF_LOG_ERROR("failed to open file %s for write", name);
         return result::Result::ERROR_GENERAL;
     }
+    _is_file_open = true;
     return result::Result::OK;
 }
 
