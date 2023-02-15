@@ -35,7 +35,7 @@
 // ============================= Tasks ======================================
 
 application::TaskDescriptor<256,  2> audio_task;
-application::TaskDescriptor<256,  1> audio_tester_task;
+application::TaskDescriptor<256,  2> audio_tester_task;
 application::TaskDescriptor<256,  1> log_task;
 application::TaskDescriptor<256,  3> systemstate_task;
 application::TaskDescriptor<1024, 2> memory_task;
@@ -255,6 +255,7 @@ int main()
     memory_context.command_from_ble_queue = ble_to_mem_commands_queue.handle;
     memory_context.status_to_ble_queue = ble_from_mem_status_queue.handle;
     memory_context.data_to_ble_queue =  ble_from_mem_data_queue.handle;
+    memory_context.audio_data_queue = audio_data_queue.handle;
     const auto memory_task_init_result = memory_task.init(
         memory::task_memory,
         "MEM",

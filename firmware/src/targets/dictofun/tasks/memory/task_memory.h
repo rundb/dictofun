@@ -13,8 +13,6 @@
 
 namespace memory
 {
-bool isMemoryErased();
-
 
 void task_memory(void * context_ptr);
 void launch_test_1(flash::SpiFlash& flash);
@@ -31,8 +29,8 @@ enum class Command
     LAUNCH_TEST_4,
     MOUNT_LFS,
     UNMOUNT_LFS,
-    SELECT_WRITE_MODE,
-    SELECT_READ_MODE,
+    SELECT_OWNER_BLE,
+    SELECT_OWNER_AUDIO,
     CREATE_RECORD,
     CLOSE_WRITTEN_FILE,
 };

@@ -13,6 +13,7 @@ namespace filesystem
 {
 
 result::Result init_littlefs(lfs_t& lfs, const lfs_config& config);
+result::Result deinit_littlefs(lfs_t& lfs);
 result::Result close_file(lfs_t& lfs, const char * name);
 
 // Following methods face into the BLE part of the system
