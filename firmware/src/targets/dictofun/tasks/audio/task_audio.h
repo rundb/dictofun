@@ -15,6 +15,7 @@ namespace audio
 
 // TODO: find a more appropriate location for this configuration parameter 
 constexpr size_t pdm_sample_size{64};
+constexpr size_t decimator_codec_factor{4};
 
 /// @brief Function that implements audio task
 /// @param context_ptr pointer to struct Context, passed from the main.cpp

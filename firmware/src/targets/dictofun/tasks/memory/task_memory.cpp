@@ -15,7 +15,8 @@
 #include "littlefs_access.h"
 #include <cstdlib>
 // TODO: this dependency here is really bad
-#include "microphone_pdm.h"
+
+#include "codec_decimate.h"
 #include "task_audio.h"
 
 #include "task_ble.h"
@@ -27,7 +28,7 @@ namespace memory
 
 spi::Spi flash_spi(0, SPI_FLASH_CS_PIN);
 
-static const spi::Spi::Configuration flash_spi_config{NRF_DRV_SPI_FREQ_2M,
+static const spi::Spi::Configuration flash_spi_config{NRF_DRV_SPI_FREQ_8M,
                                                       NRF_DRV_SPI_MODE_0,
                                                       NRF_DRV_SPI_BIT_ORDER_MSB_FIRST,
                                                       SPI_FLASH_SCK_PIN,
@@ -85,7 +86,7 @@ constexpr uint32_t audio_data_wait_ticks{10};
 ble::FileDataFromMemoryQueueElement data_queue_elem;
 
 // Single audio sample from audio module
-audio::microphone::PdmMicrophone<audio::pdm_sample_size>::SampleType audio_data_queue_element;
+audio::codec::Sample<audio::pdm_sample_size/audio::decimator_codec_factor> audio_data_queue_element;
 
 static struct FileOperationContext
 {

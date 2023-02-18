@@ -4,6 +4,7 @@
  */
 
 #include "block_api.h"
+#include "nrf_log.h"
 
 namespace memory
 {
@@ -14,6 +15,12 @@ static memory::SpiNorFlashIf * flash_{nullptr};
 static uint32_t sector_size_{0};
 static uint32_t page_size_{0};
 static uint32_t memory_size_{0};
+static uint32_t erasure_bits_sector_start_{0};
+constexpr uint32_t max_supported_memory_size{16*1024*1024};
+constexpr uint32_t min_supported_block_size{4096};
+constexpr uint32_t sectors_erasure_max_bitmap_size{max_supported_memory_size/ 8 / min_supported_block_size};
+static uint8_t sectors_erasure_bitmap[sectors_erasure_max_bitmap_size];
+static uint32_t sectors_erasure_actual_bitmap_size_{0};
 
 void register_flash_device(memory::SpiNorFlashIf * flash, uint32_t sector_size, uint32_t page_size, uint32_t memory_size)
 {
@@ -21,24 +28,66 @@ void register_flash_device(memory::SpiNorFlashIf * flash, uint32_t sector_size, 
     sector_size_ = sector_size;
     page_size_ = page_size;
     memory_size_ = memory_size;
+    erasure_bits_sector_start_ = memory_size_ - sector_size_;
+    sectors_erasure_actual_bitmap_size_ = (memory_size_ / 8 / sector_size_) + 1;
+
+    for (auto i = 0; i < sectors_erasure_actual_bitmap_size_ / page_size_; ++i)
+    {
+        const auto page_address = erasure_bits_sector_start_ + i * page_size_;
+        flash_->read(page_address, sectors_erasure_bitmap, page_size_);
+    }
+    
 }
 
-// TODO: this function should sooner or later be implemented, and file write throughput should be measured
 bool is_sector_erased(lfs_block_t block)
 {
-    return false;
+    const auto byte_offset{block / 8};
+    const auto bit_offset{block % 8};
+
+    return sectors_erasure_bitmap[byte_offset] & (1 << bit_offset) > 0;
 }
 
-// TODO: this function should sooner or later be implemented, and file write throughput should be measured
 void mark_sector_as_erased(lfs_block_t block)
 {
+    const auto byte_offset{block / 8};
+    const auto bit_offset{block % 8};
 
+    sectors_erasure_bitmap[byte_offset] |= (1 << bit_offset);
+
+    // erase the bitmap sector
+    const auto erase_result = flash_->erase(erasure_bits_sector_start_, sector_size_);
+    if (memory::SpiNorFlashIf::Result::OK != erase_result)
+    {
+        NRF_LOG_ERROR("failed to erase sector while marking as erased");
+        return;
+    }
+    for (auto i = 0; i < sectors_erasure_actual_bitmap_size_ / page_size_; ++i)
+    {
+        const auto page_address = erasure_bits_sector_start_ + i * page_size_;
+        const auto prog_res = flash_->program(page_address, sectors_erasure_bitmap, page_size_);
+        if (memory::SpiNorFlashIf::Result::OK != prog_res)
+        {
+            NRF_LOG_ERROR("failed to reprogram page with sectors' erasure status %x", page_address);
+        }
+    }
+    // NRF_LOG_DEBUG("block %x marked e-", block);
 }
 
-// TODO: this function should sooner or later be implemented, and file write throughput should be measured
 void mark_sector_as_needs_erasure(lfs_block_t block)
 {
-    
+    const auto byte_offset{block / 8};
+    const auto bit_offset{block % 8};
+
+    sectors_erasure_bitmap[byte_offset] &= ~(1 << bit_offset);
+
+    // let byte_offset be 5, then it is in page (5 / 256) * 256 = 0
+    const auto page_address = erasure_bits_sector_start_ + (byte_offset / page_size_) * page_size_;
+    const auto result = flash_->program(page_address, sectors_erasure_bitmap, page_size_);
+    if (memory::SpiNorFlashIf::Result::OK != result)
+    {
+        NRF_LOG_ERROR("failed to mark sector as dirty");
+    }
+    // NRF_LOG_DEBUG("block %x marked e+", block);
 }
 
 int read(const struct lfs_config *c, lfs_block_t block, lfs_off_t off, void *buffer, lfs_size_t size)

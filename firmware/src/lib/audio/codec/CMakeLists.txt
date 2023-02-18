@@ -13,4 +13,14 @@ if (${is_unit_test})
     )
 
     gtest_discover_tests(test_codec)
+else()
+    add_library(codec_decimator STATIC
+        src/dummy.c
+    )
+
+    target_include_directories(codec_decimator PUBLIC src)
+    target_link_libraries(codec_decimator PUBLIC 
+        codec_if
+    )
+
 endif()

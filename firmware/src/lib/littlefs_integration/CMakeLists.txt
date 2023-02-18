@@ -7,4 +7,5 @@ target_include_directories(littlefs_integration PUBLIC ./)
 target_link_libraries(littlefs_integration PUBLIC
     spi_flash_interface
     littlefs
+    nrf5_log
 )

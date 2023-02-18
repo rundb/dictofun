@@ -2,20 +2,23 @@ import struct
 
 def apply_wav_header(raw_data):
     result = bytearray([])
-    result += "RIFF".encode('utf-8')
     file_size = len(raw_data) + 36
-    result += struct.pack("I", file_size)
-    result += "WAVE".encode('utf-8')
-    result += "fmt\0".encode('utf-8')
+    sample_rate = 8000
+    bits_per_sample = 8
+    byte_rate = int(sample_rate * bits_per_sample * 1 / 8)
+
+    result += "RIFF".encode('utf-8') # 1 - 4
+    result += struct.pack("I", file_size) # File size
+    result += "WAVE".encode('utf-8') 
+    result += "fmt ".encode('utf-8')
     result += struct.pack("I", 16)
+
     result += struct.pack("H", 1) # type of format, 2 bytes
     result += struct.pack("H", 1) # number of channels, 2 bytes
-    sample_rate = 16000
     result += struct.pack("I", sample_rate) # sample rate
-    next_value = int(sample_rate * 8 * 1 / 8)
-    result += struct.pack("I", next_value)
-    result += struct.pack("H", 1)
-    result += struct.pack("H", 8) #bits per sample
+    result += struct.pack("I", byte_rate) # byte rate
+    result += struct.pack("H", 4) # channel type (mono/stereo/8-16 bit)
+    result += struct.pack("H", bits_per_sample) #bits per sample
     result += "data".encode('utf-8')
     result += struct.pack("I", len(raw_data))
 

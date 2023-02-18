@@ -18,6 +18,7 @@
 
 // TODO: this dependency here is really bad
 #include "microphone_pdm.h"
+#include "codec_decimate.h"
 
 #include <task_state.h>
 #include "task_audio.h"
@@ -39,7 +40,7 @@ application::TaskDescriptor<256,  2> audio_tester_task;
 application::TaskDescriptor<256,  1> log_task;
 application::TaskDescriptor<256,  3> systemstate_task;
 application::TaskDescriptor<1024, 2> memory_task;
-application::TaskDescriptor<1024,  2> ble_task;
+application::TaskDescriptor<1024, 2> ble_task;
 application::TaskDescriptor<96,   1>  led_task;
 
 // ============================= Queues =====================================
@@ -49,7 +50,8 @@ application::QueueDescriptor<logger::CliStatusQueueElement, 1>       cli_status_
 application::QueueDescriptor<audio::CommandQueueElement, 1>          audio_commands_queue;
 application::QueueDescriptor<audio::StatusQueueElement, 1>           audio_status_queue;
 application::QueueDescriptor<audio::tester::ControlQueueElement, 1>  audio_tester_commands_queue;
-application::QueueDescriptor<audio::microphone::PdmMicrophone<audio::pdm_sample_size>::SampleType, 3>          audio_data_queue;
+//application::QueueDescriptor<audio::microphone::PdmMicrophone<audio::pdm_sample_size>::SampleType, 3>          audio_data_queue;
+application::QueueDescriptor<audio::codec::Sample<audio::pdm_sample_size/audio::decimator_codec_factor>, 3>          audio_data_queue;
 
 application::QueueDescriptor<memory::CommandQueueElement, 1>         memory_commands_queue;
 application::QueueDescriptor<memory::StatusQueueElement, 1>          memory_status_queue; 
