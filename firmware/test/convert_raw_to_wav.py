@@ -1,10 +1,11 @@
 import struct
+import ctypes
 
 def apply_wav_header(raw_data):
     result = bytearray([])
     file_size = len(raw_data) + 36
     sample_rate = 8000
-    bits_per_sample = 8
+    bits_per_sample = 16
     byte_rate = int(sample_rate * bits_per_sample * 1 / 8)
 
     result += "RIFF".encode('utf-8') # 1 - 4
@@ -17,7 +18,7 @@ def apply_wav_header(raw_data):
     result += struct.pack("H", 1) # number of channels, 2 bytes
     result += struct.pack("I", sample_rate) # sample rate
     result += struct.pack("I", byte_rate) # byte rate
-    result += struct.pack("H", 4) # channel type (mono/stereo/8-16 bit)
+    result += struct.pack("H", 2) # channel type (mono/stereo/8-16 bit)
     result += struct.pack("H", bits_per_sample) #bits per sample
     result += "data".encode('utf-8')
     result += struct.pack("I", len(raw_data))
@@ -39,3 +40,9 @@ if __name__ == '__main__':
     print(len(result))
     with open("last_record.wav", "wb") as wav:
         wav.write(result)
+
+    samples = raw_data[256:512]
+    for i in range(0, len(samples), 2):
+        value = samples[i] + samples[i+1] << 8
+        #print(value)
+        print(ctypes.c_int16(value))

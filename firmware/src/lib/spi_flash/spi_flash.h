@@ -16,8 +16,9 @@ class SpiFlash: public memory::SpiNorFlashIf
 {
 public:
     using DelayFunction = std::function<void(uint32_t)>;
+    using TickFunction= std::function<uint32_t(void)>;
     using Result = memory::SpiNorFlashIf::Result;
-    explicit SpiFlash(spi::Spi& flashSpi, DelayFunction delay_function);
+    explicit SpiFlash(spi::Spi& flashSpi, DelayFunction delay_function, TickFunction tick_function);
 
     SpiFlash() = delete;
     SpiFlash(const SpiFlash&) = delete;
@@ -51,12 +52,14 @@ public:
 private:
     spi::Spi& _spi;
     DelayFunction _delay;
+    TickFunction _get_ticks;
     static SpiFlash * _instance;
     static const size_t MAX_TRANSACTION_SIZE = 265;
     uint8_t _txBuffer[MAX_TRANSACTION_SIZE];
     uint8_t _rxBuffer[MAX_TRANSACTION_SIZE];
     static const uint32_t SECTOR_SIZE = 0x1000;
     static const uint32_t PAGE_SIZE = 0x100;
+    uint32_t _last_transaction_tick{0};
 
     static void spiOperationCallback(spi::Spi::Result result);
     static volatile bool _isSpiOperationPending;

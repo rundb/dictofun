@@ -23,8 +23,9 @@ class DecimatorCodec: public Codec<RawSampleType, CodedSampleType>
 {
     static constexpr size_t decimation_step = sizeof(RawSampleType) / sizeof(CodedSampleType);
 public:
-// TODO: add a static check that sizeof(InputSampleType) == N * sizeof(OutputSampleType)
-    explicit DecimatorCodec() 
+
+    explicit DecimatorCodec(const size_t sample_size) 
+    : _sample_size{sample_size}
     {
         static_assert(sizeof(RawSampleType) % sizeof(CodedSampleType) == 0, "Decimator codec wrongly configured");
     }
@@ -38,7 +39,8 @@ public:
 
     // Decoding can't be implementing in decimator, as we lose the data when decimation is performed
     result::Result decode(CodedSampleType& input, RawSampleType& output) override { return result::Result::ERROR_GENERAL; }
-
+private:
+    size_t _sample_size;
 };
 
 }

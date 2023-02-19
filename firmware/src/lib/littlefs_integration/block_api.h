@@ -17,6 +17,7 @@ namespace block_device
 {
 
 void register_flash_device(memory::SpiNorFlashIf * flash, uint32_t sector_size, uint32_t page_size, uint32_t memory_size);
+void ROTU_print_bitmap();
 
 int read(const struct lfs_config *c, lfs_block_t block, lfs_off_t off, void *buffer, lfs_size_t size);
 int program(const struct lfs_config *c, lfs_block_t block, lfs_off_t off, const void *buffer, lfs_size_t size);

@@ -23,6 +23,9 @@
 
 #include "lfs.h"
 
+extern uint32_t ROTU_timestamps[200][3];
+extern uint32_t ROTU_idx;
+
 namespace memory
 {
 
@@ -35,7 +38,8 @@ static const spi::Spi::Configuration flash_spi_config{NRF_DRV_SPI_FREQ_8M,
                                                       SPI_FLASH_MOSI_PIN,
                                                       SPI_FLASH_MISO_PIN};
 
-flash::SpiFlash flash{flash_spi, vTaskDelay};
+
+flash::SpiFlash flash{flash_spi, vTaskDelay, xTaskGetTickCount};
 constexpr uint32_t flash_page_size{256};
 constexpr uint32_t flash_sector_size{4096};
 constexpr uint32_t flash_total_size{16*1024*1024-4096};
@@ -80,7 +84,7 @@ constexpr uint32_t cmd_wait_idle_ticks{5};
 constexpr uint32_t cmd_wait_fast_ticks{1};
 constexpr uint32_t ble_command_wait_ticks{5};
 constexpr uint32_t data_send_wait_ticks{10};
-constexpr uint32_t audio_data_wait_ticks{10};
+constexpr uint32_t audio_data_wait_ticks{5};
 
 // This element allocated statically, as it's rather big (~260 bytes)
 ble::FileDataFromMemoryQueueElement data_queue_elem;
@@ -101,6 +105,11 @@ static uint32_t written_record_size{0};
 static bool is_ble_access_allowed();
 void process_request_from_ble(Context& context, ble::CommandToMemory command_id, ble::fts::file_id_type file_id);
 void process_request_from_state(Context& context, Command command_id);
+
+// static constexpr size_t ROTU_samples_count{200};
+// static uint32_t ROTU_timestamps[ROTU_samples_count][2]{{0}};
+// static uint32_t ROTU_idx{0};
+// #define ROTU_REG_TIMESTAMP(ts1, ts2) {if (ROTU_idx < ROTU_samples_count) { ROTU_timestamps[ROTU_idx][0] = (ts1); ROTU_timestamps[ROTU_idx][1] = (ts2); ++ROTU_idx;} }
 
 void task_memory(void * context_ptr)
 {
@@ -123,9 +132,25 @@ void task_memory(void * context_ptr)
     {
         NRF_LOG_ERROR("mem: failed to mount littlefs");
     }
-
+    int ROTU_is_log_printed_count{0};
     while(1)
     {
+        if (xTaskGetTickCount() >= 10000 && ROTU_is_log_printed_count == 0)
+        {            
+            ROTU_is_log_printed_count = 1;
+            // for (auto i = 0; i < ROTU_idx; ++i)
+            // {
+                // NRF_LOG_DEBUG("%d %s %d %d", ROTU_timestamps[i][0], ROTU_timestamps[i][0] == 3 ? "" : ROTU_timestamps[i][0] == 1 ? "\t" : "\t\t", ROTU_timestamps[i][1], ROTU_timestamps[i][2]);
+                // vTaskDelay(10);
+            // }
+        }
+        else if (xTaskGetTickCount() >= 12000 && ROTU_is_log_printed_count == 1)
+        {
+            ROTU_is_log_printed_count = 2;
+            // re-register flash device and trigger printout of the bitmap
+            // memory::block_device::ROTU_print_bitmap();
+        }
+
         const auto cmd_queue_receive_status = xQueueReceive(
             context.command_queue,
             reinterpret_cast<void *>(&command),
@@ -133,6 +158,14 @@ void task_memory(void * context_ptr)
         if (pdPASS == cmd_queue_receive_status)
         {
             process_request_from_state(context, command.command_id);
+            // if (command.command_id == Command::CLOSE_WRITTEN_FILE)
+            // {
+                // for (auto i = 0; i < ROTU_idx; ++i)
+                // {
+                //     NRF_LOG_DEBUG("%d %d %d", i, ROTU_timestamps[i][0], ROTU_timestamps[i][1]);
+                //     vTaskDelay(5);
+                // }
+            // }
         }
         if (_memory_owner == MemoryOwner::BLE)
         {
@@ -149,22 +182,29 @@ void task_memory(void * context_ptr)
         {
             if (_file_operation_context.is_file_open)
             {
-                const auto audio_data_receive_status = xQueueReceive(
-                    context.audio_data_queue,
-                    reinterpret_cast<void *>(&audio_data_queue_element),
-                    audio_data_wait_ticks);
-                if (pdPASS == audio_data_receive_status)
+                BaseType_t audio_data_receive_status = pdTRUE;
+                while (audio_data_receive_status == pdTRUE)
                 {
-                    const auto write_result = memory::filesystem::write_data(lfs, audio_data_queue_element.data, sizeof(audio_data_queue_element));
-                    if (result::Result::OK != write_result)
+                    audio_data_receive_status = xQueueReceive(
+                        context.audio_data_queue,
+                        reinterpret_cast<void *>(&audio_data_queue_element),
+                        audio_data_wait_ticks);
+                    if (pdPASS == audio_data_receive_status)
                     {
-                        NRF_LOG_ERROR("mem: data write failed");
+                        // const auto ROTU_start_tick = xTaskGetTickCount();
+                        const auto write_result = memory::filesystem::write_data(lfs, audio_data_queue_element.data, sizeof(audio_data_queue_element));
+                        // const auto ROTU_end_tick = xTaskGetTickCount();
+                        if (result::Result::OK != write_result)
+                        {
+                            NRF_LOG_ERROR("mem: data write failed");
+                        }
+                        else
+                        {
+                            written_record_size += sizeof(audio_data_queue_element);
+                        }
+                        // ROTU_REG_TIMESTAMP(ROTU_start_tick, ROTU_end_tick);
                     }
-                    else
-                    {
-                        written_record_size += sizeof(audio_data_queue_element);
-                    }
-                }   
+                }
             }
         }
     }

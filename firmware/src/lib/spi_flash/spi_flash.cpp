@@ -9,6 +9,14 @@
 #include <cstring>
 #include "nrf_log.h"
 
+#include "FreeRTOS.h"
+#include "task.h"
+
+static constexpr size_t ROTU_samples_count{400};
+uint32_t ROTU_timestamps[ROTU_samples_count][3]{{0}};
+uint32_t ROTU_idx{0};
+#define ROTU_REG_TIMESTAMP(id, ts, diff) {if (ROTU_idx < ROTU_samples_count) { ROTU_timestamps[ROTU_idx][0] = (id); ROTU_timestamps[ROTU_idx][1] = (ts); ROTU_timestamps[ROTU_idx][2] = (diff); ++ROTU_idx;} }
+
 namespace flash
 {
 
@@ -17,9 +25,17 @@ static const uint32_t MAX_SPI_WAIT_TIMEOUT = 100000;
 volatile bool SpiFlash::_isSpiOperationPending;
 SpiFlash* SpiFlash::_instance{nullptr};
 
-SpiFlash::SpiFlash(spi::Spi& flashSpi, DelayFunction delay_function)
+static constexpr uint32_t ROTU_faster_ticks_delay{100};
+void ROTU_faster_delay(uint32_t proc_ticks)
+{
+    for (volatile uint32_t i = 0UL; i < proc_ticks; ++i);
+    
+}
+
+SpiFlash::SpiFlash(spi::Spi& flashSpi, DelayFunction delay_function, TickFunction tick_function)
     : _spi(flashSpi)
     , _delay(delay_function)
+    , _get_ticks(tick_function)
     , _context({Operation::IDLE, 0, nullptr, 0})
 {
     _isSpiOperationPending = false;
@@ -34,6 +50,7 @@ SpiFlash::SpiFlash(spi::Spi& flashSpi, DelayFunction delay_function)
     }
 }
 
+
 void SpiFlash::init()
 {
     nrf_gpio_cfg_output(SPI_FLASH_RST_PIN);
@@ -45,6 +62,7 @@ void SpiFlash::init()
 
 SpiFlash::Result SpiFlash::read(uint32_t address, uint8_t* data, uint32_t size)
 {
+    const auto ROTU_start_tick = xTaskGetTickCount();
     if (data == nullptr)
     {
         return Result::ERROR_INPUT;
@@ -56,7 +74,7 @@ SpiFlash::Result SpiFlash::read(uint32_t address, uint8_t* data, uint32_t size)
     }
 
     // TODO: consider reducing this delay to minimum (using more detailed ticks' source)
-    _delay(1);
+    if (_get_ticks() - _last_transaction_tick == 0) { _delay(1); }//ROTU_faster_delay(ROTU_faster_ticks_delay); }
 
     // 1. fill in transaction header
     _txBuffer[0] = 0x3U;
@@ -84,22 +102,24 @@ SpiFlash::Result SpiFlash::read(uint32_t address, uint8_t* data, uint32_t size)
         // TODO: define appropriate actions for this case
         NRF_LOG_ERROR("read: timeout error");
     }
-
+    const auto ROTU_end_tick = xTaskGetTickCount();
+    ROTU_REG_TIMESTAMP(3, ROTU_start_tick, ROTU_end_tick - ROTU_start_tick);
+    _last_transaction_tick = _get_ticks();
     return Result::OK;
 }
 
 // TODO: might have to implement programming of several pages
 SpiFlash::Result SpiFlash::program(uint32_t address, const uint8_t * const data, uint32_t size)
 {
+    const auto ROTU_start_tick = xTaskGetTickCount();
     if (data == nullptr)
     {
         return Result::ERROR_INPUT;
     }
-    if ((address % PAGE_SIZE != 0) || (size > PAGE_SIZE))
+    if (/*(address % PAGE_SIZE != 0) ||*/ (size > PAGE_SIZE))
     {
         return Result::ERROR_ALIGNMENT;
     }
-
     uint32_t timeout{max_wait_time_ms};
     while(isBusy() && timeout > 0)
     {
@@ -110,6 +130,8 @@ SpiFlash::Result SpiFlash::program(uint32_t address, const uint8_t * const data,
     {
         return Result::ERROR_TIMEOUT;
     }
+
+    if (_get_ticks() - _last_transaction_tick == 0) { _delay(1); }//ROTU_faster_delay(ROTU_faster_ticks_delay); }
 
     writeEnable(true);
     _txBuffer[0] = 0x2;
@@ -135,7 +157,10 @@ SpiFlash::Result SpiFlash::program(uint32_t address, const uint8_t * const data,
     {
         // TODO: define appropriate actions for this case
     }
+    const auto ROTU_end_tick = xTaskGetTickCount();
+    ROTU_REG_TIMESTAMP(1, ROTU_start_tick, ROTU_end_tick - ROTU_start_tick);
 
+    _last_transaction_tick = _get_ticks();
     return Result::OK;
 }
 
@@ -157,6 +182,8 @@ SpiFlash::Result SpiFlash::eraseSector(const uint32_t address)
         return Result::ERROR_TIMEOUT;
     }
 
+    if (_get_ticks() - _last_transaction_tick == 0) { _delay(1); }// ROTU_faster_delay(ROTU_faster_ticks_delay); }
+
     writeEnable(true);
     _isSpiOperationPending = true;
     _txBuffer[0] = 0x20;
@@ -166,11 +193,14 @@ SpiFlash::Result SpiFlash::eraseSector(const uint32_t address)
     
     _spi.xfer(_txBuffer, _rxBuffer, 4, spiOperationCallback);
     _context.operation = Operation::ERASE;
+    _last_transaction_tick = _get_ticks();
     return Result::OK;
 }
 
 SpiFlash::Result SpiFlash::erase(uint32_t address, uint32_t size)
 {
+    const auto ROTU_start_tick = xTaskGetTickCount();
+
     if ((address % SECTOR_SIZE != 0) || (size % SECTOR_SIZE != 0))
     {
         return Result::ERROR_ALIGNMENT;
@@ -212,6 +242,8 @@ SpiFlash::Result SpiFlash::erase(uint32_t address, uint32_t size)
         }
     }
     _context.operation = Operation::IDLE;
+    const auto ROTU_end_tick = xTaskGetTickCount();
+    ROTU_REG_TIMESTAMP(2, ROTU_start_tick, ROTU_end_tick - ROTU_start_tick);
     return Result::OK;
 }
 
