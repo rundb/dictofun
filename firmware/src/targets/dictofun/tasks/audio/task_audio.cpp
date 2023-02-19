@@ -76,7 +76,7 @@ void task_audio(void * context_ptr)
             // TODO: push this item to the data queue
             const auto data_queue_send_result = xQueueSend(
                 context.data_queue,
-                reinterpret_cast<void *>(&sample),
+                reinterpret_cast<void *>(sample.data),
                 0);
             if (pdPASS != data_queue_send_result)
             {
