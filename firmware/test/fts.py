@@ -163,10 +163,6 @@ class FtsClient:
         else:
             logging.error("file list: response timeout. exiting routine with an empty result list")
             return []
-
-        logging.info("received list_char update")
-        logging.info("received size: " + str(len(received_data)) + ", expected: " + str(expected_size))
-        logging.info("received: " + str(received_data))
         
         while len(received_data) != expected_size and time.time() - start_time < transaction_timeout:
             if self.pending_flags[self.list_char.uuid]:
