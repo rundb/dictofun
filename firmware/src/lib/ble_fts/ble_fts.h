@@ -91,7 +91,7 @@ private:
     static constexpr uint32_t cp_char_max_len{9};
     static constexpr uint32_t file_list_char_max_len{32};
     static constexpr uint32_t file_info_char_max_len{32};
-    static constexpr uint32_t file_data_char_max_len{128};
+    static constexpr uint32_t file_data_char_max_len{200};
     static constexpr uint32_t fs_status_char_max_len{14};
     static constexpr uint32_t status_char_max_len{9};
 
@@ -200,7 +200,7 @@ private:
 
     struct TransactionContext {
         static constexpr size_t buffer_size{256};
-        static constexpr uint16_t packet_size_value{16};
+        static constexpr uint16_t packet_size_value{200};
         uint32_t idx{0};
         uint32_t size{0};
         uint8_t buffer[buffer_size];

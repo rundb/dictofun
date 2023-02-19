@@ -75,10 +75,14 @@ def check_files_list_getter(fts):
     return files_list
 
 def check_files_info_getter(fts, files):
-    test_file_id = files[-1]
-    file_info = fts.get_file_info(test_file_id)
-    logging.info("last file in the FS: %s" % str(file_info))
-    return file_info["size"]
+    try:
+        test_file_id = files[-1]
+        file_info = fts.get_file_info(test_file_id)
+        logging.info("last file in the FS: %s" % str(file_info))
+        return file_info["size"]
+    except Exception as e:
+        logging.error("files info getter failed with exception %s" % str(e))
+        return -1
 
 def check_file_data_getter(fts, file, size):
     file_data = fts.get_file_data(file, size)
@@ -141,10 +145,17 @@ def launch_checks(dictofun):
         logging.error("failed to create FTS Client instance, error: %s" % str(e))
         exit(-1)
 
-    files = check_files_list_getter(fts)
-    check_fs_stat_getter(fts)
-    last_file_size = check_files_info_getter(fts, files)
-    check_file_data_getter(fts, files[-1], last_file_size)
+    try:
+        files = check_files_list_getter(fts)
+        check_fs_stat_getter(fts)
+        last_file_size = check_files_info_getter(fts, files)
+        if last_file_size < 0:
+            return -1
+        check_file_data_getter(fts, files[-1], last_file_size)
+    except Exception as e:
+        logging.error("basic checks failed with an exception %s" % str(e))
+        return -1
+    return 0
 
 """
 Here all preparations (except for UART commands is performed)
