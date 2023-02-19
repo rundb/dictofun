@@ -39,32 +39,6 @@ void register_flash_device(memory::SpiNorFlashIf * flash, uint32_t sector_size, 
         const auto page_address = erasure_bits_sector_start_ + i * page_size_;
         flash_->read(page_address, &sectors_erasure_bitmap[i * page_size_], page_size_);
     }
-    // vTaskDelay(20);
-    // ROTU_print_bitmap();
-
-}
-
-void ROTU_print_bitmap()
-{
-    NRF_LOG_INFO("%d %d", sectors_erasure_actual_bitmap_size_, sectors_erasure_max_bitmap_size);
-    for (auto i = 0; i < sectors_erasure_actual_bitmap_size_; i += 8)
-    {
-        static constexpr size_t ROTU_maxlen{100};
-        char tmp[ROTU_maxlen]{0};
-        snprintf(tmp, ROTU_maxlen, "%x\t%x %x %x %x %x %x %x %x", 
-            i,
-            sectors_erasure_bitmap[i],
-            sectors_erasure_bitmap[i+1],
-            sectors_erasure_bitmap[i+2],
-            sectors_erasure_bitmap[i+3],
-            sectors_erasure_bitmap[i+4],
-            sectors_erasure_bitmap[i+5],
-            sectors_erasure_bitmap[i+6],
-            sectors_erasure_bitmap[i+7]
-        );
-        NRF_LOG_DEBUG("%s", tmp);
-        vTaskDelay(40);
-    }
 }
 
 bool is_sector_erased(lfs_block_t block)
@@ -189,7 +163,6 @@ int erase(const struct lfs_config *c, lfs_block_t block)
     {
         return -1;
     }
-    NRF_LOG_DEBUG("erase %x (%x)", block, block/8);
     mark_sector_as_erased(block);
     
     return 0;
