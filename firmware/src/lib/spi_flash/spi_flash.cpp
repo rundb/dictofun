@@ -9,9 +9,6 @@
 #include <cstring>
 #include "nrf_log.h"
 
-#include "FreeRTOS.h"
-#include "task.h"
-
 namespace flash
 {
 

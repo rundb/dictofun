@@ -50,7 +50,7 @@ application::QueueDescriptor<logger::CliStatusQueueElement, 1>       cli_status_
 application::QueueDescriptor<audio::CommandQueueElement, 1>          audio_commands_queue;
 application::QueueDescriptor<audio::StatusQueueElement, 1>           audio_status_queue;
 application::QueueDescriptor<audio::tester::ControlQueueElement, 1>  audio_tester_commands_queue;
-//application::QueueDescriptor<audio::microphone::PdmMicrophone<audio::pdm_sample_size>::SampleType, 3>          audio_data_queue;
+
 application::QueueDescriptor<audio::codec::Sample<audio::pdm_sample_size/audio::decimator_codec_factor>, 6>          audio_data_queue;
 
 application::QueueDescriptor<memory::CommandQueueElement, 1>         memory_commands_queue;

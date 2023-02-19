@@ -4,7 +4,7 @@ import ctypes
 def apply_wav_header(raw_data):
     result = bytearray([])
     file_size = len(raw_data) + 36
-    sample_rate = 8000
+    sample_rate = 16000
     bits_per_sample = 16
     byte_rate = int(sample_rate * bits_per_sample * 1 / 8)
 
@@ -36,13 +36,8 @@ if __name__ == '__main__':
             byte = raw.read(1)
             raw_data += byte
     print(len(raw_data))
-    result = apply_wav_header(raw_data)
+    result = apply_wav_header(raw_data[64:])
     print(len(result))
     with open("last_record.wav", "wb") as wav:
         wav.write(result)
 
-    samples = raw_data[256:512]
-    for i in range(0, len(samples), 2):
-        value = samples[i] + samples[i+1] << 8
-        #print(value)
-        print(ctypes.c_int16(value))
