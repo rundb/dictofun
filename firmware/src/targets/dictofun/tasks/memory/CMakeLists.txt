@@ -11,7 +11,7 @@ target_link_libraries(task_memory PRIVATE
     task_ble_interface
     ble_fts
     # TODO: get rid of this dependency
-    microphone_pdm
+    codec_decimator
     task_audio_interface
 )
 

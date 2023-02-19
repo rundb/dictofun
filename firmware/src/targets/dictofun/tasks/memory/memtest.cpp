@@ -109,6 +109,24 @@ void launch_test_2(flash::SpiFlash& flash)
     }
     NRF_LOG_INFO("read 2 took %d ms", read_2_end_tick - read_2_start_tick);
 
+    // ===== Step 2.1: modify a single byte that was previously not programmed
+    test_data[0] = 0x6;
+    const auto reprogram_result = flash.program(test_area_start_address + 7, test_data, 1);
+    if (memory::SpiNorFlashIf::Result::OK != reprogram_result)
+    {
+        NRF_LOG_ERROR("reprogram failed");
+    }
+    test_data[0] = 0;
+    const auto reread_result = flash.read(test_area_start_address + 7, test_data, 1);
+    if (memory::SpiNorFlashIf::Result::OK != reread_result)
+    {
+        NRF_LOG_ERROR("reread failed");
+    }
+    if (test_data[0] != 0x6)
+    {
+        NRF_LOG_ERROR("reprogram failed: %x != 6", test_data[0]);
+    }
+
     // ==== Step 4: erase the sector we just programmed
     const auto erase_start_tick{xTaskGetTickCount()};
     const auto erase_res = flash.erase(test_area_start_address, test_erase_size);

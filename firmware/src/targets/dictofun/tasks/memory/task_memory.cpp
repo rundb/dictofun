@@ -15,7 +15,8 @@
 #include "littlefs_access.h"
 #include <cstdlib>
 // TODO: this dependency here is really bad
-#include "microphone_pdm.h"
+
+#include "codec_decimate.h"
 #include "task_audio.h"
 
 #include "task_ble.h"
@@ -27,14 +28,15 @@ namespace memory
 
 spi::Spi flash_spi(0, SPI_FLASH_CS_PIN);
 
-static const spi::Spi::Configuration flash_spi_config{NRF_DRV_SPI_FREQ_2M,
+static const spi::Spi::Configuration flash_spi_config{NRF_DRV_SPI_FREQ_8M,
                                                       NRF_DRV_SPI_MODE_0,
                                                       NRF_DRV_SPI_BIT_ORDER_MSB_FIRST,
                                                       SPI_FLASH_SCK_PIN,
                                                       SPI_FLASH_MOSI_PIN,
                                                       SPI_FLASH_MISO_PIN};
 
-flash::SpiFlash flash{flash_spi, vTaskDelay};
+
+flash::SpiFlash flash{flash_spi, vTaskDelay, xTaskGetTickCount};
 constexpr uint32_t flash_page_size{256};
 constexpr uint32_t flash_sector_size{4096};
 constexpr uint32_t flash_total_size{16*1024*1024-4096};
@@ -79,13 +81,13 @@ constexpr uint32_t cmd_wait_idle_ticks{5};
 constexpr uint32_t cmd_wait_fast_ticks{1};
 constexpr uint32_t ble_command_wait_ticks{5};
 constexpr uint32_t data_send_wait_ticks{10};
-constexpr uint32_t audio_data_wait_ticks{10};
+constexpr uint32_t audio_data_wait_ticks{5};
 
 // This element allocated statically, as it's rather big (~260 bytes)
 ble::FileDataFromMemoryQueueElement data_queue_elem;
 
 // Single audio sample from audio module
-audio::microphone::PdmMicrophone<audio::pdm_sample_size>::SampleType audio_data_queue_element;
+audio::codec::Sample<audio::pdm_sample_size/audio::decimator_codec_factor> audio_data_queue_element;
 
 static struct FileOperationContext
 {
@@ -148,22 +150,27 @@ void task_memory(void * context_ptr)
         {
             if (_file_operation_context.is_file_open)
             {
-                const auto audio_data_receive_status = xQueueReceive(
-                    context.audio_data_queue,
-                    reinterpret_cast<void *>(&audio_data_queue_element),
-                    audio_data_wait_ticks);
-                if (pdPASS == audio_data_receive_status)
+                BaseType_t audio_data_receive_status = pdTRUE;
+                while (audio_data_receive_status == pdTRUE)
                 {
-                    const auto write_result = memory::filesystem::write_data(lfs, audio_data_queue_element.data, sizeof(audio_data_queue_element));
-                    if (result::Result::OK != write_result)
+                    audio_data_receive_status = xQueueReceive(
+                        context.audio_data_queue,
+                        reinterpret_cast<void *>(&audio_data_queue_element),
+                        audio_data_wait_ticks);
+                    if (pdPASS == audio_data_receive_status)
                     {
-                        NRF_LOG_ERROR("mem: data write failed");
+                        const auto write_result = memory::filesystem::write_data(lfs, audio_data_queue_element.data, sizeof(audio_data_queue_element));
+
+                        if (result::Result::OK != write_result)
+                        {
+                            NRF_LOG_ERROR("mem: data write failed");
+                        }
+                        else
+                        {
+                            written_record_size += sizeof(audio_data_queue_element);
+                        }
                     }
-                    else
-                    {
-                        written_record_size += sizeof(audio_data_queue_element);
-                    }
-                }   
+                }
             }
         }
     }

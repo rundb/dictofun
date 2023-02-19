@@ -7,28 +7,28 @@
 namespace audio
 {
 
-template <typename MicrophoneSample>
-void AudioProcessor<MicrophoneSample>::init()
+template <typename MicrophoneSample, typename CodecOutputSample>
+void AudioProcessor<MicrophoneSample, CodecOutputSample>::init()
 {
     microphone_.init();
     microphone_.register_data_ready_callback(
-        std::bind(&AudioProcessor<MicrophoneSample>::microphone_data_ready_callback, this));
+        std::bind(&AudioProcessor<MicrophoneSample, CodecOutputSample>::microphone_data_ready_callback, this));
 }
 
-template <typename MicrophoneSample>
-void AudioProcessor<MicrophoneSample>::start()
+template <typename MicrophoneSample, typename CodecOutputSample>
+void AudioProcessor<MicrophoneSample, CodecOutputSample>::start()
 {
     microphone_.start_recording();
 }
 
-template <typename MicrophoneSample>
-void AudioProcessor<MicrophoneSample>::stop()
+template <typename MicrophoneSample, typename CodecOutputSample>
+void AudioProcessor<MicrophoneSample, CodecOutputSample>::stop()
 {
     microphone_.stop_recording();
 }
 
-template <typename MicrophoneSample>
-CyclicCallStatus AudioProcessor<MicrophoneSample>::cyclic()
+template <typename MicrophoneSample, typename CodecOutputSample>
+CyclicCallStatus AudioProcessor<MicrophoneSample, CodecOutputSample>::cyclic()
 {
     if (is_data_frame_pending_)
     {
@@ -41,14 +41,19 @@ CyclicCallStatus AudioProcessor<MicrophoneSample>::cyclic()
             // - the good option: run the data through the codec and then push the compressed data to the application
             return CyclicCallStatus::ERROR;
         }
+        const auto processing_result = codec_.encode(sample_, processed_sample_);
+        if (result::Result::OK != processing_result)
+        {
+            return CyclicCallStatus::ERROR;
+        }
         return CyclicCallStatus::DATA_READY;
     }
 
     return CyclicCallStatus::NO_ACTION;
 }
 
-template <typename MicrophoneSample>
-void AudioProcessor<MicrophoneSample>::microphone_data_ready_callback()
+template <typename MicrophoneSample, typename CodecOutputSample>
+void AudioProcessor<MicrophoneSample, CodecOutputSample>::microphone_data_ready_callback()
 {
     is_data_frame_pending_ = true;
 }

@@ -17,9 +17,10 @@ static const uint32_t MAX_SPI_WAIT_TIMEOUT = 100000;
 volatile bool SpiFlash::_isSpiOperationPending;
 SpiFlash* SpiFlash::_instance{nullptr};
 
-SpiFlash::SpiFlash(spi::Spi& flashSpi, DelayFunction delay_function)
+SpiFlash::SpiFlash(spi::Spi& flashSpi, DelayFunction delay_function, TickFunction tick_function)
     : _spi(flashSpi)
     , _delay(delay_function)
+    , _get_ticks(tick_function)
     , _context({Operation::IDLE, 0, nullptr, 0})
 {
     _isSpiOperationPending = false;
@@ -33,6 +34,7 @@ SpiFlash::SpiFlash(spi::Spi& flashSpi, DelayFunction delay_function)
         while(1) {_delay(100);}
     }
 }
+
 
 void SpiFlash::init()
 {
@@ -56,7 +58,7 @@ SpiFlash::Result SpiFlash::read(uint32_t address, uint8_t* data, uint32_t size)
     }
 
     // TODO: consider reducing this delay to minimum (using more detailed ticks' source)
-    _delay(1);
+    if (_get_ticks() - _last_transaction_tick == 0) { _delay(1); }
 
     // 1. fill in transaction header
     _txBuffer[0] = 0x3U;
@@ -85,21 +87,22 @@ SpiFlash::Result SpiFlash::read(uint32_t address, uint8_t* data, uint32_t size)
         NRF_LOG_ERROR("read: timeout error");
     }
 
+    _last_transaction_tick = _get_ticks();
     return Result::OK;
 }
 
 // TODO: might have to implement programming of several pages
 SpiFlash::Result SpiFlash::program(uint32_t address, const uint8_t * const data, uint32_t size)
 {
+
     if (data == nullptr)
     {
         return Result::ERROR_INPUT;
     }
-    if ((address % PAGE_SIZE != 0) || (size > PAGE_SIZE))
+    if (size > PAGE_SIZE)
     {
         return Result::ERROR_ALIGNMENT;
     }
-
     uint32_t timeout{max_wait_time_ms};
     while(isBusy() && timeout > 0)
     {
@@ -110,6 +113,8 @@ SpiFlash::Result SpiFlash::program(uint32_t address, const uint8_t * const data,
     {
         return Result::ERROR_TIMEOUT;
     }
+
+    if (_get_ticks() - _last_transaction_tick == 0) { _delay(1); }
 
     writeEnable(true);
     _txBuffer[0] = 0x2;
@@ -136,6 +141,7 @@ SpiFlash::Result SpiFlash::program(uint32_t address, const uint8_t * const data,
         // TODO: define appropriate actions for this case
     }
 
+    _last_transaction_tick = _get_ticks();
     return Result::OK;
 }
 
@@ -157,6 +163,8 @@ SpiFlash::Result SpiFlash::eraseSector(const uint32_t address)
         return Result::ERROR_TIMEOUT;
     }
 
+    if (_get_ticks() - _last_transaction_tick == 0) { _delay(1); }
+
     writeEnable(true);
     _isSpiOperationPending = true;
     _txBuffer[0] = 0x20;
@@ -166,6 +174,7 @@ SpiFlash::Result SpiFlash::eraseSector(const uint32_t address)
     
     _spi.xfer(_txBuffer, _rxBuffer, 4, spiOperationCallback);
     _context.operation = Operation::ERASE;
+    _last_transaction_tick = _get_ticks();
     return Result::OK;
 }
 

@@ -4,6 +4,7 @@
  */
 
 #include "microphone.h"
+#include "codec.h"
 
 // This is a set of public interfaces used for handling audio in Dictofun application.
 namespace audio
@@ -20,12 +21,15 @@ enum class CyclicCallStatus
 /// - control of microphone
 /// - memory management for microphone buffers
 /// - control over usage of a codec
-template <typename MicrophoneSample>
+template <typename MicrophoneSample, typename CodecOutputSample>
 class AudioProcessor
 {
 public:
-    explicit AudioProcessor(Microphone<MicrophoneSample>& microphone)
+    explicit AudioProcessor(
+        Microphone<MicrophoneSample>& microphone, 
+        Codec<MicrophoneSample, CodecOutputSample>& codec)
     : microphone_(microphone)
+    , codec_(codec)
     {}
 
     void init();
@@ -37,7 +41,7 @@ public:
     CyclicCallStatus cyclic();
 
     // TODO: replace this sample with after-codec one when it's available
-    MicrophoneSample& get_last_sample() { return sample_; }
+    CodecOutputSample& get_last_sample() { return processed_sample_; }
 
     AudioProcessor() = delete;
     AudioProcessor(AudioProcessor&) = delete;
@@ -48,6 +52,8 @@ public:
 private:
     Microphone<MicrophoneSample>& microphone_;
     MicrophoneSample sample_;
+    CodecOutputSample processed_sample_;
+    Codec<MicrophoneSample, CodecOutputSample>& codec_;
     void microphone_data_ready_callback();
     volatile bool is_data_frame_pending_{false};
 

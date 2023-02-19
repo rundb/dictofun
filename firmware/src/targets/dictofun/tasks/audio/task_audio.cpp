@@ -12,6 +12,7 @@
 #include "task.h"
 
 #include "microphone_pdm.h"
+#include "codec_decimate.h"
 #include "audio_processor.h"
 
 namespace audio
@@ -25,7 +26,14 @@ static uint32_t recorded_data_size{0};
 static uint32_t lost_data_size{0};
 
 audio::microphone::PdmMicrophone<pdm_sample_size> pdm_mic{CONFIG_IO_PDM_CLK, CONFIG_IO_PDM_DATA};
-audio::AudioProcessor<audio::microphone::PdmMicrophone<pdm_sample_size>::SampleType> audio_processor{pdm_mic};
+using CodecInputType = audio::microphone::PdmMicrophone<pdm_sample_size>::SampleType;
+using CodecOutputType = audio::codec::Sample<pdm_sample_size/decimator_codec_factor>;
+audio::codec::DecimatorCodec<CodecInputType, CodecOutputType> decimator_codec{sizeof(uint16_t)};
+
+audio::AudioProcessor<
+    audio::microphone::PdmMicrophone<pdm_sample_size>::SampleType,
+    CodecOutputType>
+    audio_processor{pdm_mic, decimator_codec};
 
 void microphone::isr_pdm_event_handler(const nrfx_pdm_evt_t * const p_evt)
 {
@@ -72,7 +80,7 @@ void task_audio(void * context_ptr)
                 0);
             if (pdPASS != data_queue_send_result)
             {
-                NRF_LOG_WARNING("audio: data lost");
+                NRF_LOG_WARNING("audio: data lost %d", xTaskGetTickCount());
                 // TODO: it may be needed to abort the whole record process here.
                 lost_data_size += sizeof(sample);
             }
