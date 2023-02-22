@@ -85,10 +85,13 @@ def check_files_info_getter(fts, files):
         return -1
 
 def check_file_data_getter(fts, file, size):
+    start_tick = time.time()
     file_data = fts.get_file_data(file, size)
     logging.info("file size: %d. data written to `last_record.bin`" % len(file_data))
     with open("last_record.bin", "wb") as record:
         record.write(file_data)
+    end_tick = time.time()
+    logging.info("throughput: " + str(int(size / (end_tick - start_tick))) + "bytes/sec")
 
 def check_fs_stat_getter(fts):
     fs_stat = fts.get_fs_status()
@@ -211,9 +214,9 @@ if __name__ == '__main__':
     test_execution_result = 0
     if not dictofun is None:
         prepare_dictofun(dictofun, dictofun_control)
-        test_execution_result = launch_tests(dictofun)
-        # dictofun_control.issue_command("ble 4", 0.5)
-        # launch_checks(dictofun)
+        # test_execution_result = launch_tests(dictofun)
+        dictofun_control.issue_command("ble 4", 0.5)
+        launch_checks(dictofun)
         release_dictofun(dictofun, dictofun_control)
     else:
         logging.error("no dictofun discovered")

@@ -30,5 +30,6 @@ void set_fts_fs_handler(ble::fts::FileSystemInterface& fs_if);
 namespace services
 {
 void register_fs_communication_queues(QueueHandle_t commands_queue, QueueHandle_t status_queue, QueueHandle_t data_queue);
+bool is_fts_active();
 }
 }

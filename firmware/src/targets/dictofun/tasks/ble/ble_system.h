@@ -37,6 +37,7 @@ public:
     void process();
     void connect_fts_to_target_fs();
     void register_fs_communication_queues(QueueHandle_t commands_queue, QueueHandle_t status_queue, QueueHandle_t data_queue);
+    bool is_fts_active();
 private:
     result::Result init_sdh();
     result::Result init_gap();

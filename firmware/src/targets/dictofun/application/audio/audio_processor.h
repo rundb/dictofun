@@ -27,7 +27,7 @@ class AudioProcessor
 public:
     explicit AudioProcessor(
         Microphone<MicrophoneSample>& microphone, 
-        Codec<MicrophoneSample, CodecOutputSample>& codec)
+        codec::Codec<MicrophoneSample, CodecOutputSample>& codec)
     : microphone_(microphone)
     , codec_(codec)
     {}
@@ -53,7 +53,7 @@ private:
     Microphone<MicrophoneSample>& microphone_;
     MicrophoneSample sample_;
     CodecOutputSample processed_sample_;
-    Codec<MicrophoneSample, CodecOutputSample>& codec_;
+    codec::Codec<MicrophoneSample, CodecOutputSample>& codec_;
     void microphone_data_ready_callback();
     volatile bool is_data_frame_pending_{false};
 

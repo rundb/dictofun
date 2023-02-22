@@ -18,7 +18,9 @@ namespace ble
 BleSystem ble_system;
 
 ble::CommandQueueElement command_buffer;
-constexpr TickType_t command_wait_ticks{5U};
+constexpr TickType_t command_wait_slow_ticks{5U};
+constexpr TickType_t command_wait_fast_ticks{1U};
+
 
 struct 
 {
@@ -52,7 +54,7 @@ void task_ble(void * context_ptr)
         const auto command_receive_status = xQueueReceive(
             context.command_queue,
             reinterpret_cast<void *>(&command_buffer),
-            command_wait_ticks
+            ble_system.is_fts_active() ? command_wait_fast_ticks : command_wait_slow_ticks
         );
         if (pdPASS == command_receive_status)
         {
