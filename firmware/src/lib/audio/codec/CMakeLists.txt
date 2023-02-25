@@ -24,9 +24,4 @@ if (${is_unit_test})
     )
 
     gtest_discover_tests(test_codec)
-else()
-    # add_library(codec_decimator STATIC
-    #     src/dummy.c
-    # )
-
 endif()
