@@ -519,4 +519,9 @@ void BleSystem::register_fs_communication_queues(
     services::register_fs_communication_queues(commands_queue, status_queue, data_queue);
 }
 
+bool BleSystem::is_fts_active()
+{
+    return services::is_fts_active();
+}
+
 }

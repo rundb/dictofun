@@ -87,7 +87,7 @@ constexpr uint32_t audio_data_wait_ticks{5};
 ble::FileDataFromMemoryQueueElement data_queue_elem;
 
 // Single audio sample from audio module
-audio::codec::Sample<audio::pdm_sample_size/audio::decimator_codec_factor> audio_data_queue_element;
+audio::CodecOutputType audio_data_queue_element;
 
 static struct FileOperationContext
 {

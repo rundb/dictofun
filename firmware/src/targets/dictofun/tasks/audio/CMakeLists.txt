@@ -7,6 +7,7 @@ target_include_directories(task_audio PUBLIC ./)
 target_link_libraries(task_audio PRIVATE 
     application_audio
     microphone_pdm
+    codec_adpcm
 )
 target_link_libraries(task_audio PUBLIC 
     application
@@ -18,3 +19,6 @@ target_link_libraries(task_audio PUBLIC
 
 add_library(task_audio_interface INTERFACE)
 target_include_directories(task_audio_interface INTERFACE ./)
+target_link_libraries(task_audio_interface INTERFACE 
+    codec_if
+)

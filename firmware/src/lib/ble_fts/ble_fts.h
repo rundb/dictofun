@@ -68,6 +68,7 @@ public:
     }
 
     void process();
+    bool is_file_transmission_running() { return _context.active_command != FtsService::ControlPointOpcode::IDLE; }
 private:
     static FtsService * _instance;
     FileSystemInterface& _fs_if;

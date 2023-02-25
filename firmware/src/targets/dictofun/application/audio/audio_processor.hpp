@@ -18,6 +18,7 @@ void AudioProcessor<MicrophoneSample, CodecOutputSample>::init()
 template <typename MicrophoneSample, typename CodecOutputSample>
 void AudioProcessor<MicrophoneSample, CodecOutputSample>::start()
 {
+    codec_.start();
     microphone_.start_recording();
 }
 

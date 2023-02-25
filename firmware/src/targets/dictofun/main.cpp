@@ -51,7 +51,7 @@ application::QueueDescriptor<audio::CommandQueueElement, 1>          audio_comma
 application::QueueDescriptor<audio::StatusQueueElement, 1>           audio_status_queue;
 application::QueueDescriptor<audio::tester::ControlQueueElement, 1>  audio_tester_commands_queue;
 
-application::QueueDescriptor<audio::codec::Sample<audio::pdm_sample_size/audio::decimator_codec_factor>, 4>          audio_data_queue;
+application::QueueDescriptor<audio::CodecOutputType, 4>              audio_data_queue;
 
 application::QueueDescriptor<memory::CommandQueueElement, 1>         memory_commands_queue;
 application::QueueDescriptor<memory::StatusQueueElement, 1>          memory_status_queue; 

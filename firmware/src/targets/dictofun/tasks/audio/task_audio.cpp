@@ -13,6 +13,7 @@
 
 #include "microphone_pdm.h"
 #include "codec_decimate.h"
+#include "codec_adpcm.h"
 #include "audio_processor.h"
 
 namespace audio
@@ -26,14 +27,20 @@ static uint32_t recorded_data_size{0};
 static uint32_t lost_data_size{0};
 
 audio::microphone::PdmMicrophone<pdm_sample_size> pdm_mic{CONFIG_IO_PDM_CLK, CONFIG_IO_PDM_DATA};
-using CodecInputType = audio::microphone::PdmMicrophone<pdm_sample_size>::SampleType;
-using CodecOutputType = audio::codec::Sample<pdm_sample_size/decimator_codec_factor>;
-audio::codec::DecimatorCodec<CodecInputType, CodecOutputType> decimator_codec{sizeof(uint16_t)};
+using MicrophoneOutputType = audio::microphone::PdmMicrophone<pdm_sample_size>::SampleType;
+using CodecInputType = MicrophoneOutputType;
+
+audio::codec::DecimatorCodec<CodecInputType, CodecOutputType> decimator_codec{sizeof(uint16_t), pdm_sampling_frequency};
+audio::codec::CodecAdpcm<CodecInputType, CodecAdpcmOutputType> adpcm_codec{pdm_sampling_frequency};
 
 audio::AudioProcessor<
-    audio::microphone::PdmMicrophone<pdm_sample_size>::SampleType,
+    MicrophoneOutputType,
     CodecOutputType>
-    audio_processor{pdm_mic, decimator_codec};
+    audio_processor{
+        pdm_mic, 
+        adpcm_codec
+        // decimator_codec
+    };
 
 void microphone::isr_pdm_event_handler(const nrfx_pdm_evt_t * const p_evt)
 {
