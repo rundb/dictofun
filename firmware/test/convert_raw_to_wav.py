@@ -45,11 +45,6 @@ def decode_file_type(raw):
     
     return descriptor
 
-def decode_adpcm_record(raw):
-    result = bytearray([])
-
-    return result
-        
 
 if __name__ == '__main__':
     if len(sys.argv) != 3:
@@ -78,8 +73,6 @@ if __name__ == '__main__':
     if len(descriptor) == 0:
         logging.error("unknown descriptor. Exiting")
         sys.exit(-1)
-
-    print("file descriptor: " + str(descriptor))
 
     if descriptor["type"] == "raw":
         try:
