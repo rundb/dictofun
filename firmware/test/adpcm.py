@@ -1,11 +1,20 @@
+# SPDX-License-Identifier:  Apache-2.0
+#
+# Copyright (c) 2023, Roman Turkin
 
 
 import logging
 import sys
 import numpy as np
 
-def htons(a):
-    return ((a >> 8) & 0x00FF) | ((a << 8) & 0xFF00)
+"""
+This file contains methods for decoding ADPCM-coded data provided by Nordic in one of their reference examples.
+Basically I took algorithm from dvi_adcpm.c found in https://www.nordicsemi.com/Products/Reference-designs/nRFready-Smart-Remote-3-for-nRF52-Series/Download?lang=en#infotabs
+(archive nRF6939-SW) and converted the C code to python.
+
+Unfortunately, I was unable to find a Python library that would've been capable of correctly interpreting this version of IMA ADPCM, so the easiest option for me has been
+to take reference example and rewrite it in Python. It's also benefitial to have it in the form of code, as later I'd have to implement it in Swift and Java/Kotlin. 
+"""
 
 index_table = [
     -1, -1, -1, -1, 2, 4, 6, 8,
@@ -98,6 +107,7 @@ def encode(input):
     return output
 
 
+# TODO: fix handling of the first 3 bytes (it regulates the initial state of the data by setting correct valpred and index values)
 def adpcm_decode(input):
     # first 3 bytes contain the information regarding the initial state of the coding
     # todo: implement
