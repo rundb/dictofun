@@ -2,36 +2,12 @@ import wave
 import logging
 import sys
 import struct
+from adpcm import adpcm_decode
 
 wav_format_codes = {
-    "raw" : 1,
+    "raw" : 0x01,
     "adpcm" : 0x11
 }
-
-def apply_wav_header(raw_data, format):
-    result = bytearray([])
-    file_size = len(raw_data) + 36
-    sample_rate = 16000
-    bits_per_sample = 16
-    byte_rate = int(sample_rate * bits_per_sample * 1 / 8)
-
-    result += "RIFF".encode('utf-8') # 1 - 4
-    result += struct.pack("I", file_size) # File size
-    result += "WAVE".encode('utf-8') 
-    result += "fmt ".encode('utf-8')
-    result += struct.pack("I", 16)
-
-    result += struct.pack("H", wav_format_codes[format]) # type of format
-    result += struct.pack("H", 1) # number of channels, 2 bytes
-    result += struct.pack("I", sample_rate) # sample rate
-    result += struct.pack("I", byte_rate) # byte rate
-    result += struct.pack("H", 2) # channel type (mono/stereo/8-16 bit)
-    result += struct.pack("H", bits_per_sample) #bits per sample
-    result += "data".encode('utf-8')
-    result += struct.pack("I", len(raw_data))
-
-    result += raw_data
-    return result
 
 def decode_file_type(raw):
     descriptor = {}
@@ -117,10 +93,11 @@ if __name__ == '__main__':
 
     elif descriptor["type"] == "adpcm":
         try:
-            output = apply_wav_header(raw_data, descriptor["type"])
-            with open(output_name, "wb") as f:
-                f.write(output)
+            decoded = adpcm_decode(raw_data[0x100:])
+            with wave.open(output_name, "wb") as record:
+                record.setnchannels(1)
+                record.setsampwidth(descriptor["sample_width"])
+                record.setframerate(descriptor["frequency"])
+                record.writeframes(decoded)
         except Exception as e:
             logging.error("exception during header application: " + str(e))
-
-        

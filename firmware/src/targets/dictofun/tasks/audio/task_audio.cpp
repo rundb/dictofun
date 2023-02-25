@@ -38,8 +38,8 @@ audio::AudioProcessor<
     CodecOutputType>
     audio_processor{
         pdm_mic, 
-        //adpcm_codec
-        decimator_codec
+        adpcm_codec
+        // decimator_codec
     };
 
 void microphone::isr_pdm_event_handler(const nrfx_pdm_evt_t * const p_evt)
