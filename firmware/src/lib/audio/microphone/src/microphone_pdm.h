@@ -48,11 +48,12 @@ public:
 private:
     uint8_t clk_pin_;
     uint8_t data_pin_;
-    static constexpr size_t buffers_count{2U};
+    static constexpr size_t buffers_count{3U};
     static constexpr size_t buffer_size{SampleBufferSize/2}; // divided by 2, as the buffer element is 2 bytes
     int16_t buffers_[buffers_count][buffer_size];
     size_t previous_buffer_index_{0};
     size_t current_buffer_index_{0};
+    int16_t * _released_buffer_ptr{nullptr};
     PdmDataReadyCallback data_ready_callback{nullptr};
 };
 
