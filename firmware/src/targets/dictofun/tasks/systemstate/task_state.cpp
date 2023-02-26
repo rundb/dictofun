@@ -8,6 +8,7 @@
 
 #include <nrf_gpio.h>
 #include <nrf_log.h>
+#include "nrf_log_ctrl.h"
 
 #include "task_cli_logger.h"
 #include "task_audio.h"
@@ -32,6 +33,8 @@ constexpr TickType_t cli_command_wait_ticks_type{10};
 constexpr TickType_t ble_request_wait_ticks_type{1};
 
 Context * context{nullptr};
+static constexpr uint8_t power_flipflop_clk{26};
+static constexpr uint8_t power_flipflop_d{27};
     
 bool is_record_start_by_cli_allowed()
 {
@@ -41,6 +44,37 @@ bool is_record_start_by_cli_allowed()
     }
     // TODO: add another check to see if CLI commands are overall allowed
     return true;
+}
+
+void configure_power_latch()
+{
+    nrf_gpio_cfg_output(power_flipflop_clk);
+    nrf_gpio_cfg_output(power_flipflop_d);
+
+    nrf_gpio_pin_clear(power_flipflop_clk);
+    nrf_gpio_pin_set(power_flipflop_d);
+
+    vTaskDelay(1);
+    nrf_gpio_pin_set(power_flipflop_clk);
+    vTaskDelay(1);
+    nrf_gpio_pin_clear(power_flipflop_clk);
+    vTaskDelay(1);
+
+}
+
+void shutdown_ldo()
+{
+    NRF_LOG_INFO("shutting the system down");
+    // Letting logger to print out all it needs to print
+    NRF_LOG_FLUSH();
+    vTaskDelay(100);
+    nrf_gpio_pin_clear(power_flipflop_d);
+    vTaskDelay(1);
+    nrf_gpio_pin_clear(power_flipflop_clk);
+    vTaskDelay(1);
+    nrf_gpio_pin_set(power_flipflop_clk);
+    vTaskDelay(1);
+    nrf_gpio_pin_clear(power_flipflop_clk);
 }
 
 void record_end_callback(TimerHandle_t timer)
@@ -102,9 +136,11 @@ result::Result launch_record_timer(const TickType_t record_duration)
 void launch_cli_command_record(const uint32_t duration, bool should_store_the_record);
 void launch_cli_command_memory_test(const uint32_t test_id);
 void launch_cli_command_ble_operation(const uint32_t command_id);
+void launch_cli_command_system(const uint32_t command_id);
 
 void task_system_state(void * context_ptr)
 {
+    configure_power_latch();
     NRF_LOG_INFO("task state: initialized");
     context = reinterpret_cast<Context *>(context_ptr);
     while(1)
@@ -131,6 +167,11 @@ void task_system_state(void * context_ptr)
                 case logger::CliCommand::BLE_COMMAND:
                 {
                     launch_cli_command_ble_operation(cli_command_buffer.args[0]);
+                    break;
+                }
+                case logger::CliCommand::SYSTEM:
+                {
+                    launch_cli_command_system(cli_command_buffer.args[0]);
                     break;
                 }
             }
@@ -269,6 +310,12 @@ void launch_cli_command_ble_operation(const uint32_t command_id)
         NRF_LOG_ERROR("task state: failed to queue BLE operation");
         return;
     }
+}
+
+void launch_cli_command_system(const uint32_t command_id)
+{
+    NRF_LOG_INFO("task state: launching system command %d", command_id);
+    shutdown_ldo();
 }
 
 }
