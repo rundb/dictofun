@@ -11,4 +11,5 @@ target_link_libraries(ble_fts PUBLIC
 
 target_link_libraries(ble_fts PRIVATE
     nrf5_ble_common
+    nrf5_crc32
 )

@@ -16,6 +16,8 @@
 #include "codec_adpcm.h"
 #include "audio_processor.h"
 
+#include "crc32.h"
+
 namespace audio
 {
 
@@ -52,6 +54,8 @@ void task_audio(void * context_ptr)
     NRF_LOG_INFO("task audio: initialized");
     Context& context = *(reinterpret_cast<Context *>(context_ptr));
     audio_processor.init();
+    uint32_t crc_value{0UL};
+    bool is_first_frame_received{false};
     while (1)
     {
         const auto audio_queue_receive_status = xQueueReceive(
@@ -68,30 +72,38 @@ void task_audio(void * context_ptr)
                 NRF_LOG_INFO("audio: received record_start command");
                 audio_processor.start();
                 context.is_recording_active = true;
+
+                is_first_frame_received = false;
             }
             if (audio_command_buffer.command_id == Command::RECORD_STOP)
             {
                 context.is_recording_active = false;
                 audio_processor.stop();
-                NRF_LOG_INFO("audio: received record_stop command. recorded %d bytes, lost %d", recorded_data_size, lost_data_size);
+                NRF_LOG_INFO("audio: rec stop. recorded %d bytes, lost %d. CRC=0x%x", recorded_data_size, lost_data_size, crc_value);
             }
         }
         const auto cyclic_call_result = audio_processor.cyclic();
         if (CyclicCallStatus::DATA_READY == cyclic_call_result)
         {
             auto& sample = audio_processor.get_last_sample();
-            // TODO: push this item to the data queue
-            const auto data_queue_send_result = xQueueSend(
-                context.data_queue,
-                reinterpret_cast<void *>(sample.data),
-                0);
-            if (pdPASS != data_queue_send_result)
+
+            if (context.is_recording_active)
             {
-                NRF_LOG_WARNING("audio: data lost %d", xTaskGetTickCount());
-                // TODO: it may be needed to abort the whole record process here.
-                lost_data_size += sizeof(sample);
+                crc_value = crc32_compute(sample.data, sizeof(sample), is_first_frame_received ? &crc_value : NULL);
+
+                // TODO: push this item to the data queue
+                const auto data_queue_send_result = xQueueSend(
+                    context.data_queue,
+                    reinterpret_cast<void *>(sample.data),
+                    0);
+                if (pdPASS != data_queue_send_result)
+                {
+                    NRF_LOG_WARNING("audio: data lost %d", xTaskGetTickCount());
+                    // TODO: it may be needed to abort the whole record process here.
+                    lost_data_size += sizeof(sample);
+                }
+                recorded_data_size += sizeof(sample);
             }
-            recorded_data_size += sizeof(sample);
         }
     }
 }

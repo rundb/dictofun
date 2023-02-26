@@ -2,7 +2,9 @@ import wave
 import logging
 import sys
 import struct
+import numpy as np
 from adpcm import adpcm_decode
+import zlib
 
 wav_format_codes = {
     "raw" : 0x01,
@@ -68,6 +70,10 @@ if __name__ == '__main__':
         logging.error("failed to open file " + input_name + ": " + str(e))
         sys.exit(-1)
 
+    crc = 0
+    crc = zlib.crc32(raw_data, crc)
+    print(f"crc: 0x{crc:08x}")
+
     descriptor = decode_file_type(raw_data)
 
     if len(descriptor) == 0:
@@ -81,6 +87,10 @@ if __name__ == '__main__':
                 record.setsampwidth(descriptor["sample_width"])
                 record.setframerate(descriptor["frequency"] / descriptor["decimation_factor"])
                 record.writeframes(raw_data[0x200:])
+            with open("test.txt", "w") as f:
+                for i in range(0x1000, 0x1800, 2):
+                    value = str(np.int16(raw_data[i] + (raw_data[i+1] << 8))) + "\n"
+                    f.write(value)
         except Exception as e:
             logging.error("failed to create record file " + output_name + ": " + str(e))
 
@@ -92,5 +102,10 @@ if __name__ == '__main__':
                 record.setsampwidth(descriptor["sample_width"])
                 record.setframerate(descriptor["frequency"])
                 record.writeframes(decoded)
+            with open("test.txt", "w") as f:
+                for i in range(0x2000, 0x3000, 2):
+                    value = str(np.int16(decoded[i] + (decoded[i+1] << 8))) + "\n"
+                    f.write(value)
+
         except Exception as e:
             logging.error("exception during header application: " + str(e))

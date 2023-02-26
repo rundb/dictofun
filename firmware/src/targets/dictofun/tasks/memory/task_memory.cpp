@@ -22,6 +22,14 @@
 #include "task_ble.h"
 
 #include "lfs.h"
+#include "crc32.h"
+
+constexpr uint32_t ROTU_max_idx{2048};
+uint8_t ROTU_data[ROTU_max_idx][2];
+extern uint32_t ROTU_total_data_start;
+static uint32_t ROTU_idx{0};
+static uint32_t ROTU_total_data{0};
+#define ROTU_PUSH_DATA(d) {if (ROTU_total_data > ROTU_total_data_start &&  ROTU_idx < ROTU_max_idx) {ROTU_data[ROTU_idx][1] = d; ++ROTU_idx;} }
 
 namespace memory
 {
@@ -188,6 +196,8 @@ void convert_file_id_to_string(ble::fts::file_id_type file_id, char * buffer)
     memcpy(buffer, &file_id, sizeof(ble::fts::file_id_type));
 }
 
+static uint32_t crc_value = 0;
+static bool is_first_frame_sent{false};
 void process_request_from_ble(Context& context, ble::CommandToMemory command_id, ble::fts::file_id_type file_id)
 {
     ble::StatusFromMemoryQueueElement status{ble::StatusFromMemory::OK, 0};
@@ -262,6 +272,7 @@ void process_request_from_ble(Context& context, ble::CommandToMemory command_id,
             }
             _file_operation_context.is_file_open = true;
             _file_operation_context.file_id = file_id;
+            is_first_frame_sent = false;
             break;
         }
         case ble::CommandToMemory::CLOSE_FILE:
@@ -281,6 +292,24 @@ void process_request_from_ble(Context& context, ble::CommandToMemory command_id,
             }
             _file_operation_context.is_file_open = false;
             _file_operation_context.file_id = 0;
+
+            NRF_LOG_INFO("file crc: 0x%x, size=%d", crc_value, ROTU_total_data);
+
+            
+            NRF_LOG_INFO("collected %d samples", ROTU_idx);
+            for (auto i = 0; i < ROTU_idx; i++)
+            {
+                // if (ROTU_data[i][0] != ROTU_data[i][1])
+                // {
+                //     NRF_LOG_INFO("%d: %d %d", i, ROTU_data[i][0], ROTU_data[i][1]);
+                //     vTaskDelay(5);
+                // }
+                if (i % 100 == 0)
+                {
+                    NRF_LOG_INFO("%d: %d %d", i + ROTU_total_data_start, ROTU_data[i][0], ROTU_data[i][1]);
+                    vTaskDelay(5);
+                }
+            }
             
             break;
         }
@@ -300,6 +329,12 @@ void process_request_from_ble(Context& context, ble::CommandToMemory command_id,
                 break;
             }
             status.data_size = data_queue_elem.size;
+            crc_value = crc32_compute(data_queue_elem.data, data_queue_elem.size, is_first_frame_sent ? &crc_value : NULL);
+            for (auto i = 0; i < data_queue_elem.size; ++i)
+            {
+                ROTU_PUSH_DATA(data_queue_elem.data[i]);
+            }
+            ROTU_total_data += data_queue_elem.size;
             break;
         }
         case ble::CommandToMemory::GET_FS_STATUS:

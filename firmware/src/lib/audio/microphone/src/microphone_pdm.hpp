@@ -18,6 +18,8 @@ namespace microphone
 // the instantiation of the microphone class. It has to call PdmMicrophone<>::pdm_event_handler()
 extern void isr_pdm_event_handler(const nrfx_pdm_evt_t * const p_evt);
 
+
+
 template <size_t SampleBufferSize>
 void PdmMicrophone<SampleBufferSize>::init() 
 {
@@ -41,7 +43,16 @@ void PdmMicrophone<SampleBufferSize>::pdm_event_handler(const nrfx_pdm_evt_t * c
     {
         previous_buffer_index_ = current_buffer_index_;
         current_buffer_index_ = (current_buffer_index_ + 1) % buffers_count;
-        nrf_drv_pdm_buffer_set(buffers_[current_buffer_index_], buffer_size);
+        memset(&buffers_[current_buffer_index_][0], 0, SampleBufferSize);
+        const auto result = nrf_drv_pdm_buffer_set(&buffers_[current_buffer_index_][0], buffer_size);
+        if (result != NRFX_SUCCESS)
+        {
+            NRF_LOG_ERROR("pdm buf set err(%d)", result);
+        }
+    }
+    if (p_evt->buffer_released != nullptr)
+    {
+        _released_buffer_ptr = p_evt->buffer_released;
         data_ready_callback();
     }
 }
@@ -49,23 +60,27 @@ void PdmMicrophone<SampleBufferSize>::pdm_event_handler(const nrfx_pdm_evt_t * c
 template <size_t SampleBufferSize>
 void PdmMicrophone<SampleBufferSize>::start_recording() 
 {
+    nrf_drv_pdm_buffer_set(buffers_[current_buffer_index_], buffer_size);
+
     const auto start_result = nrf_drv_pdm_start();
     if (start_result != 0)
     {
         NRF_LOG_ERROR("pdm: start has failed, result = %d", start_result);
     }
+    _recorded_buffers_count = 0;
 }
 
 template <size_t SampleBufferSize>
 void PdmMicrophone<SampleBufferSize>::stop_recording() 
 {
     nrf_drv_pdm_stop();
+    NRF_LOG_INFO("pdm: recored %d bytes", _recorded_buffers_count * SampleBufferSize);
 }
 
 template <size_t SampleBufferSize>
 result::Result PdmMicrophone<SampleBufferSize>::get_samples(SampleType& sample) 
 {
-    memcpy(sample.data, buffers_[previous_buffer_index_], SampleBufferSize);
+    memcpy(sample.data, _released_buffer_ptr, SampleBufferSize);
     return result::Result::OK;
 }
 

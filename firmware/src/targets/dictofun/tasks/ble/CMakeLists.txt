@@ -33,6 +33,7 @@ target_link_libraries(task_ble PRIVATE
     nrf5_atflags
     nrf5_ble_advertising
     nrf5_ble_srv_lbs
+    nrf5_crc32
     boards
 )
 target_link_libraries(task_ble PUBLIC 

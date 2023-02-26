@@ -9,6 +9,7 @@
 #include "ble.h"
 #include "nrf_sdh_ble.h"
 #include "nrf_log.h"
+#include "crc32.h"
 
 namespace ble
 {
@@ -36,6 +37,8 @@ nrf_sdh_ble_evt_observer_t observer = {
     .handler = FtsService::on_ble_evt,
     .p_context = reinterpret_cast<void *>(&FtsService::_context),
 };
+
+static uint32_t crc_value{0};
 
 FtsService * FtsService::_instance{nullptr};
 
@@ -436,6 +439,7 @@ void FtsService::process()
                 {
                     NRF_LOG_DEBUG("file transaction completed");
                 }
+                NRF_LOG_INFO("ble: crc = 0x%x", crc_value);
             }
             else
             {
@@ -654,6 +658,7 @@ result::Result FtsService::send_file_info()
     return result::Result::OK;
 }
 
+
 result::Result FtsService::send_file_data()
 {
     // 1. Open the requested file
@@ -684,6 +689,8 @@ result::Result FtsService::send_file_data()
         (void)update_general_status(GeneralStatus::FS_CORRUPT, 0);
         return read_result;
     }
+
+    crc_value = crc32_compute(_transaction_ctx.buffer, _transaction_ctx.size, NULL);
 
     _transaction_ctx.idx = 0;
     _transaction_ctx.file_sent_size = 0;
@@ -721,6 +728,8 @@ result::Result FtsService::continue_sending_file_data()
         NRF_LOG_ERROR("ble::fts::cont_send_data: push has failed");
         return result::Result::ERROR_GENERAL;
     }
+
+    crc_value = crc32_compute(_transaction_ctx.buffer, _transaction_ctx.size, &crc_value);
 
     return result::Result::OK;
 }

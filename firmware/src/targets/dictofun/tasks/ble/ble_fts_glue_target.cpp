@@ -10,8 +10,16 @@
 #include "queue.h"
 #include "task_ble.h"
 #include "nrf_log.h"
+#include "crc32.h"
 
 using namespace ble::fts;
+
+static constexpr uint32_t ROTU_max_idx{512};
+extern uint8_t ROTU_data[ROTU_max_idx][2];
+static uint32_t ROTU_idx{0};
+static uint32_t ROTU_total_data{0};
+uint32_t ROTU_total_data_start{0};
+#define ROTU_PUSH_DATA(d) {if (ROTU_total_data > ROTU_total_data_start &&  ROTU_idx < ROTU_max_idx) {ROTU_data[ROTU_idx][0] = d; ++ROTU_idx;} }
 
 namespace integration
 {
@@ -26,6 +34,9 @@ static QueueHandle_t _data_from_fs_queue{nullptr};
 static constexpr uint32_t max_status_wait_time{400};
 static constexpr uint32_t max_short_data_wait_time{100};
 static constexpr uint32_t max_long_data_wait_time{400};
+
+static uint32_t crc_value{0};
+static bool is_first_frame_sent{false};
 
 // this queue element is allocated statically, as it's rather huge (~260 bytes) and it's better to avoid putting it on stack
 ble::FileDataFromMemoryQueueElement data_from_memory_queue_element;
@@ -166,6 +177,7 @@ result::Result open_file(const file_id_type file_id, uint32_t& file_size)
     }
     NRF_LOG_DEBUG("opened file with size %d", response.data_size);
     file_size = response.data_size;
+    is_first_frame_sent = false;
     return result::Result::OK;
 }
 
@@ -199,6 +211,7 @@ result::Result close_file(const file_id_type file_id)
     {
     }
     NRF_LOG_DEBUG("closed file");
+    NRF_LOG_INFO("glue: file crc: 0x%x, size %d", crc_value, ROTU_total_data);
     return result::Result::OK;
 }
 
@@ -239,7 +252,9 @@ result::Result get_data(const file_id_type file_id, uint8_t * buffer, uint32_t& 
     {
     }
     ble::FileDataFromMemoryQueueElement& data{data_from_memory_queue_element};
+    
     data.size = 0;
+    memset(&data, 0, sizeof(data));
     const auto data_result = xQueueReceive(_data_from_fs_queue, &data, max_long_data_wait_time);
     if (pdTRUE != data_result)
     {
@@ -248,8 +263,21 @@ result::Result get_data(const file_id_type file_id, uint8_t * buffer, uint32_t& 
     }
     
     actual_size = data.size;
-
+    
     memcpy(buffer, data.data, data.size);
+
+    crc_value = crc32_compute(data.data, data.size, is_first_frame_sent ? &crc_value : NULL);
+    
+    for (auto i = 0; i < data.size; ++i)
+    {
+        ROTU_PUSH_DATA(data.data[i]);
+    }
+    ROTU_total_data += data.size;
+
+    if (!is_first_frame_sent)
+    {
+        is_first_frame_sent = true;
+    }
 
     return result::Result::OK;
 }

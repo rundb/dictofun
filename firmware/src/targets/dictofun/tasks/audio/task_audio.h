@@ -24,6 +24,7 @@ using CodecDecimatorOutputType = audio::codec::Sample<pdm_sample_size/decimator_
 using CodecAdpcmOutputType = audio::codec::Sample<pdm_sample_size/adpcm_factor>;
 
 using CodecOutputType = CodecAdpcmOutputType; 
+
 // using CodecOutputType = CodecDecimatorOutputType;
 
 /// @brief Function that implements audio task

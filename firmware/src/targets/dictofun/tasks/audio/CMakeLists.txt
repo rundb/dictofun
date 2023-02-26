@@ -8,6 +8,7 @@ target_link_libraries(task_audio PRIVATE
     application_audio
     microphone_pdm
     codec_adpcm
+    nrf5_crc32
 )
 target_link_libraries(task_audio PUBLIC 
     application
