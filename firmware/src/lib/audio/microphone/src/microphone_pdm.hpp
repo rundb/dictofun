@@ -44,11 +44,17 @@ void PdmMicrophone<SampleBufferSize>::pdm_event_handler(const nrfx_pdm_evt_t * c
         nrf_drv_pdm_buffer_set(buffers_[current_buffer_index_], buffer_size);
         data_ready_callback();
     }
+    if (p_evt->buffer_released != nullptr)
+    {
+        _released_buffer_ptr = p_evt->buffer_released;
+    }
 }
 
 template <size_t SampleBufferSize>
 void PdmMicrophone<SampleBufferSize>::start_recording() 
 {
+    nrf_drv_pdm_buffer_set(buffers_[current_buffer_index_], buffer_size);
+
     const auto start_result = nrf_drv_pdm_start();
     if (start_result != 0)
     {
@@ -65,7 +71,7 @@ void PdmMicrophone<SampleBufferSize>::stop_recording()
 template <size_t SampleBufferSize>
 result::Result PdmMicrophone<SampleBufferSize>::get_samples(SampleType& sample) 
 {
-    memcpy(sample.data, buffers_[previous_buffer_index_], SampleBufferSize);
+    memcpy(sample.data, _released_buffer_ptr, SampleBufferSize);
     return result::Result::OK;
 }
 
