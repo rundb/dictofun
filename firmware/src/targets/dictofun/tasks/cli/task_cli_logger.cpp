@@ -43,6 +43,14 @@ void ble_operation_callback(uint32_t command_id)
     _ble_operation_command.is_active = true;
 }
 
+static SystemCommand _system_command;
+void system_operation_callback(uint32_t command_id)
+{
+    if (_system_command.is_active) return;
+    _system_command.command_id = command_id;
+    _system_command.is_active = true;
+}
+
 uint32_t get_timestamp()
 {
     return xTaskGetTickCount();
@@ -62,6 +70,7 @@ void task_cli_logger(void * cli_context)
     register_record_launch_callback(record_launch_callback);
     register_memory_test_callback(memory_test_callback);
     register_ble_control_callback(ble_operation_callback);
+    register_system_control_callback(system_operation_callback);
     while (1)
     {
         vTaskDelay(5);
@@ -122,6 +131,23 @@ void task_cli_logger(void * cli_context)
             else
             {
                 NRF_LOG_INFO("cli: BLE command has been queued");
+            }
+        }
+        if (_system_command.is_active)
+        {
+            _system_command.is_active = false;
+            CliCommandQueueElement cmd{
+                CliCommand::SYSTEM, 
+                { static_cast<uint32_t>(_system_command.command_id), 0 }
+            };
+            const auto send_result = xQueueSend(context.cli_commands_handle, &cmd, 0U);
+            if (pdPASS != send_result)
+            {
+                NRF_LOG_WARNING("cli: failed to launch system command");
+            }
+            else
+            {
+                NRF_LOG_INFO("cli: system command has been queued");
             }
         }
     }

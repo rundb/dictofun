@@ -81,7 +81,6 @@ static void cmd_reset(nrf_cli_t const * p_cli, size_t argc, char ** argv)
 
 NRF_CLI_CMD_REGISTER(reset, NULL, "Perform a software reset", cmd_reset);
 
-
 static record_launch_callback _record_launch_callback = NULL;
 void register_record_launch_callback(record_launch_callback callback)
 {
@@ -224,3 +223,39 @@ static void cmd_ble_commands(nrf_cli_t const * p_cli, const size_t argc, char **
 }
 
 NRF_CLI_CMD_REGISTER(ble, NULL, "Launch BLE command", cmd_ble_commands);
+
+static system_control_callback _system_control_callback = NULL;
+void register_system_control_callback(system_control_callback callback)
+{
+    _system_control_callback = callback;
+}
+
+static void cmd_system_commands(nrf_cli_t const * p_cli, const size_t argc, char ** argv)
+{
+    if (argc != 2)
+    {
+        nrf_cli_fprintf(p_cli, NRF_CLI_ERROR, "Wrong command syntax\n");
+        return;
+    }
+    // TODO: add support for the second argument, if needed
+    const int command_id = atoi(argv[1]);
+    if (command_id != 1)
+    {
+        nrf_cli_fprintf(p_cli, NRF_CLI_ERROR, "Wrong command ID\n", argc);
+        return;
+    }
+    nrf_cli_fprintf(p_cli, NRF_CLI_NORMAL, "Launching system command\n");
+    if (_system_control_callback != NULL)
+    {
+        _system_control_callback(command_id);
+        nrf_cli_fprintf(p_cli, NRF_CLI_NORMAL, "system command #%d is launched\n", command_id);
+    }
+    else
+    {
+        nrf_cli_fprintf(p_cli,
+            NRF_CLI_WARNING,
+            "No system command launch function registered. Command shall not be launched\n");
+    }
+}
+
+NRF_CLI_CMD_REGISTER(system, NULL, "Launch system command", cmd_system_commands);

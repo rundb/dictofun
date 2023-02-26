@@ -24,6 +24,9 @@ void register_memory_test_callback(memory_test_callback callback);
 typedef void (*ble_control_callback)(uint32_t) ;
 void register_ble_control_callback(ble_control_callback callback);
 
+typedef void (*system_control_callback)(uint32_t) ;
+void register_system_control_callback(system_control_callback callback);
+
 #ifdef __cplusplus
 }
 #endif
