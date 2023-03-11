@@ -16,6 +16,7 @@ enum class Result: uint8_t
     ERROR_NACK,
     ERROR_BUS_ERROR,
     ERROR_BUSY,
+    ERROR_NOT_IMPLEMENTED,
 };
 
 class I2cIf 
@@ -23,9 +24,9 @@ class I2cIf
 public:
     virtual Result read(uint8_t address, uint8_t * data, uint8_t size) = 0;
 
-    virtual Result write(uint8_t address, uint8_t * data, uint8_t size) = 0;
+    virtual Result write(uint8_t address, const uint8_t * data, uint8_t size) = 0;
+    virtual Result write_read(uint8_t address, const uint8_t * const tx_data, uint8_t tx_size, uint8_t * rx_data, uint8_t rx_size) = 0;
 
-    virtual Result write_read(uint8_t address, const uint8_t const * tx_data, uint8_t tx_size, uint8_t * rx_data, uint8_t rx_size) = 0;
 };
 
 }

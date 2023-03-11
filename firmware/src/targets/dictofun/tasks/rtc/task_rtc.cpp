@@ -6,10 +6,15 @@
 #include "task_rtc.h"
 #include "nrf_log.h"
 
+#include "nrf_i2c.h"
+
 namespace rtc
 {
 
 static constexpr uint32_t command_wait_time{1000};
+
+const i2c::NrfI2c::Config i2c_config{10, 11, i2c::NrfI2c::Config::Baudrate::_100K};
+i2c::NrfI2c rtc_i2c{i2c_config};
     
 void task_rtc(void * context_ptr)
 {
