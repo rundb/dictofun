@@ -1,6 +1,6 @@
 // SPDX-License-Identifier:  Apache-2.0
 /*
- * Copyright (c) 2022, Roman Turkin
+ * Copyright (c) 2023, Roman Turkin
  */
 
 #include "task_rtc.h"
