@@ -17,6 +17,7 @@ enum class Result: uint8_t
     ERROR_BUS_ERROR,
     ERROR_BUSY,
     ERROR_NOT_IMPLEMENTED,
+    ERROR_GENERAL,
 };
 
 class I2cIf 

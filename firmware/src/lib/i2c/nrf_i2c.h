@@ -6,6 +6,7 @@
 #pragma once
 
 #include "i2c_if.h"
+#include "nrf_drv_twi.h"
 
 namespace i2c
 {
@@ -15,6 +16,7 @@ class NrfI2c: public I2cIf
 public:
     struct Config 
     {
+        uint8_t idx;
         uint8_t clk_pin;
         uint8_t data_pin;
         enum class Baudrate {
@@ -36,6 +38,11 @@ public:
     i2c::Result write(uint8_t address, const uint8_t * const data, uint8_t size) override;
 
     i2c::Result write_read(uint8_t address, const uint8_t * const tx_data, uint8_t tx_size, uint8_t * rx_data, uint8_t rx_size) override;
+private:
+    const Config& _config;
+    nrf_drv_twi_t _twi_instance;
+
+    nrf_drv_twi_frequency_t get_frequency_config(Config::Baudrate baudrate) const;
 };
 
 }

@@ -4,15 +4,46 @@
  */
 
 #include "nrf_i2c.h"
+#include "nrf_drv_twi.h"
 
 namespace i2c
 {
 
-NrfI2c::NrfI2c(const Config& config){}
+NrfI2c::NrfI2c(const Config& config)
+: _config{config}
+{
+}
+
+nrf_drv_twi_frequency_t NrfI2c::get_frequency_config(const Config::Baudrate baudrate) const
+{
+    return (baudrate == Config::Baudrate::_400K) ? NRF_DRV_TWI_FREQ_400K : NRF_DRV_TWI_FREQ_100K;
+}
+
+void twi_event_handler(nrf_drv_twi_evt_t const * p_event, void * p_context)
+{
+
+}
 
 i2c::Result NrfI2c::init()
 {
-    return Result::ERROR_NOT_IMPLEMENTED;
+    nrf_drv_twi_config_t twi_config{
+        _config.clk_pin,
+        _config.data_pin,
+        get_frequency_config(_config.baudrate),
+        1,
+        false,
+        false
+    };
+    const auto init_result = nrf_drv_twi_init(&_twi_instance,
+                         &twi_config,
+                         twi_event_handler,
+                         nullptr);
+    if (NRFX_SUCCESS != init_result)
+    {
+        return Result::ERROR_GENERAL;
+    }  
+
+    return Result::OK;
 }
 
 i2c::Result NrfI2c::read(const uint8_t address, uint8_t * data, const uint8_t size)
