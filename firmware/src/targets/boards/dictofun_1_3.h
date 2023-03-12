@@ -42,7 +42,7 @@
 #define I2C_CLK_PIN_NUMBER  16
 #define I2C_DATA_PIN_NUMBER 17
 #define RTC_INT_N_PIN       31
-#define I2C_MODULE_IDX      0
+#define I2C_MODULE_IDX      1
 
 #define LDO_EN_PIN         27
 #define LDO_LATCH_D_PIN    27

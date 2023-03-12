@@ -38,6 +38,13 @@ void task_rtc(void * context_ptr)
         vTaskSuspend(nullptr);
     }
 
+    uint8_t rotu_data[1] {1};
+    const auto i2c_tx_result = rtc_i2c.write(0x68, rotu_data, 1);
+    if (i2c::Result::OK != i2c_tx_result)
+    {
+        NRF_LOG_ERROR("i2c tx failed");
+    }
+
     while(1)
     {
         const auto cmd_queue_receive_status = xQueueReceive(

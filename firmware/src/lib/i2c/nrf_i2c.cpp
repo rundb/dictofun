@@ -6,11 +6,15 @@
 #include "nrf_i2c.h"
 #include "nrf_drv_twi.h"
 
+//nrf_drv_twi_t twi_0 = NRF_DRV_TWI_INSTANCE(0);
+nrf_drv_twi_t twi_1 = NRF_DRV_TWI_INSTANCE(1);
+
 namespace i2c
 {
 
 NrfI2c::NrfI2c(const Config& config)
 : _config{config}
+, _twi_instance(config.idx == 1 ? twi_1 : _twi_dummy)
 {
 }
 
@@ -42,6 +46,7 @@ i2c::Result NrfI2c::init()
     {
         return Result::ERROR_GENERAL;
     }  
+    nrf_drv_twi_enable(&_twi_instance);
 
     return Result::OK;
 }
@@ -53,7 +58,18 @@ i2c::Result NrfI2c::read(const uint8_t address, uint8_t * data, const uint8_t si
 
 i2c::Result NrfI2c::write(const uint8_t address, const uint8_t * const data, const uint8_t size)
 {
-    return Result::ERROR_NOT_IMPLEMENTED;
+    const auto tx_result = nrf_drv_twi_tx(
+        &_twi_instance,
+        address,
+        data, 
+        size,
+        false
+    );
+    if (NRFX_SUCCESS != tx_result)
+    {
+        return Result::ERROR_GENERAL;
+    }  
+    return Result::OK;
 }
 
 i2c::Result NrfI2c::write_read(const uint8_t address, const uint8_t * const tx_data, const uint8_t tx_size, uint8_t * rx_data, const uint8_t rx_size)
