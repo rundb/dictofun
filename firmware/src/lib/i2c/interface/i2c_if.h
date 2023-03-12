@@ -6,6 +6,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <functional>
 
 namespace i2c
 {
@@ -20,6 +21,14 @@ enum class Result: uint8_t
     ERROR_GENERAL,
 };
 
+enum class TransactionResult
+{
+    COMPLETE,
+    ERROR_NACK,
+    ERROR_GENERAL,
+    NONE,
+};
+
 class I2cIf 
 {
 public:
@@ -27,6 +36,9 @@ public:
 
     virtual Result write(uint8_t address, const uint8_t * data, uint8_t size) = 0;
     virtual Result write_read(uint8_t address, const uint8_t * const tx_data, uint8_t tx_size, uint8_t * rx_data, uint8_t rx_size) = 0;
+
+    using CompletionCallback = std::function<void(TransactionResult)>;
+    virtual void register_completion_callback(CompletionCallback callback) = 0;
 
 };
 
