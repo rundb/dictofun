@@ -39,8 +39,8 @@
 #define UART_TX_PIN_NUMBER 11
 #define UART_RX_PIN_NUMBER 12
 
-#define I2C_CLK_PIN_NUMBER  16
-#define I2C_DATA_PIN_NUMBER 17
+#define I2C_CLK_PIN_NUMBER  17
+#define I2C_DATA_PIN_NUMBER 16
 #define RTC_INT_N_PIN       31
 #define I2C_MODULE_IDX      1
 

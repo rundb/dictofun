@@ -12,10 +12,14 @@ nrf_drv_twi_t twi_1 = NRF_DRV_TWI_INSTANCE(1);
 namespace i2c
 {
 
+NrfI2c * NrfI2c::_instances[max_i2c_instances] = {nullptr, nullptr };
+
 NrfI2c::NrfI2c(const Config& config)
 : _config{config}
 , _twi_instance(config.idx == 1 ? twi_1 : _twi_dummy)
 {
+    _instances[config.idx] = this;
+    _irq_context.id = config.idx;
 }
 
 nrf_drv_twi_frequency_t NrfI2c::get_frequency_config(const Config::Baudrate baudrate) const
@@ -25,7 +29,39 @@ nrf_drv_twi_frequency_t NrfI2c::get_frequency_config(const Config::Baudrate baud
 
 void twi_event_handler(nrf_drv_twi_evt_t const * p_event, void * p_context)
 {
+    const auto id = reinterpret_cast<NrfI2c::IrqContext *>(p_context)->id;
+    NrfI2c::instance(id).irq_handler(p_event);
+}
 
+void NrfI2c::irq_handler(nrf_drv_twi_evt_t const * p_event)
+{
+    switch (p_event->type)
+    {
+        case NRF_DRV_TWI_EVT_DONE:
+        {
+            if (_callback != nullptr)
+            {
+                _callback(TransactionResult::COMPLETE);
+            }
+            break;
+        }
+        case NRF_DRV_TWI_EVT_ADDRESS_NACK:
+        {
+            if (_callback != nullptr)
+            {
+                _callback(TransactionResult::ERROR_NACK);
+            }
+            break;
+        }
+        case NRF_DRV_TWI_EVT_DATA_NACK:
+        {
+            if (_callback != nullptr)
+            {
+                _callback(TransactionResult::ERROR_NACK);
+            }
+            break;
+        }
+    }
 }
 
 i2c::Result NrfI2c::init()
@@ -41,7 +77,7 @@ i2c::Result NrfI2c::init()
     const auto init_result = nrf_drv_twi_init(&_twi_instance,
                          &twi_config,
                          twi_event_handler,
-                         nullptr);
+                         &_irq_context);
     if (NRFX_SUCCESS != init_result)
     {
         return Result::ERROR_GENERAL;
@@ -53,7 +89,18 @@ i2c::Result NrfI2c::init()
 
 i2c::Result NrfI2c::read(const uint8_t address, uint8_t * data, const uint8_t size)
 {
-    return Result::ERROR_NOT_IMPLEMENTED;
+    const auto rx_result = nrf_drv_twi_rx(
+        &_twi_instance,
+        address,
+        data, 
+        size
+    );
+    if (NRFX_SUCCESS != rx_result)
+    {
+        return Result::ERROR_GENERAL;
+    }
+
+    return Result::OK;
 }
 
 i2c::Result NrfI2c::write(const uint8_t address, const uint8_t * const data, const uint8_t size)
@@ -68,7 +115,7 @@ i2c::Result NrfI2c::write(const uint8_t address, const uint8_t * const data, con
     if (NRFX_SUCCESS != tx_result)
     {
         return Result::ERROR_GENERAL;
-    }  
+    }
     return Result::OK;
 }
 

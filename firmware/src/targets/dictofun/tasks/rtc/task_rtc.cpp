@@ -23,6 +23,35 @@ const i2c::NrfI2c::Config i2c_config{
 };
 
 i2c::NrfI2c rtc_i2c{i2c_config};
+
+volatile bool is_i2c_slave_acknowledged{false};
+void i2c_callback(i2c::NrfI2c::TransactionResult result)
+{
+    is_i2c_slave_acknowledged = (result == i2c::NrfI2c::TransactionResult::COMPLETE);
+}
+
+void scan_slaves()
+{
+    uint32_t counter{0};
+    rtc_i2c.register_completion_callback(i2c_callback);
+    for (auto i = 0; i < 0x7F; i += 2)
+    {
+        is_i2c_slave_acknowledged = false;
+        uint8_t test_data[1] {0};
+        const auto i2c_tx_result = rtc_i2c.read(i, test_data, sizeof(test_data));
+        if (i2c::Result::OK != i2c_tx_result)
+        {
+            NRF_LOG_ERROR("i2c tx failed. adr (%x)", i);
+        }
+        vTaskDelay(3);
+        if (is_i2c_slave_acknowledged)
+        {
+            ++counter;
+            NRF_LOG_INFO("discovered slave @ 0x%x", i);
+        }
+    }
+    NRF_LOG_INFO("discovered %d slaves", counter);
+}
     
 void task_rtc(void * context_ptr)
 {
@@ -37,13 +66,7 @@ void task_rtc(void * context_ptr)
         NRF_LOG_ERROR("i2c init failed");
         vTaskSuspend(nullptr);
     }
-
-    uint8_t rotu_data[1] {1};
-    const auto i2c_tx_result = rtc_i2c.write(0x68, rotu_data, 1);
-    if (i2c::Result::OK != i2c_tx_result)
-    {
-        NRF_LOG_ERROR("i2c tx failed");
-    }
+    scan_slaves();
 
     while(1)
     {
