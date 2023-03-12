@@ -27,6 +27,7 @@
 #include "task_memory.h"
 #include "task_ble.h"
 #include "task_led.h"
+#include "task_rtc.h"
 
 #include <stdint.h>
 
@@ -42,6 +43,7 @@ application::TaskDescriptor<256,  3> systemstate_task;
 application::TaskDescriptor<1024, 2> memory_task;
 application::TaskDescriptor<1024, 2> ble_task;
 application::TaskDescriptor<96,   1>  led_task;
+application::TaskDescriptor<128,  2>  rtc_task;
 
 // ============================= Queues =====================================
 
@@ -65,6 +67,9 @@ application::QueueDescriptor<ble::FileDataFromMemoryQueueElement, 1> ble_from_me
 
 application::QueueDescriptor<led::CommandQueueElement, 3>            led_commands_queue;
 
+application::QueueDescriptor<rtc::CommandQueueElement, 1>            rtc_commands_queue;
+application::QueueDescriptor<rtc::ResponseQueueElement, 1>           rtc_response_queue;
+
 // ============================= Timers =====================================
 
 StaticTimer_t record_timer_buffer;
@@ -78,6 +83,7 @@ audio::tester::Context  audio_tester_context;
 memory::Context         memory_context;
 ble::Context            ble_context;
 led::Context            led_context;
+rtc::Context            rtc_context;
 
 // clang-format on
 
@@ -192,6 +198,18 @@ int main()
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
+    const auto rtc_commands_queue_init_result = rtc_commands_queue.init();
+    if (result::Result::OK != rtc_commands_queue_init_result)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
+    const auto rtc_response_queue_init_result = rtc_response_queue.init();
+    if (result::Result::OK != rtc_response_queue_init_result)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
     // Timers' initialization
     record_timer_handle = xTimerCreateStatic("AUDIO", 1, pdFALSE, nullptr, systemstate::record_end_callback, &record_timer_buffer);
     if (nullptr == record_timer_handle)
@@ -290,6 +308,18 @@ int main()
         &led_context);
 
     if (result::Result::OK != led_task_init_result)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
+    rtc_context.command_queue = rtc_commands_queue.handle;
+    rtc_context.response_queue = rtc_response_queue.handle;
+    const auto rtc_task_init_result = rtc_task.init(
+        rtc::task_rtc,
+        "RTC",
+        &rtc_context);
+
+    if (result::Result::OK != rtc_task_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
