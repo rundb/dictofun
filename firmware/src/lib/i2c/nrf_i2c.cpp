@@ -39,10 +39,23 @@ void NrfI2c::irq_handler(nrf_drv_twi_evt_t const * p_event)
     {
         case NRF_DRV_TWI_EVT_DONE:
         {
+            if (_transaction_context.type == TransactionContext::Type::WRITE_READ)
+            {
+                const auto read_result = read(_transaction_context.address, _transaction_context.rx_data, _transaction_context.rx_data_size);
+                if (i2c::Result::OK != read_result)
+                {
+                    _transaction_context.type = TransactionContext::Type::NONE;
+                    _callback(TransactionResult::ERROR_GENERAL);
+                    break;
+                }
+                _transaction_context.type = TransactionContext::Type::READ;
+                break;
+            }
             if (_callback != nullptr)
             {
                 _callback(TransactionResult::COMPLETE);
             }
+            _transaction_context.type = TransactionContext::Type::NONE;
             break;
         }
         case NRF_DRV_TWI_EVT_ADDRESS_NACK:
@@ -51,6 +64,7 @@ void NrfI2c::irq_handler(nrf_drv_twi_evt_t const * p_event)
             {
                 _callback(TransactionResult::ERROR_NACK);
             }
+            _transaction_context.type = TransactionContext::Type::NONE;
             break;
         }
         case NRF_DRV_TWI_EVT_DATA_NACK:
@@ -59,6 +73,7 @@ void NrfI2c::irq_handler(nrf_drv_twi_evt_t const * p_event)
             {
                 _callback(TransactionResult::ERROR_NACK);
             }
+            _transaction_context.type = TransactionContext::Type::NONE;
             break;
         }
     }
@@ -119,9 +134,29 @@ i2c::Result NrfI2c::write(const uint8_t address, const uint8_t * const data, con
     return Result::OK;
 }
 
-i2c::Result NrfI2c::write_read(const uint8_t address, const uint8_t * const tx_data, const uint8_t tx_size, uint8_t * rx_data, const uint8_t rx_size)
+i2c::Result NrfI2c::write_read(
+    const uint8_t address, 
+    const uint8_t * const tx_data, 
+    const uint8_t tx_size, 
+    uint8_t * rx_data, 
+    const uint8_t rx_size)
 {
-    return Result::ERROR_NOT_IMPLEMENTED;
+    const auto tx_result = nrf_drv_twi_tx(
+        &_twi_instance,
+        address,
+        tx_data, 
+        tx_size,
+        true
+    );
+    if (NRFX_SUCCESS != tx_result)
+    {
+        return Result::ERROR_GENERAL;
+    }
+    _transaction_context.address = address;
+    _transaction_context.type = TransactionContext::Type::WRITE_READ;
+    _transaction_context.rx_data = rx_data;
+    _transaction_context.rx_data_size = rx_size;
+    return Result::OK;
 }
 
 }

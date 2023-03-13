@@ -9,6 +9,7 @@
 #include "boards.h"
 
 #include "nrf_i2c.h"
+#include "rv4162.h"
 
 namespace rtc
 {
@@ -23,11 +24,12 @@ const i2c::NrfI2c::Config i2c_config{
 };
 
 i2c::NrfI2c rtc_i2c{i2c_config};
+rtc::Rv4162 rtc{rtc_i2c};
 
 volatile bool is_i2c_slave_acknowledged{false};
-void i2c_callback(i2c::NrfI2c::TransactionResult result)
+void i2c_callback(i2c::TransactionResult result)
 {
-    is_i2c_slave_acknowledged = (result == i2c::NrfI2c::TransactionResult::COMPLETE);
+    is_i2c_slave_acknowledged = (result == i2c::TransactionResult::COMPLETE);
 }
 
 void scan_slaves()
@@ -66,7 +68,45 @@ void task_rtc(void * context_ptr)
         NRF_LOG_ERROR("i2c init failed");
         vTaskSuspend(nullptr);
     }
-    scan_slaves();
+    // scan_slaves();
+
+    const auto rtc_init_result = rtc.init();
+    if (result::Result::OK != rtc_init_result)
+    {
+        NRF_LOG_ERROR("failed to initialize RTC. ");
+    }
+    else
+    {
+        rtc::Rv4162::DateTime datetime;
+        const auto rtc_get_result = rtc.get_date_time(datetime);
+        if (result::Result::OK != rtc_get_result)
+        {
+            NRF_LOG_ERROR("rtc: failed to get current date and time. ");
+        }
+        else {
+            NRF_LOG_INFO("date: %d-%d-%d, time: %d-%d-%d", 
+                datetime.year, 
+                datetime.month, 
+                datetime.day, 
+                datetime.hour, 
+                datetime.minute, 
+                datetime.second
+            );
+        }
+        // // This should be called once in the power cycle of the whole setup, for the sake of testing
+        // datetime.year = 23;
+        // datetime.month = 3;
+        // datetime.day = 13;
+        // datetime.weekday = 1;
+        // datetime.hour = 16;
+        // datetime.minute = 22;
+        // datetime.second = 0;
+        // const auto rtc_set_result = rtc.set_date_time(datetime);
+        // if (result::Result::OK != rtc_set_result)
+        // {
+        //     NRF_LOG_ERROR("rtc: failed to set time");
+        // }
+    }
 
     while(1)
     {

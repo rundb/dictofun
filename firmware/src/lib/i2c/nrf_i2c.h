@@ -40,15 +40,7 @@ public:
     i2c::Result write(uint8_t address, const uint8_t * const data, uint8_t size) override;
 
     i2c::Result write_read(uint8_t address, const uint8_t * const tx_data, uint8_t tx_size, uint8_t * rx_data, uint8_t rx_size) override;
-
-    enum class TransactionResult
-    {
-        COMPLETE,
-        ERROR_NACK,
-        ERROR_GENERAL,
-    };
-    using CompletionCallback = std::function<void(TransactionResult)>;
-    void register_completion_callback(CompletionCallback callback) { _callback = callback;}
+    void register_completion_callback(CompletionCallback callback) override { _callback = callback;}
 private:
     static constexpr uint32_t max_i2c_instances{2};
     static NrfI2c * _instances[max_i2c_instances];
@@ -69,6 +61,20 @@ private:
     };
     IrqContext _irq_context;
     CompletionCallback _callback{nullptr};
+
+    struct TransactionContext
+    {
+        enum class Type
+        {
+            NONE,
+            WRITE_READ,
+            READ,
+            WRITE
+        } type{Type::NONE};
+        uint8_t address;
+        uint8_t * rx_data;
+        uint8_t rx_data_size;
+    } _transaction_context;
 };
 
 }

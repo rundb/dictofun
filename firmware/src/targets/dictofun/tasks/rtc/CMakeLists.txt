@@ -7,6 +7,7 @@ target_include_directories(task_rtc PUBLIC ./)
 target_link_libraries(task_rtc PRIVATE
     nrf5_log
     nrf_i2c
+    rv4162
 )
 
 target_link_libraries(task_rtc PUBLIC 
