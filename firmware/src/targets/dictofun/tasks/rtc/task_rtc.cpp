@@ -93,6 +93,19 @@ void task_rtc(void * context_ptr)
                 datetime.second
             );
         }
+        // // This should be called once in the power cycle of the whole setup, for the sake of testing
+        // datetime.year = 23;
+        // datetime.month = 3;
+        // datetime.day = 13;
+        // datetime.weekday = 1;
+        // datetime.hour = 16;
+        // datetime.minute = 22;
+        // datetime.second = 0;
+        // const auto rtc_set_result = rtc.set_date_time(datetime);
+        // if (result::Result::OK != rtc_set_result)
+        // {
+        //     NRF_LOG_ERROR("rtc: failed to set time");
+        // }
     }
 
     while(1)
