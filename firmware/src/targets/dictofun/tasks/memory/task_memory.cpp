@@ -14,12 +14,13 @@
 #include "block_api.h"
 #include "littlefs_access.h"
 #include <cstdlib>
+#include <cstdio>
 // TODO: this dependency here is really bad
 
 #include "codec_decimate.h"
 #include "task_audio.h"
-
 #include "task_ble.h"
+#include "task_rtc.h"
 
 #include "lfs.h"
 
@@ -363,7 +364,7 @@ void process_request_from_state(Context& context, const Command command_id)
                 xQueueSend(context.status_queue, reinterpret_cast<void *>(&response), 0);
                 return;
             }
-            memory::generate_next_file_name(active_record_name);
+            memory::generate_next_file_name(active_record_name, context);
 
             const auto create_result = memory::filesystem::create_file(lfs, active_record_name);
             if (result::Result::OK != create_result)
@@ -451,7 +452,8 @@ void process_request_from_state(Context& context, const Command command_id)
     }
 }
 
-void generate_next_file_name(char * name)
+
+void generate_next_file_name_fallback(char * name)
 {
     if (strlen(name) != 8)
     {
@@ -462,6 +464,44 @@ void generate_next_file_name(char * name)
     const auto next_id = last_id + 1;
     name[6] = ((next_id / 10) % 10) + '0';
     name[7] =  (next_id % 10) + '0';
+}
+
+void generate_next_file_name(char * name, const Context& context)
+{
+    // send request to RTC task to figure out if RTC is available
+    rtc::CommandQueueElement cmd{rtc::Command::GET_TIME, {}};
+    const auto send_result = xQueueSend(context.commands_to_rtc_queue,
+        &cmd,
+        0
+    );
+    if (pdTRUE != send_result)
+    {
+        // Queue operation has failed
+        NRF_LOG_WARNING("mem: get time request has failed. Using fallback generator");
+        generate_next_file_name_fallback(name);
+        return;
+    }
+
+    static constexpr uint32_t get_time_response_wait_time{100};
+    rtc::ResponseQueueElement response;
+    const auto receive_result = xQueueReceive(context.response_from_rtc_queue, 
+        &response,
+        get_time_response_wait_time);
+
+    if (receive_result != pdTRUE || response.status != rtc::Status::OK)
+    {
+        // communication to RTC module has failed. need to fallback
+        NRF_LOG_WARNING("mem: get time request has timed out. Using fallback generator");
+        generate_next_file_name_fallback(name);
+        return;
+    }
+    // FIXME: for now use day, hour, minute and second of the record
+    snprintf(name, strlen(name) + 1, "%02d%02d%02d%02d", 
+        response.content[3],
+        response.content[2],
+        response.content[1],
+        response.content[0]
+    );
 }
 
 }

@@ -19,7 +19,9 @@ void launch_test_1(flash::SpiFlash& flash);
 void launch_test_2(flash::SpiFlash& flash);
 void launch_test_3(lfs_t& lfs, const lfs_config& lfs_configuration);
 void launch_test_4(lfs_t& lfs);
-void generate_next_file_name(char * name);
+
+struct Context;
+void generate_next_file_name(char * name, const Context& context);
 
 enum class Command
 {
@@ -63,7 +65,8 @@ struct Context
     QueueHandle_t command_from_ble_queue {nullptr};
     QueueHandle_t status_to_ble_queue {nullptr};
     QueueHandle_t data_to_ble_queue {nullptr};
-
+    QueueHandle_t commands_to_rtc_queue{nullptr};
+    QueueHandle_t response_from_rtc_queue{nullptr};
 };
 
 }

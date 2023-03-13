@@ -317,7 +317,8 @@ void launch_test_4(lfs_t& lfs)
         NRF_LOG_ERROR("failed to read latest record name. aborting the test");
         return;
     }
-    memory::generate_next_file_name(tmp_record_name);
+    memory::Context context;
+    memory::generate_next_file_name(tmp_record_name, context);
     // ============ Step 2: create a file and write content into it
     NRF_LOG_DEBUG("mem: creating file");
     const auto create_result = memory::filesystem::create_file(lfs, tmp_record_name);

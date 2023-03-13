@@ -276,6 +276,8 @@ int main()
     memory_context.status_to_ble_queue = ble_from_mem_status_queue.handle;
     memory_context.data_to_ble_queue =  ble_from_mem_data_queue.handle;
     memory_context.audio_data_queue = audio_data_queue.handle;
+    memory_context.commands_to_rtc_queue = rtc_commands_queue.handle;
+    memory_context.response_from_rtc_queue = rtc_response_queue.handle;
     const auto memory_task_init_result = memory_task.init(
         memory::task_memory,
         "MEM",

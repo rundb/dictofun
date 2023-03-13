@@ -76,9 +76,6 @@ result::Result Rv4162::get_date_time(DateTime& datetime)
     datetime.month = bcd_to_dec(rx_data[6], 5);
     datetime.year = bcd_to_dec(rx_data[7], 8);
 
-    NRF_LOG_INFO("rx %x %x %x %x", rx_data[0], rx_data[1],rx_data[2],rx_data[3]);
-    NRF_LOG_INFO("rx %x %x %x %x", rx_data[4], rx_data[5],rx_data[6],rx_data[7]);
-
     return result::Result::OK;
 }
 
@@ -97,8 +94,6 @@ result::Result Rv4162::set_date_time(const DateTime& datetime)
     };
     last_transaction_result = i2c::TransactionResult::NONE;
     const auto tx_result = _i2c.write(_i2c_address, tx_data, sizeof(tx_data));
-    NRF_LOG_INFO("tx %x %x %x %x", tx_data[0], tx_data[1],tx_data[2],tx_data[3]);
-    NRF_LOG_INFO("tx %x %x %x %x", tx_data[4], tx_data[5],tx_data[6],tx_data[7]);
 
     static constexpr uint32_t timeout_value{1000000};
     uint32_t timeout{timeout_value};

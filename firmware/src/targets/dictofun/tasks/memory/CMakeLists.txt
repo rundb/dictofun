@@ -13,6 +13,7 @@ target_link_libraries(task_memory PRIVATE
     # TODO: get rid of this dependency
     codec_decimator
     task_audio_interface
+    task_rtc_interface
 )
 
 target_link_libraries(task_memory PUBLIC 
