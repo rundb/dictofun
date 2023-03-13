@@ -37,7 +37,26 @@ result::Result Rv4162::init()
 
 result::Result Rv4162::get_date_time(DateTime& datetime)
 {
-    return result::Result::ERROR_NOT_IMPLEMENTED;
+    uint8_t tx_data[1] = {0x0};
+    uint8_t rx_data[8];
+
+    last_transaction_result = i2c::TransactionResult::NONE;
+    const auto i2c_txrx_result = _i2c.write_read(_i2c_address, tx_data, sizeof(tx_data), rx_data, sizeof(rx_data));
+    static constexpr uint32_t timeout_value{1000000};
+    uint32_t timeout{timeout_value};
+    while (i2c::TransactionResult::NONE == last_transaction_result && ((timeout--) > 0));
+    if (last_transaction_result != i2c::TransactionResult::COMPLETE)
+    {
+        return result::Result::ERROR_GENERAL;
+    }
+    datetime.second = rx_data[1];
+    datetime.minute = rx_data[2];
+    datetime.hour = rx_data[3];
+    datetime.day = rx_data[4];
+    datetime.month = rx_data[5];
+    datetime.year = rx_data[6];
+
+    return result::Result::OK;
 }
 
 }

@@ -61,6 +61,20 @@ private:
     };
     IrqContext _irq_context;
     CompletionCallback _callback{nullptr};
+
+    struct TransactionContext
+    {
+        enum class Type
+        {
+            NONE,
+            WRITE_READ,
+            READ,
+            WRITE
+        } type{Type::NONE};
+        uint8_t address;
+        uint8_t * rx_data;
+        uint8_t rx_data_size;
+    } _transaction_context;
 };
 
 }
