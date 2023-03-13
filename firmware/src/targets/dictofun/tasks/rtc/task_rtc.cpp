@@ -14,7 +14,7 @@
 namespace rtc
 {
 
-static constexpr uint32_t command_wait_time{1000};
+static constexpr uint32_t command_wait_time{50};
 
 const i2c::NrfI2c::Config i2c_config{
     I2C_MODULE_IDX, 
@@ -59,8 +59,6 @@ void task_rtc(void * context_ptr)
 {
     NRF_LOG_INFO("task rtc: initialized");
     Context& context = *(reinterpret_cast<Context *>(context_ptr));
-
-    CommandQueueElement command;
 
     const auto i2c_init_result = rtc_i2c.init();
     if (i2c::Result::OK != i2c_init_result)
@@ -108,6 +106,7 @@ void task_rtc(void * context_ptr)
         // }
     }
 
+    CommandQueueElement command;
     while(1)
     {
         const auto cmd_queue_receive_status = xQueueReceive(
@@ -116,7 +115,42 @@ void task_rtc(void * context_ptr)
             command_wait_time);
         if (pdPASS == cmd_queue_receive_status)
         {
-            NRF_LOG_INFO("received command %d", command.command_id);
+            NRF_LOG_INFO("rtc: received command %d", command.command_id);
+            switch (command.command_id)
+            {
+                case Command::GET_TIME:
+                {
+                    // 1. read the time value
+                    rtc::Rv4162::DateTime datetime;
+                    const auto rtc_get_result = rtc.get_date_time(datetime);
+                    if (result::Result::OK != rtc_get_result)
+                    {
+                        ResponseQueueElement rsp{Status::ERROR};
+                        xQueueSend(context.response_queue, &rsp, 0);
+                        break;
+                    }
+
+                    // 2. serialize the time value into the response
+                    ResponseQueueElement rsp{Status::OK};
+                    rsp.content[0] = datetime.second;
+                    rsp.content[1] = datetime.minute;
+                    rsp.content[2] = datetime.hour;
+                    rsp.content[3] = datetime.day;
+                    rsp.content[4] = datetime.month;
+                    rsp.content[5] = datetime.year;
+                    
+
+                    // 3. send the response back to the response queue
+                    xQueueSend(context.response_queue, &rsp, 0);
+
+                    break;
+                }
+                case Command::SET_TIME:
+                {
+                    NRF_LOG_ERROR("rtc: set time not implemented yet");
+                    break;
+                }
+            }
         }
     }
 }
