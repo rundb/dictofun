@@ -20,6 +20,7 @@ target_link_libraries(task_system_state PUBLIC
     task_memory_interface
     task_ble_interface
     task_led_interface
+    task_button_interface
     ble_fts
     littlefs
 )

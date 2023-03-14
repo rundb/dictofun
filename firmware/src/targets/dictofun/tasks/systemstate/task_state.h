@@ -31,6 +31,8 @@ struct Context
 
     QueueHandle_t led_commands_handle{nullptr};
 
+    QueueHandle_t button_events_handle{nullptr};
+
     TimerHandle_t record_timer_handle{nullptr};
 
     bool is_record_active{false};

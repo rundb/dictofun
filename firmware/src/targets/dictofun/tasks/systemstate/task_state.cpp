@@ -16,6 +16,7 @@
 #include "task_memory.h"
 #include "task_ble.h"
 #include "task_led.h"
+#include "task_button.h"
 
 #include <FreeRTOS.h>
 #include <task.h>
@@ -27,10 +28,12 @@ namespace systemstate
 
 logger::CliCommandQueueElement cli_command_buffer;
 ble::RequestQueueElement ble_requests_buffer;
+button::EventQueueElement button_event_buffer;
 bool _should_record_be_stored{false};
 
 constexpr TickType_t cli_command_wait_ticks_type{10};
 constexpr TickType_t ble_request_wait_ticks_type{1};
+constexpr TickType_t button_event_wait_ticks_type{1};
 
 Context * context{nullptr};
 static constexpr uint8_t power_flipflop_clk{26};
@@ -138,6 +141,8 @@ void launch_cli_command_memory_test(const uint32_t test_id);
 void launch_cli_command_ble_operation(const uint32_t command_id);
 void launch_cli_command_system(const uint32_t command_id);
 
+void process_button_event(button::Event event);
+
 void task_system_state(void * context_ptr)
 {
     configure_power_latch();
@@ -145,6 +150,17 @@ void task_system_state(void * context_ptr)
     context = reinterpret_cast<Context *>(context_ptr);
     while(1)
     {
+
+        const auto button_event_receive_status = xQueueReceive(
+            context->button_events_handle,
+            &button_event_buffer,
+            button_event_wait_ticks_type
+        );
+        if (pdPASS == button_event_receive_status)
+        {
+            process_button_event(button_event_buffer.event);
+        }
+
         const auto cli_queue_receive_status = xQueueReceive(
             context->cli_commands_handle,
             reinterpret_cast<void *>(&cli_command_buffer),
@@ -316,6 +332,11 @@ void launch_cli_command_system(const uint32_t command_id)
 {
     NRF_LOG_INFO("task state: launching system command %d", command_id);
     shutdown_ldo();
+}
+
+void process_button_event(button::Event event)
+{
+    // TODO: implement
 }
 
 }
