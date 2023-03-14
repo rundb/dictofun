@@ -28,6 +28,7 @@
 #include "task_ble.h"
 #include "task_led.h"
 #include "task_rtc.h"
+#include "task_button.h"
 
 #include <stdint.h>
 
@@ -37,13 +38,14 @@
 // ============================= Tasks ======================================
 
 application::TaskDescriptor<256,  3> audio_task;
-application::TaskDescriptor<256,  2> audio_tester_task;
+application::TaskDescriptor<256,  1> audio_tester_task;
 application::TaskDescriptor<256,  1> log_task;
 application::TaskDescriptor<256,  3> systemstate_task;
 application::TaskDescriptor<1024, 2> memory_task;
 application::TaskDescriptor<1024, 2> ble_task;
 application::TaskDescriptor<96,   1>  led_task;
 application::TaskDescriptor<128,  2>  rtc_task;
+application::TaskDescriptor<96,   3>  button_task;
 
 // ============================= Queues =====================================
 
@@ -70,6 +72,8 @@ application::QueueDescriptor<led::CommandQueueElement, 3>            led_command
 application::QueueDescriptor<rtc::CommandQueueElement, 1>            rtc_commands_queue;
 application::QueueDescriptor<rtc::ResponseQueueElement, 1>           rtc_response_queue;
 
+application::QueueDescriptor<button::EventQueueElement, 1>           button_event_queue;
+
 // ============================= Timers =====================================
 
 StaticTimer_t record_timer_buffer;
@@ -84,6 +88,7 @@ memory::Context         memory_context;
 ble::Context            ble_context;
 led::Context            led_context;
 rtc::Context            rtc_context;
+button::Context         button_context;
 
 // clang-format on
 
@@ -210,6 +215,12 @@ int main()
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
+    const auto button_event_queue_init_result = button_event_queue.init();
+    if (result::Result::OK != button_event_queue_init_result)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
     // Timers' initialization
     record_timer_handle = xTimerCreateStatic("AUDIO", 1, pdFALSE, nullptr, systemstate::record_end_callback, &record_timer_buffer);
     if (nullptr == record_timer_handle)
@@ -260,6 +271,7 @@ int main()
     systemstate_context.ble_commands_handle = ble_commands_queue.handle;
     systemstate_context.ble_requests_handle = ble_requests_queue.handle;
     systemstate_context.led_commands_handle = led_commands_queue.handle;
+    systemstate_context.button_events_handle = button_event_queue.handle;
 
     const auto systemstate_task_init_result = systemstate_task.init(
         systemstate::task_system_state, 
@@ -322,6 +334,17 @@ int main()
         &rtc_context);
 
     if (result::Result::OK != rtc_task_init_result)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
+    button_context.events_handle = button_event_queue.handle;
+    const auto button_task_init_result = button_task.init(
+        button::task_button,
+        "BTN",
+        &button_context);
+
+    if (result::Result::OK != button_task_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
