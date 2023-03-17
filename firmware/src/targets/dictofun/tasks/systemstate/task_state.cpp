@@ -32,7 +32,6 @@ logger::CliCommandQueueElement cli_command_buffer;
 ble::RequestQueueElement ble_requests_buffer;
 button::EventQueueElement button_event_buffer;
 bool _should_record_be_stored{false};
-bool _is_ble_active{false};
 
 application::NvConfig _nvconfig{vTaskDelay};
 application::NvConfig::Configuration _configuration;
@@ -340,11 +339,6 @@ void launch_cli_command_ble_operation(const uint32_t command_id)
     {
         NRF_LOG_ERROR("task state: failed to queue BLE operation");
         return;
-    }
-    if (command == (ble::Command::START))
-    {
-        _is_ble_active = true;
-        _nvconfig.set_sd_backend();
     }
 }
 

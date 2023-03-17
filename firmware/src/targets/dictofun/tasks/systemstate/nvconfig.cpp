@@ -24,11 +24,6 @@ static constexpr uint32_t fstorage_size{1};
 NRF_FSTORAGE_DEF(nrf_fstorage_t fstorage) =
 {
     .evt_handler = fstorage_evt_handler,
-
-    /* These below are the boundaries of the flash space assigned to this instance of fstorage.
-     * You must set these manually, even at runtime, before nrf_fstorage_init() is called.
-     * The function nrf5_flash_end_addr_get() can be used to retrieve the last address on the
-     * last page of flash available to write data. */
     .start_addr = fstorage_start_address,
     .end_addr   = fstorage_end_address,
 };
@@ -37,7 +32,7 @@ static void fstorage_evt_handler(nrf_fstorage_evt_t * p_evt)
 {
     if (p_evt->result != NRF_SUCCESS)
     {
-        NRF_LOG_INFO("--> Event received: ERROR while executing an fstorage operation.");
+        NRF_LOG_WARNING("--> Event received: ERROR while executing an fstorage operation.");
         return;
     }
 
@@ -45,13 +40,13 @@ static void fstorage_evt_handler(nrf_fstorage_evt_t * p_evt)
     {
         case NRF_FSTORAGE_EVT_WRITE_RESULT:
         {
-            NRF_LOG_INFO("--> Event received: wrote %d bytes at address 0x%x.",
+            NRF_LOG_DEBUG("--> Event received: wrote %d bytes at address 0x%x.",
                          p_evt->len, p_evt->addr);
         } break;
 
         case NRF_FSTORAGE_EVT_ERASE_RESULT:
         {
-            NRF_LOG_INFO("--> Event received: erased %d page from address 0x%x.",
+            NRF_LOG_DEBUG("--> Event received: erased %d page from address 0x%x.",
                          p_evt->len, p_evt->addr);
         } break;
 
@@ -62,7 +57,6 @@ static void fstorage_evt_handler(nrf_fstorage_evt_t * p_evt)
 
 void NvConfig::wait_for_flash_ready(nrf_fstorage_t const * p_fstorage)
 {
-    /* While fstorage is busy, sleep and wait for an event. */
     while (nrf_fstorage_is_busy(p_fstorage))
     {
         if (_delay != nullptr)
