@@ -18,6 +18,8 @@
 #include "task_led.h"
 #include "task_button.h"
 
+#include "nvconfig.h"
+
 #include <FreeRTOS.h>
 #include <task.h>
 #include <timers.h>
@@ -30,6 +32,10 @@ logger::CliCommandQueueElement cli_command_buffer;
 ble::RequestQueueElement ble_requests_buffer;
 button::EventQueueElement button_event_buffer;
 bool _should_record_be_stored{false};
+bool _is_ble_active{false};
+
+application::NvConfig _nvconfig{vTaskDelay};
+application::NvConfig::Configuration _configuration;
 
 constexpr TickType_t cli_command_wait_ticks_type{10};
 constexpr TickType_t ble_request_wait_ticks_type{1};
@@ -148,9 +154,18 @@ void task_system_state(void * context_ptr)
     configure_power_latch();
     NRF_LOG_INFO("task state: initialized");
     context = reinterpret_cast<Context *>(context_ptr);
+    const auto nvconfig_load_result = _nvconfig.load(_configuration);
+    if (result::Result::OK != nvconfig_load_result)
+    {
+        NRF_LOG_WARNING("state: failed to load application config");
+    }
+    else
+    {
+        NRF_LOG_INFO("state: operation mode %d", _configuration.mode);
+    }
+    _nvconfig.set_sd_backend();
     while(1)
     {
-
         const auto button_event_receive_status = xQueueReceive(
             context->button_events_handle,
             &button_event_buffer,
@@ -325,6 +340,11 @@ void launch_cli_command_ble_operation(const uint32_t command_id)
     {
         NRF_LOG_ERROR("task state: failed to queue BLE operation");
         return;
+    }
+    if (command == (ble::Command::START))
+    {
+        _is_ble_active = true;
+        _nvconfig.set_sd_backend();
     }
 }
 
