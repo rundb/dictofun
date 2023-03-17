@@ -39,6 +39,12 @@ void task_level_led_write_handler(uint16_t conn_handle, ble_lbs_t * p_lbs, uint8
 void task_ble(void * context_ptr)
 {
     Context& context{*reinterpret_cast<Context *>(context_ptr)};
+    // BLE task initialization has to be delayed for 2 reasons.
+    // 1. we don't need BLE immediately after startup, it doesn't carry any real-time functionality
+    // 2. NVM config has to be accessed immediately after startup. It can be done using SD-aware and SD-ignorant implementations. 
+    //    There are 2 options: either use SD-aware and wait until SD is loaded, or use SD-ignorant immediately and switch to SD-aware
+    //    after the config is loaded. I have chosen the first option, as it introduces less dependencies between tasks. 
+    vTaskDelay(100);
     const auto configure_result = ble_system.configure(task_level_led_write_handler);
     if (result::Result::OK != configure_result)
     {

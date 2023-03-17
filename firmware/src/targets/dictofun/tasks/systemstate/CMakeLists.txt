@@ -1,11 +1,17 @@
 add_library(task_system_state STATIC
     task_state.cpp
+    nvconfig.cpp
 )
 
 target_include_directories(task_system_state PUBLIC ./)
 
 target_link_libraries(task_system_state PRIVATE
     spi_flash
+    nrf5_fstorage
+    nrf5_fstorage_sd
+    nrf5_fstorage_nvmc
+    nrf5_nrfx_nvmc
+    nrf5_crc32
 )
 
 target_link_libraries(task_system_state PUBLIC 

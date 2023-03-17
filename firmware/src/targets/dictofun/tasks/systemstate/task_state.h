@@ -41,27 +41,3 @@ struct Context
 void record_end_callback(TimerHandle_t timer);
 
 }
-
-namespace application
-{
-
-enum class AppSmState
-{
-    INIT,
-    PREPARE,
-    RECORD_START,
-    RECORD,
-    RECORD_FINALIZATION,
-    CONNECT,
-    TRANSFER,
-    DISCONNECT,
-    FINALIZE,
-    SHUTDOWN,
-    RESTART
-};
-
-AppSmState getApplicationState();
-
-void application_init();
-void application_cyclic();
-} // namespace application
