@@ -5,10 +5,11 @@ jobs:
   checkout-the-repo:
     runs-on: [self-hosted, linux]
     steps:
-      - uses: actions/checkout@v3 
+      - uses: actions/checkout@v2
       - run: git submodule update --init --recursive
       - run: cd firmware/ci && docker build -t dictofun_builder --build-arg HOST_ARCHITECTURE="arm" .
   run-cmake-target-build:
+    needs: checkout-the-repo
     runs-on: [self-hosted, linux]
     steps:
       - run: cd firmware && docker run -v $(pwd):/code  dictofun_builder /bin/bash -c "mkdir -p /code/build && cd /code/build && rm -rf ./* && ../ci/build_dictofun.sh"
