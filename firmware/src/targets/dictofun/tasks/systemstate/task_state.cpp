@@ -40,7 +40,7 @@ constexpr TickType_t button_event_wait_ticks_type{1};
 
 Context * context{nullptr};
 
-void process_button_event(button::Event event);
+void process_button_event(button::Event event, const Context& context);
 
 void task_system_state(void * context_ptr)
 {
@@ -70,7 +70,7 @@ void task_system_state(void * context_ptr)
         );
         if (pdPASS == button_event_receive_status)
         {
-            process_button_event(button_event_buffer.event);
+            process_button_event(button_event_buffer.event, *context);
         }
 
         const auto cli_queue_receive_status = xQueueReceive(
@@ -206,7 +206,7 @@ result::Result request_record_closure(const Context& context)
     return result::Result::OK;
 }
 
-void process_button_event(button::Event event)
+void process_button_event(button::Event event, const Context& context)
 {
     const auto operation_mode = get_operation_mode();
     switch (operation_mode)
@@ -218,7 +218,40 @@ void process_button_event(button::Event event)
         }
         case decltype(operation_mode)::ENGINEERING : case decltype(operation_mode)::FIELD :
         {
-
+            if (event == decltype(event)::SINGLE_PRESS_ON)
+            {
+                // TODO: switch owner of memory to AUDIO at this point
+                const auto creation_result = request_record_creation(context);
+                if (decltype(creation_result)::OK != creation_result)
+                {
+                    NRF_LOG_ERROR("state: failed to create record upon button press");
+                    return;
+                }
+                const auto record_start_result = request_record_start(context);
+                if (decltype(record_start_result)::OK != record_start_result)
+                {
+                    NRF_LOG_ERROR("state: failed to launch record upon button press");
+                    return;
+                }
+                NRF_LOG_INFO("state: launched record start");
+            }
+            else
+            {
+                const auto record_stop_result = request_record_stop(context);
+                if (decltype(record_stop_result)::OK != record_stop_result)
+                {
+                    NRF_LOG_ERROR("state: failed to stop record upon button release");
+                    return;
+                }
+                const auto closure_result = request_record_closure(context);
+                if (decltype(closure_result)::OK != closure_result)
+                {
+                    NRF_LOG_ERROR("state: failed to close record upon button release");
+                    return;
+                }
+                NRF_LOG_INFO("state: stopped and saved record");
+                // TODO: enable BLE at this point and switch memory owner to BLE
+            }
             break;
         }
     }
