@@ -9,8 +9,6 @@ target_link_libraries(task_system_state PRIVATE
     spi_flash
     nrf5_fstorage
     nrf5_fstorage_sd
-    nrf5_fstorage_nvmc
-    nrf5_nrfx_nvmc
     nrf5_crc32
 )
 

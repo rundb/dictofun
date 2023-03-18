@@ -259,3 +259,39 @@ static void cmd_system_commands(nrf_cli_t const * p_cli, const size_t argc, char
 }
 
 NRF_CLI_CMD_REGISTER(system, NULL, "Launch system command", cmd_system_commands);
+
+static opmode_config_callback _opmode_config_callback = NULL;
+void register_opmode_config_callback(opmode_config_callback callback)
+{
+    _opmode_config_callback = callback;
+}
+
+static void cmd_opmode(nrf_cli_t const * p_cli, const size_t argc, char ** argv)
+{
+    if (argc != 2)
+    {
+        nrf_cli_fprintf(p_cli, NRF_CLI_ERROR, "Wrong command syntax\n");
+        return;
+    }
+    
+    const int mode_id = atoi(argv[1]);
+    if (mode_id < 1 || mode_id > 3)
+    {
+        nrf_cli_fprintf(p_cli, NRF_CLI_ERROR, "Wrong command ID\n", argc);
+        return;
+    }
+    nrf_cli_fprintf(p_cli, NRF_CLI_NORMAL, "Launching opmode change command\n");
+    if (_opmode_config_callback != NULL)
+    {
+        _opmode_config_callback(mode_id);
+        nrf_cli_fprintf(p_cli, NRF_CLI_NORMAL, "opmode #%d is launched\n", mode_id);
+    }
+    else
+    {
+        nrf_cli_fprintf(p_cli,
+            NRF_CLI_WARNING,
+            "No opmode command launch function registered. Command shall not be launched\n");
+    }
+}
+
+NRF_CLI_CMD_REGISTER(opmode, NULL, "Change operation mode", cmd_opmode);

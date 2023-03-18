@@ -27,6 +27,9 @@ void register_ble_control_callback(ble_control_callback callback);
 typedef void (*system_control_callback)(uint32_t) ;
 void register_system_control_callback(system_control_callback callback);
 
+typedef void (*opmode_config_callback)(uint32_t);
+void register_opmode_config_callback(opmode_config_callback callback);
+
 #ifdef __cplusplus
 }
 #endif

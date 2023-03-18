@@ -6,7 +6,6 @@
 
 #include "nrf_fstorage.h"
 #include "nrf_fstorage_sd.h"
-#include "nrf_fstorage_nvmc.h"
 
 #include "nrf_log.h"
 #include "crc32.h"
@@ -55,31 +54,20 @@ static void fstorage_evt_handler(nrf_fstorage_evt_t * p_evt)
     }
 }
 
-void NvConfig::wait_for_flash_ready(nrf_fstorage_t const * p_fstorage)
+result::Result NvConfig::wait_for_flash_ready(nrf_fstorage_t const * p_fstorage)
 {
-    while (nrf_fstorage_is_busy(p_fstorage))
+    uint32_t timeout{nvm_wait_timeout_ticks};
+    while (nrf_fstorage_is_busy(p_fstorage) && timeout > 0)
     {
         if (_delay != nullptr)
         {
             _delay(1);
+            --timeout;
         }
     }
+    return (timeout == 0) ? result::Result::ERROR_TIMEOUT : result::Result::OK;
 }
 
-void NvConfig::set_sd_backend()
-{
-    const auto uninit_result = nrf_fstorage_uninit(&fstorage, NULL);
-    if (NRF_SUCCESS != uninit_result)
-    {
-        NRF_LOG_ERROR("fstorage: failed to uninit nvmc storage");
-        return;
-    }
-    const auto init_result = nrf_fstorage_init(&fstorage, &nrf_fstorage_sd, NULL);
-    if (NRF_SUCCESS != init_result)
-    {
-        NRF_LOG_ERROR("fstorage: failed to init sd storage");
-    }
-}
 
 result::Result NvConfig::load(Configuration& config)
 {
@@ -92,6 +80,7 @@ result::Result NvConfig::load(Configuration& config)
         }
     }
     Configuration tmp;
+
     const auto read_result = nrf_fstorage_read(&fstorage, fstorage_start_address, &tmp, sizeof(Configuration));
     if (NRF_SUCCESS != read_result)
     {
@@ -125,7 +114,23 @@ result::Result NvConfig::load(Configuration& config)
     return result::Result::OK;
 }
 
-result::Result NvConfig::store(const Configuration& config)
+/// @brief Use this function before the FStorage is initialized
+result::Result NvConfig::load_early(Configuration& config)
+{
+    Configuration tmp;
+
+    memcpy(&tmp, reinterpret_cast<uint8_t*>(fstorage_start_address), sizeof(tmp));
+
+    if (!is_config_valid(tmp))
+    {
+        return result::Result::ERROR_GENERAL;
+    }
+    memcpy(&config, &tmp, sizeof(config));
+    
+    return result::Result::OK;
+}
+
+result::Result NvConfig::store(Configuration& config)
 {
     if (!_is_initialized)
     {
@@ -135,6 +140,7 @@ result::Result NvConfig::store(const Configuration& config)
             return result::Result::ERROR_GENERAL;
         }
     }
+    
     // erase configuration page
     const auto erase_result = nrf_fstorage_erase(&fstorage, fstorage_start_address, fstorage_size, NULL);
     if (NRF_SUCCESS != erase_result)
@@ -143,7 +149,18 @@ result::Result NvConfig::store(const Configuration& config)
         return result::Result::ERROR_GENERAL;
     }
 
-    wait_for_flash_ready(&fstorage);
+    const auto wait_result = wait_for_flash_ready(&fstorage);
+    if (result::Result::OK != wait_result)
+    {
+        return wait_result;
+    }
+
+    config.marker = marker_value;
+    config.crc = crc32_compute(
+        reinterpret_cast<const uint8_t *>(&config), 
+        sizeof(Configuration) - sizeof(uint32_t), 
+        NULL
+    );
 
     // program the configuration block
     const auto write_result = nrf_fstorage_write(&fstorage, 
@@ -157,7 +174,11 @@ result::Result NvConfig::store(const Configuration& config)
         return result::Result::ERROR_GENERAL;
     }
 
-    wait_for_flash_ready(&fstorage);
+    const auto wait_result_2 = wait_for_flash_ready(&fstorage);
+    if (result::Result::OK != wait_result_2)
+    {
+        return wait_result_2;
+    }
 
     return result::Result::OK;
 }
@@ -168,7 +189,7 @@ result::Result NvConfig::init()
         return result::Result::OK;
     }
 
-    const auto init_result = nrf_fstorage_init(&fstorage, &nrf_fstorage_nvmc, NULL);
+    const auto init_result = nrf_fstorage_init(&fstorage, &nrf_fstorage_sd, NULL);
     if (NRF_SUCCESS != init_result)
     {
         NRF_LOG_ERROR("nrf storage init has failed (%d)", init_result);
