@@ -48,12 +48,19 @@ struct SystemCommand
     uint32_t command_id;
 };
 
+struct OpmodeConfigCommand
+{
+    bool is_active{false};
+    uint32_t mode_id;
+};
+
 enum class CliCommand
 {
     RECORD,
     MEMORY_TEST,
     BLE_COMMAND,
     SYSTEM,
+    OPMODE,
 };
 
 enum class CliStatus

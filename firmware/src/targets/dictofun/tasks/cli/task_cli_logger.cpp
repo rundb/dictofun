@@ -51,6 +51,14 @@ void system_operation_callback(uint32_t command_id)
     _system_command.is_active = true;
 }
 
+static OpmodeConfigCommand _opmode_config_command;
+void opmode_config_callback(uint32_t mode_id)
+{
+    if (_opmode_config_command.is_active) return;
+    _opmode_config_command.is_active = true;
+    _opmode_config_command.mode_id = mode_id;
+}
+
 uint32_t get_timestamp()
 {
     return xTaskGetTickCount();
@@ -71,6 +79,7 @@ void task_cli_logger(void * cli_context)
     register_memory_test_callback(memory_test_callback);
     register_ble_control_callback(ble_operation_callback);
     register_system_control_callback(system_operation_callback);
+    register_opmode_config_callback(opmode_config_callback);
     while (1)
     {
         vTaskDelay(5);
@@ -148,6 +157,23 @@ void task_cli_logger(void * cli_context)
             else
             {
                 NRF_LOG_INFO("cli: system command has been queued");
+            }
+        }
+        if (_opmode_config_command.is_active)
+        {
+            _opmode_config_command.is_active = false;
+            CliCommandQueueElement cmd{
+                CliCommand::OPMODE, 
+                { static_cast<uint32_t>(_opmode_config_command.mode_id), 0 }
+            };
+            const auto send_result = xQueueSend(context.cli_commands_handle, &cmd, 0U);
+            if (pdPASS != send_result)
+            {
+                NRF_LOG_WARNING("cli: failed to launch opmode command");
+            }
+            else
+            {
+                NRF_LOG_INFO("cli: opmode config command has been queued");
             }
         }
     }

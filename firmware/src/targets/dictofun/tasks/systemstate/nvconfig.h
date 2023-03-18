@@ -41,8 +41,9 @@ public:
         uint32_t crc;
     } __attribute__((packed));
 
+    result::Result load_early(Configuration& config);
     result::Result load(Configuration& config);
-    result::Result store(const Configuration& config);
+    result::Result store(Configuration& config);
 
     void set_sd_backend();
 
@@ -55,7 +56,8 @@ private:
     static constexpr uint32_t data_array_size{sizeof(Configuration)};
     uint8_t _tmp_data[data_array_size]{0};
 
-    void wait_for_flash_ready(nrf_fstorage_t const * p_fstorage);
+    static constexpr uint32_t nvm_wait_timeout_ticks{200};
+    result::Result wait_for_flash_ready(nrf_fstorage_t const * p_fstorage);
 
     bool is_config_valid(const Configuration& config);
 

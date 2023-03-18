@@ -33,6 +33,8 @@ ble::RequestQueueElement ble_requests_buffer;
 button::EventQueueElement button_event_buffer;
 bool _should_record_be_stored{false};
 
+bool _is_ble_system_active{false};
+
 application::NvConfig _nvconfig{vTaskDelay};
 application::NvConfig::Configuration _configuration;
 
@@ -85,6 +87,25 @@ void shutdown_ldo()
     nrf_gpio_pin_clear(power_flipflop_clk);
 }
 
+result::Result enable_ble_subsystem(Context& context)
+{
+    if (!_is_ble_system_active)
+    {
+        ble::CommandQueueElement cmd{ble::Command::START};
+        const auto ble_start_status = xQueueSend(
+            context.ble_commands_handle,
+            reinterpret_cast<void *>(&cmd), 
+            0);
+        if (ble_start_status != pdPASS)
+        {
+            NRF_LOG_ERROR("failed to queue BLE start operation");
+            return result::Result::ERROR_GENERAL;
+        }
+        _is_ble_system_active = true;
+    }
+    return result::Result::OK;
+}
+
 void record_end_callback(TimerHandle_t timer)
 {
     context->is_record_active = false;
@@ -112,7 +133,7 @@ void record_end_callback(TimerHandle_t timer)
     {
         audio::tester::ControlQueueElement tester_cmd;
         tester_cmd.should_enable_tester = false;
-        const auto tester_start_status = xQueueSend(
+        [[maybe_unused]] const auto tester_start_status = xQueueSend(
             context->audio_tester_commands_handle,
             reinterpret_cast<void *>(&tester_cmd), 
             0);
@@ -145,26 +166,39 @@ void launch_cli_command_record(const uint32_t duration, bool should_store_the_re
 void launch_cli_command_memory_test(const uint32_t test_id);
 void launch_cli_command_ble_operation(const uint32_t command_id);
 void launch_cli_command_system(const uint32_t command_id);
+void launch_cli_command_opmode(const uint32_t mode_id);
 
 void process_button_event(button::Event event);
+
+void load_nvconfig();
 
 void task_system_state(void * context_ptr)
 {
     configure_power_latch();
     NRF_LOG_INFO("task state: initialized");
     context = reinterpret_cast<Context *>(context_ptr);
-    const auto nvconfig_load_result = _nvconfig.load(_configuration);
+    // Process NV configuration. If it doesn't exist - memory operation should be scheduled.
+    const auto nvconfig_load_result = _nvconfig.load_early(_configuration);
+    bool is_operation_mode_defined{true};
+    static constexpr uint32_t nvconfig_definition_timestamp{2000};
     if (result::Result::OK != nvconfig_load_result)
     {
-        NRF_LOG_WARNING("state: failed to load application config");
+        NRF_LOG_WARNING("state: failed to early load application config");
+        is_operation_mode_defined = false;
     }
     else
     {
-        NRF_LOG_INFO("state: operation mode %d", _configuration.mode);
+        NRF_LOG_INFO("state: operation mode %s", _configuration.mode == application::DEVELOPMENT ? "DEV" : _configuration.mode == application::ENGINEERING ? "ENG" : "FIELD");
     }
-    _nvconfig.set_sd_backend();
+
     while(1)
     {
+        if (!is_operation_mode_defined && xTaskGetTickCount() > nvconfig_definition_timestamp)
+        {
+            is_operation_mode_defined = true;
+            load_nvconfig();
+        }
+
         const auto button_event_receive_status = xQueueReceive(
             context->button_events_handle,
             &button_event_buffer,
@@ -202,6 +236,11 @@ void task_system_state(void * context_ptr)
                 case logger::CliCommand::SYSTEM:
                 {
                     launch_cli_command_system(cli_command_buffer.args[0]);
+                    break;
+                }
+                case logger::CliCommand::OPMODE:
+                {
+                    launch_cli_command_opmode(cli_command_buffer.args[0]);
                     break;
                 }
             }
@@ -275,7 +314,7 @@ void launch_cli_command_record(const uint32_t duration, bool should_store_the_re
             NRF_LOG_INFO("task state: enabling audio tester")
             audio::tester::ControlQueueElement cmd;
             cmd.should_enable_tester = true;
-            const auto tester_start_status = xQueueSend(
+            [[maybe_unused]]const auto tester_start_status = xQueueSend(
                 context->audio_tester_commands_handle,
                 reinterpret_cast<void *>(&cmd), 
                 0);
@@ -340,6 +379,15 @@ void launch_cli_command_ble_operation(const uint32_t command_id)
         NRF_LOG_ERROR("task state: failed to queue BLE operation");
         return;
     }
+    if (command == ble::Command::START)
+    {
+        _is_ble_system_active = true;
+    }
+    else if (command == ble::Command::STOP)
+    {
+        // FIXME: so far BLE subsystem can't be stopped/suspended due to how freertos SDH task API is implemented.
+        // _is_ble_system_active = false;
+    }
 }
 
 void launch_cli_command_system(const uint32_t command_id)
@@ -348,10 +396,75 @@ void launch_cli_command_system(const uint32_t command_id)
     shutdown_ldo();
 }
 
+void launch_cli_command_opmode(const uint32_t mode_id)
+{
+    NRF_LOG_INFO("setting opmode to %s", mode_id == 1 ? "DEV" : (mode_id == 2) ? "ENG" : "FIELD");
+    application::NvConfig::Configuration config;
+    config.mode = (mode_id == 1) ? application::Mode::DEVELOPMENT : 
+                  (mode_id == 2) ? application::Mode::ENGINEERING : 
+                  application::Mode::FIELD;
+    // Awkward dependency: BLE subsystem has to be started in order to launch this operation
+    if (result::Result::OK != enable_ble_subsystem(*context))
+    {
+        NRF_LOG_ERROR("opmode: failed to enable BLE as a pre-condition to modify nvconfig")
+    }
+    const auto config_change_result = _nvconfig.store(config);
+    if (result::Result::OK != config_change_result)
+    {
+        NRF_LOG_ERROR("state: failed to change opmode");
+    }
+    else 
+    {
+        NRF_LOG_DEBUG("state: successfully updated opmode");
+    }
+}
+
 void process_button_event(button::Event event)
 {
     // TODO: implement
 }
 
+/// @brief Unfortunately, nvconfig can't contain all dependencies within the module.
+/// This happens because fstorage has to use SD-aware implementation, and in FreeRTOS-based system 
+/// it works only if SD task is active. So in order to write-access fstorage we have to enable BLE
+/// subsystem, if it's not enabled yet, and disable afterwards, if needed.
+void load_nvconfig()
+{
+    bool need_to_disable_ble_subsystem{false};
+    if (!_is_ble_system_active)
+    {
+        if (result::Result::OK != enable_ble_subsystem(*context))
+        {
+            return;
+        }
+        need_to_disable_ble_subsystem = true;
+        _is_ble_system_active =  true;
+        // Wait to make sure BLE task has been started
+        static constexpr uint32_t ble_start_wait_ticks{10};
+        vTaskDelay(ble_start_wait_ticks);
+    }
+
+    const auto nvconfig_load_result = _nvconfig.load(_configuration);
+    if (result::Result::OK != nvconfig_load_result)
+    {
+        NRF_LOG_ERROR("deferred load nvconfig has failed.");
+    }
+
+    if (need_to_disable_ble_subsystem)
+    {
+        ble::CommandQueueElement cmd{ble::Command::STOP};
+        const auto ble_comm_status = xQueueSend(
+            context->ble_commands_handle,
+            reinterpret_cast<void *>(&cmd), 
+            0);
+        if (ble_comm_status != pdPASS)
+        {
+            NRF_LOG_ERROR("nvconfig: failed to queue BLE stop operation");
+            return;
+        }
+        // FIXME: so far BLE subsystem can't be stopped/suspended due to how freertos SDH task API is implemented.
+        //_is_ble_system_active = false;
+    }
 }
 
+}
