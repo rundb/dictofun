@@ -177,7 +177,7 @@ result::Result NvConfig::store(Configuration& config)
     const auto wait_result_2 = wait_for_flash_ready(&fstorage);
     if (result::Result::OK != wait_result_2)
     {
-        return wait_result;
+        return wait_result_2;
     }
 
     return result::Result::OK;
