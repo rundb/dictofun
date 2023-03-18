@@ -1,6 +1,7 @@
 add_library(task_system_state STATIC
     task_state.cpp
     nvconfig.cpp
+    cli_handlers.cpp
 )
 
 target_include_directories(task_system_state PUBLIC ./)

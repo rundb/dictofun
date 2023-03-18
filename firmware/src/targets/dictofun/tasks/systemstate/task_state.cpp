@@ -31,9 +31,6 @@ namespace systemstate
 logger::CliCommandQueueElement cli_command_buffer;
 ble::RequestQueueElement ble_requests_buffer;
 button::EventQueueElement button_event_buffer;
-bool _should_record_be_stored{false};
-
-bool _is_ble_system_active{false};
 
 application::NvConfig _nvconfig{vTaskDelay};
 application::NvConfig::Configuration _configuration;
@@ -45,10 +42,15 @@ constexpr TickType_t button_event_wait_ticks_type{1};
 Context * context{nullptr};
 static constexpr uint8_t power_flipflop_clk{26};
 static constexpr uint8_t power_flipflop_d{27};
-    
-bool is_record_start_by_cli_allowed()
+
+application::Mode get_operation_mode()
 {
-    if (context->is_record_active)
+    return _configuration.mode;
+}
+    
+bool is_record_start_by_cli_allowed(Context& context)
+{
+    if (context.is_record_active)
     {
         return false;
     }
@@ -89,7 +91,7 @@ void shutdown_ldo()
 
 result::Result enable_ble_subsystem(Context& context)
 {
-    if (!_is_ble_system_active)
+    if (!context._is_ble_system_active)
     {
         ble::CommandQueueElement cmd{ble::Command::START};
         const auto ble_start_status = xQueueSend(
@@ -101,7 +103,7 @@ result::Result enable_ble_subsystem(Context& context)
             NRF_LOG_ERROR("failed to queue BLE start operation");
             return result::Result::ERROR_GENERAL;
         }
-        _is_ble_system_active = true;
+        context._is_ble_system_active = true;
     }
     return result::Result::OK;
 }
@@ -119,7 +121,7 @@ void record_end_callback(TimerHandle_t timer)
         NRF_LOG_ERROR("state: timed out to wait record close");
     }
 
-    if (_should_record_be_stored)
+    if (context->_should_record_be_stored)
     {
         memory::CommandQueueElement cmd{memory::Command::CLOSE_WRITTEN_FILE, {0,0}};
         const auto create_file_res = xQueueSend(context->memory_commands_handle, reinterpret_cast<void *>(&cmd), 0);
@@ -140,10 +142,10 @@ void record_end_callback(TimerHandle_t timer)
     }
 }
 
-result::Result launch_record_timer(const TickType_t record_duration)
+result::Result launch_record_timer(const TickType_t record_duration, Context& context)
 {
     const auto period_change_result = xTimerChangePeriod(
-        context->record_timer_handle,
+        context.record_timer_handle,
         record_duration,
         0);
 
@@ -152,25 +154,19 @@ result::Result launch_record_timer(const TickType_t record_duration)
         return result::Result::ERROR_GENERAL;
     }
 
-    const auto timer_start_result = xTimerStart(context->record_timer_handle, 0);
+    const auto timer_start_result = xTimerStart(context.record_timer_handle, 0);
     if (timer_start_result != pdPASS)
     {
         return result::Result::ERROR_GENERAL;
     }
 
-    context->is_record_active = true;   
+    context.is_record_active = true;   
     return result::Result::OK;
 }
 
-void launch_cli_command_record(const uint32_t duration, bool should_store_the_record);
-void launch_cli_command_memory_test(const uint32_t test_id);
-void launch_cli_command_ble_operation(const uint32_t command_id);
-void launch_cli_command_system(const uint32_t command_id);
-void launch_cli_command_opmode(const uint32_t mode_id);
-
 void process_button_event(button::Event event);
 
-void load_nvconfig();
+void load_nvconfig(Context& context);
 
 void task_system_state(void * context_ptr)
 {
@@ -193,12 +189,6 @@ void task_system_state(void * context_ptr)
 
     while(1)
     {
-        if (!is_operation_mode_defined && xTaskGetTickCount() > nvconfig_definition_timestamp)
-        {
-            is_operation_mode_defined = true;
-            load_nvconfig();
-        }
-
         const auto button_event_receive_status = xQueueReceive(
             context->button_events_handle,
             &button_event_buffer,
@@ -220,27 +210,27 @@ void task_system_state(void * context_ptr)
             {
                 case logger::CliCommand::RECORD:
                 {
-                    launch_cli_command_record(cli_command_buffer.args[0], cli_command_buffer.args[1] > 0);
+                    launch_cli_command_record(*context, cli_command_buffer.args[0], cli_command_buffer.args[1] > 0);
                     break;
                 }
                 case logger::CliCommand::MEMORY_TEST:
                 {
-                    launch_cli_command_memory_test(cli_command_buffer.args[0]);
+                    launch_cli_command_memory_test(*context, cli_command_buffer.args[0]);
                     break;
                 }
                 case logger::CliCommand::BLE_COMMAND:
                 {
-                    launch_cli_command_ble_operation(cli_command_buffer.args[0]);
+                    launch_cli_command_ble_operation(*context, cli_command_buffer.args[0]);
                     break;
                 }
                 case logger::CliCommand::SYSTEM:
                 {
-                    launch_cli_command_system(cli_command_buffer.args[0]);
+                    launch_cli_command_system(*context, cli_command_buffer.args[0]);
                     break;
                 }
                 case logger::CliCommand::OPMODE:
                 {
-                    launch_cli_command_opmode(cli_command_buffer.args[0]);
+                    launch_cli_command_opmode(*context, cli_command_buffer.args[0], _nvconfig);
                     break;
                 }
             }
@@ -269,155 +259,13 @@ void task_system_state(void * context_ptr)
                 }
             }
         }
+        if (!is_operation_mode_defined && xTaskGetTickCount() > nvconfig_definition_timestamp)
+        {
+            is_operation_mode_defined = true;
+            load_nvconfig(*context);
+        }
     }
 }   
-
-void launch_cli_command_record(const uint32_t duration, bool should_store_the_record)
-{
-    NRF_LOG_INFO("task: received command from CLI");
-    if (is_record_start_by_cli_allowed())
-    {
-        _should_record_be_stored = should_store_the_record;
-        if (should_store_the_record)
-        {
-            memory::CommandQueueElement cmd{memory::Command::CREATE_RECORD, {0,0}};
-            const auto create_file_res = xQueueSend(context->memory_commands_handle, reinterpret_cast<void *>(&cmd), 0);
-            if (create_file_res != pdPASS)
-            {
-                NRF_LOG_ERROR("task state: failed to request file creation");
-                return;
-            }
-            memory::StatusQueueElement response;
-            static constexpr uint32_t file_creation_wait_time{500};
-            const auto create_file_response_res = xQueueReceive(context->memory_status_handle, reinterpret_cast<void*>(&response), file_creation_wait_time);
-            if (create_file_response_res != pdPASS)
-            {
-                NRF_LOG_ERROR("task state: response from mem timeout. Record won't be started");
-                return;
-            }
-        }
-
-        audio::CommandQueueElement cmd{audio::Command::RECORD_START};
-        const auto record_start_status = xQueueSend(
-            context->audio_commands_handle,
-            reinterpret_cast<void *>(&cmd), 
-            0);
-        if (record_start_status != pdPASS)
-        {
-            NRF_LOG_ERROR("task state: failed to queue start_record command");
-            return;
-        }
-
-        // record in mode without storage, so audio tester should be enabled
-        if (!should_store_the_record)
-        {
-            NRF_LOG_INFO("task state: enabling audio tester")
-            audio::tester::ControlQueueElement cmd;
-            cmd.should_enable_tester = true;
-            [[maybe_unused]]const auto tester_start_status = xQueueSend(
-                context->audio_tester_commands_handle,
-                reinterpret_cast<void *>(&cmd), 
-                0);
-        }
-        
-        constexpr TickType_t ticks_per_second{1000};
-        const TickType_t duration_ticks{duration * ticks_per_second};
-        const auto timer_launch_result = launch_record_timer(duration_ticks);
-        if (result::Result::OK != timer_launch_result)
-        {
-            NRF_LOG_ERROR("task state: failed to launch record stop timer");
-        }
-    }
-    else
-    {
-        NRF_LOG_ERROR("task_state: record start is not allowed. Aborting");
-    }
-}
-
-void launch_cli_command_memory_test(const uint32_t test_id)
-{
-    NRF_LOG_INFO("task state: launching memory test %d", test_id);
-    const memory::Command command_id = 
-        (test_id == 4) ? memory::Command::LAUNCH_TEST_4 :
-        (test_id == 3) ? memory::Command::LAUNCH_TEST_3 :
-        (test_id == 2) ? memory::Command::LAUNCH_TEST_2 :
-        memory::Command::LAUNCH_TEST_1;
-    memory::CommandQueueElement cmd{command_id, {0,0}};
-    const auto memtest_status = xQueueSend(
-        context->memory_commands_handle,
-        reinterpret_cast<void *>(&cmd), 
-        0);
-    if (memtest_status != pdPASS)
-    {
-        NRF_LOG_ERROR("task state: failed to queue memtest command");
-        return;
-    }
-}
-
-void launch_cli_command_ble_operation(const uint32_t command_id)
-{
-    NRF_LOG_INFO("task state: launching BLE command %d", command_id);
-    const ble::Command command = 
-        (command_id == 4) ? ble::Command::CONNECT_FS :
-        (command_id == 3) ? ble::Command::RESET_PAIRING :
-        (command_id == 2) ? ble::Command::STOP :
-        ble::Command::START;
-    if (command == ble::Command::CONNECT_FS)
-    {
-        // When connection to filesystem is established, ownership of memory should be changed
-        memory::CommandQueueElement command_to_memory{memory::Command::SELECT_OWNER_BLE, {0, 0}};
-        xQueueSend(context->memory_commands_handle, reinterpret_cast<void *>(&command_to_memory), 0);
-    }
-
-    ble::CommandQueueElement cmd{command};
-    const auto ble_comm_status = xQueueSend(
-        context->ble_commands_handle,
-        reinterpret_cast<void *>(&cmd), 
-        0);
-    if (ble_comm_status != pdPASS)
-    {
-        NRF_LOG_ERROR("task state: failed to queue BLE operation");
-        return;
-    }
-    if (command == ble::Command::START)
-    {
-        _is_ble_system_active = true;
-    }
-    else if (command == ble::Command::STOP)
-    {
-        // FIXME: so far BLE subsystem can't be stopped/suspended due to how freertos SDH task API is implemented.
-        // _is_ble_system_active = false;
-    }
-}
-
-void launch_cli_command_system(const uint32_t command_id)
-{
-    NRF_LOG_INFO("task state: launching system command %d", command_id);
-    shutdown_ldo();
-}
-
-void launch_cli_command_opmode(const uint32_t mode_id)
-{
-    NRF_LOG_INFO("setting opmode to %s", mode_id == 1 ? "DEV" : (mode_id == 2) ? "ENG" : "FIELD");
-    application::NvConfig::Configuration config;
-    config.mode = (mode_id == 1) ? application::Mode::DEVELOPMENT : 
-                  (mode_id == 2) ? application::Mode::ENGINEERING : 
-                  application::Mode::FIELD;
-    // Awkward dependency: BLE subsystem has to be started in order to launch this operation
-    if (result::Result::OK != enable_ble_subsystem(*context))
-    {
-        NRF_LOG_ERROR("opmode: failed to enable BLE as a pre-condition to modify nvconfig")
-    }
-    const auto config_change_result = _nvconfig.store(config);
-    if (result::Result::OK != config_change_result)
-    {
-        NRF_LOG_ERROR("state: failed to change opmode");
-    }
-    else 
-    {
-        NRF_LOG_DEBUG("state: successfully updated opmode");
-    }
-}
 
 void process_button_event(button::Event event)
 {
@@ -428,17 +276,17 @@ void process_button_event(button::Event event)
 /// This happens because fstorage has to use SD-aware implementation, and in FreeRTOS-based system 
 /// it works only if SD task is active. So in order to write-access fstorage we have to enable BLE
 /// subsystem, if it's not enabled yet, and disable afterwards, if needed.
-void load_nvconfig()
+void load_nvconfig(Context& context)
 {
     bool need_to_disable_ble_subsystem{false};
-    if (!_is_ble_system_active)
+    if (!context._is_ble_system_active)
     {
-        if (result::Result::OK != enable_ble_subsystem(*context))
+        if (result::Result::OK != enable_ble_subsystem(context))
         {
             return;
         }
         need_to_disable_ble_subsystem = true;
-        _is_ble_system_active =  true;
+        context._is_ble_system_active = true;
         // Wait to make sure BLE task has been started
         static constexpr uint32_t ble_start_wait_ticks{10};
         vTaskDelay(ble_start_wait_ticks);
@@ -454,7 +302,7 @@ void load_nvconfig()
     {
         ble::CommandQueueElement cmd{ble::Command::STOP};
         const auto ble_comm_status = xQueueSend(
-            context->ble_commands_handle,
+            context.ble_commands_handle,
             reinterpret_cast<void *>(&cmd), 
             0);
         if (ble_comm_status != pdPASS)
@@ -463,7 +311,7 @@ void load_nvconfig()
             return;
         }
         // FIXME: so far BLE subsystem can't be stopped/suspended due to how freertos SDH task API is implemented.
-        //_is_ble_system_active = false;
+        //context._is_ble_system_active = false;
     }
 }
 
