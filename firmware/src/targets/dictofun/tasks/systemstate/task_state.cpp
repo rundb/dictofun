@@ -141,9 +141,87 @@ void task_system_state(void * context_ptr)
     }
 }   
 
+result::Result request_record_creation(const Context& context)
+{
+    // First cleanup response from memory queue
+    xQueueReset(context.memory_status_handle);
+
+    memory::CommandQueueElement cmd{memory::Command::CREATE_RECORD, {0,0}};
+    const auto create_file_res = xQueueSend(context.memory_commands_handle, reinterpret_cast<void *>(&cmd), 0);
+    if (create_file_res != pdPASS)
+    {
+        return result::Result::ERROR_GENERAL;
+    }
+    memory::StatusQueueElement response;
+    static constexpr uint32_t file_creation_wait_time{2000};
+    const auto create_file_response_res = xQueueReceive(context.memory_status_handle, reinterpret_cast<void*>(&response), file_creation_wait_time);
+    if (create_file_response_res != pdPASS)
+    {
+        NRF_LOG_WARNING("task state: response from mem timeout. Record file might not have been created");
+        return result::Result::ERROR_TIMEOUT;
+    }
+    return result::Result::OK;
+}
+
+result::Result request_record_start(const Context& context)
+{
+    audio::CommandQueueElement cmd{audio::Command::RECORD_START};
+    const auto record_start_status = xQueueSend(
+        context.audio_commands_handle,
+        reinterpret_cast<void *>(&cmd), 
+        0);
+    return (record_start_status == pdPASS) ? result::Result::OK : result::Result::ERROR_GENERAL;
+}
+
+result::Result request_record_stop(const Context& context)
+{
+    audio::CommandQueueElement cmd{audio::Command::RECORD_STOP};
+    const auto record_stop_result = xQueueSend(context.audio_commands_handle, reinterpret_cast<void *>(&cmd), 0);
+    return (record_stop_result == pdPASS) ? result::Result::OK : result::Result::ERROR_GENERAL;
+}
+
+result::Result request_record_closure(const Context& context)
+{
+    xQueueReset(context.memory_status_handle);
+
+    memory::CommandQueueElement cmd{memory::Command::CLOSE_WRITTEN_FILE, {0,0}};
+    const auto close_file_res = xQueueSend(context.memory_commands_handle, reinterpret_cast<void *>(&cmd), 0);
+    if (close_file_res != pdPASS)
+    {
+        NRF_LOG_ERROR("task state: failed to request file closure");
+        return result::Result::ERROR_GENERAL;
+    }
+    memory::StatusQueueElement response;
+    static constexpr uint32_t file_closure_max_wait_time{1000};
+    const auto file_closure_status_result = xQueueReceive(context.memory_status_handle, reinterpret_cast<void *>(&response), file_closure_max_wait_time);
+    if (pdTRUE != file_closure_status_result)
+    {
+        return result::Result::ERROR_TIMEOUT;
+    }
+    if (response.status != memory::Status::OK)
+    {
+        NRF_LOG_ERROR("state: file closure has failed");
+        return result::Result::ERROR_GENERAL;
+    }
+    return result::Result::OK;
+}
+
 void process_button_event(button::Event event)
 {
-    // TODO: implement
+    const auto operation_mode = get_operation_mode();
+    switch (operation_mode)
+    {
+        case decltype(operation_mode)::DEVELOPMENT:
+        {
+            // There is no reaction required in this case
+            break;
+        }
+        case decltype(operation_mode)::ENGINEERING : case decltype(operation_mode)::FIELD :
+        {
+
+            break;
+        }
+    }
 }
 
 /// @brief Unfortunately, nvconfig can't contain all dependencies within the module.
@@ -227,24 +305,17 @@ result::Result enable_ble_subsystem(Context& context)
 void record_end_callback(TimerHandle_t timer)
 {
     context->is_record_active = false;
-    audio::CommandQueueElement cmd{audio::Command::RECORD_STOP};
-    xQueueSend(context->audio_commands_handle, reinterpret_cast<void *>(&cmd), 0);
-    audio::StatusQueueElement response;
-    static constexpr uint32_t file_closure_max_wait_time{500};
-    const auto record_stop_status_result = xQueueReceive(context->audio_status_handle, reinterpret_cast<void *>(&response), file_closure_max_wait_time);
-    if (pdTRUE != record_stop_status_result)
+    if (result::Result::OK != request_record_stop(*context))
     {
-        NRF_LOG_ERROR("state: timed out to wait record close");
+        NRF_LOG_ERROR("state: failed to request audio record stop");
     }
 
     if (context->_should_record_be_stored)
     {
-        memory::CommandQueueElement cmd{memory::Command::CLOSE_WRITTEN_FILE, {0,0}};
-        const auto create_file_res = xQueueSend(context->memory_commands_handle, reinterpret_cast<void *>(&cmd), 0);
-        if (create_file_res != pdPASS)
+        const auto closure_result = request_record_closure(*context);
+        if (decltype(closure_result)::OK != closure_result)
         {
-            NRF_LOG_ERROR("task state: failed to request file closure");
-            return;
+            NRF_LOG_ERROR("state: failed to closed record (requested by CLI)");
         }
     }
     else
