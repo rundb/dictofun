@@ -65,6 +65,8 @@ void task_audio(void * context_ptr)
         {
             if (audio_command_buffer.command_id == Command::RECORD_START)
             {
+                recorded_data_size = 0;
+                lost_data_size = 0;
                 NRF_LOG_INFO("audio: received record_start command");
                 audio_processor.start();
                 context.is_recording_active = true;
@@ -87,7 +89,6 @@ void task_audio(void * context_ptr)
                 0);
             if (pdPASS != data_queue_send_result)
             {
-                NRF_LOG_WARNING("audio: data lost %d", xTaskGetTickCount());
                 // TODO: it may be needed to abort the whole record process here.
                 lost_data_size += sizeof(sample);
             }

@@ -378,6 +378,7 @@ void process_request_from_state(Context& context, const Command command_id)
             _file_operation_context.is_file_open = true;
             StatusQueueElement response{Command::CREATE_RECORD, Status::OK};
             xQueueSend(context.status_queue, reinterpret_cast<void *>(&response), 0);
+            written_record_size = 0;
             break;
         }
         case Command::CLOSE_WRITTEN_FILE:
@@ -403,14 +404,23 @@ void process_request_from_state(Context& context, const Command command_id)
             if (result::Result::OK != deinit_result)
             {
                 NRF_LOG_ERROR("lfs: deinit failed");
+                StatusQueueElement response{Command::SELECT_OWNER_BLE, Status::ERROR_GENERAL};
+                xQueueSend(context.status_queue, reinterpret_cast<void *>(&response), 0);
+                break;
             }
             const auto init_result = memory::filesystem::init_littlefs(lfs, lfs_configuration);
             if (result::Result::OK != init_result)
             {
                 NRF_LOG_ERROR("lfs: init failed");
+                StatusQueueElement response{Command::SELECT_OWNER_BLE, Status::ERROR_GENERAL};
+                xQueueSend(context.status_queue, reinterpret_cast<void *>(&response), 0);
+                break;
             }
             NRF_LOG_INFO("mem: owner changed to ble");
             _memory_owner = MemoryOwner::BLE;
+
+            StatusQueueElement response{Command::SELECT_OWNER_BLE, Status::OK};
+            xQueueSend(context.status_queue, reinterpret_cast<void *>(&response), 0);
             break;
         }
         case Command::SELECT_OWNER_AUDIO:
@@ -419,14 +429,22 @@ void process_request_from_state(Context& context, const Command command_id)
             if (result::Result::OK != deinit_result)
             {
                 NRF_LOG_ERROR("lfs: deinit failed");
+                StatusQueueElement response{Command::SELECT_OWNER_AUDIO, Status::ERROR_GENERAL};
+                xQueueSend(context.status_queue, reinterpret_cast<void *>(&response), 0);
+                break;
             }
             const auto init_result = memory::filesystem::init_littlefs(lfs, lfs_configuration);
             if (result::Result::OK != init_result)
             {
                 NRF_LOG_ERROR("lfs: init failed");
+                StatusQueueElement response{Command::SELECT_OWNER_AUDIO, Status::ERROR_GENERAL};
+                xQueueSend(context.status_queue, reinterpret_cast<void *>(&response), 0);
+                break;
             }
             NRF_LOG_INFO("mem: owner changed to audio");
             _memory_owner = MemoryOwner::AUDIO;
+            StatusQueueElement response{Command::SELECT_OWNER_AUDIO, Status::OK};
+            xQueueSend(context.status_queue, reinterpret_cast<void *>(&response), 0);
             break;
         }
         case Command::LAUNCH_TEST_1:
@@ -447,6 +465,11 @@ void process_request_from_state(Context& context, const Command command_id)
         case Command::LAUNCH_TEST_4:
         {
             launch_test_4(lfs);
+            break;
+        }
+        case Command::UNMOUNT_LFS:
+        {
+            NRF_LOG_ERROR("mem: lfs unmount is not implemented");
             break;
         }
     }
