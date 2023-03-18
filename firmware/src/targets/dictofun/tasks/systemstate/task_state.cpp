@@ -40,7 +40,7 @@ constexpr TickType_t button_event_wait_ticks_type{1};
 
 Context * context{nullptr};
 
-void process_button_event(button::Event event, const Context& context);
+void process_button_event(button::Event event, Context& context);
 
 void task_system_state(void * context_ptr)
 {
@@ -206,7 +206,7 @@ result::Result request_record_closure(const Context& context)
     return result::Result::OK;
 }
 
-void process_button_event(button::Event event, const Context& context)
+void process_button_event(button::Event event, Context& context)
 {
     const auto operation_mode = get_operation_mode();
     switch (operation_mode)
@@ -220,13 +220,32 @@ void process_button_event(button::Event event, const Context& context)
         {
             if (event == decltype(event)::SINGLE_PRESS_ON)
             {
-                // TODO: switch owner of memory to AUDIO at this point
+                if (context._is_ble_system_active)
+                {
+                    xQueueReset(context.memory_status_handle);
+                    memory::CommandQueueElement command_to_memory{memory::Command::SELECT_OWNER_AUDIO, {0, 0}};
+                    const auto owner_switch_result = xQueueSend(context.memory_commands_handle, reinterpret_cast<void *>(&command_to_memory), 0);
+                    if (pdPASS != owner_switch_result)
+                    {
+                        NRF_LOG_ERROR("state: failed to request owner switch to audio. Record might not be saved");
+                    }
+                    memory::StatusQueueElement response;
+                    static constexpr uint32_t memory_ownership_switch_timeout{1000};
+                    const auto memory_response_result = xQueueReceive(context.memory_status_handle, reinterpret_cast<void *>(&response), memory_ownership_switch_timeout);
+                    if (pdPASS != memory_response_result || response.status != decltype(response.status)::OK)
+                    {
+                        NRF_LOG_ERROR("state: memory ownership switch has failed. Record won't be launched");
+                        return;
+                    }
+                }
+                
                 const auto creation_result = request_record_creation(context);
                 if (decltype(creation_result)::OK != creation_result)
                 {
                     NRF_LOG_ERROR("state: failed to create record upon button press");
                     return;
                 }
+                context.is_record_active = true;
                 const auto record_start_result = request_record_start(context);
                 if (decltype(record_start_result)::OK != record_start_result)
                 {
@@ -249,8 +268,23 @@ void process_button_event(button::Event event, const Context& context)
                     NRF_LOG_ERROR("state: failed to close record upon button release");
                     return;
                 }
+                context.is_record_active = false;
                 NRF_LOG_INFO("state: stopped and saved record");
-                // TODO: enable BLE at this point and switch memory owner to BLE
+                
+                // Change memory owner
+                memory::CommandQueueElement command_to_memory{memory::Command::SELECT_OWNER_BLE, {0, 0}};
+                const auto owner_switch_result = xQueueSend(context.memory_commands_handle, reinterpret_cast<void *>(&command_to_memory), 0);
+                if (pdPASS != owner_switch_result)
+                {
+                    NRF_LOG_ERROR("state: failed to request owner switch to BLE.");
+                }
+
+                // Enable BLE subsystem, if it's not enabled yet
+                const auto ble_enable_result = enable_ble_subsystem(context);
+                if (decltype(ble_enable_result)::OK != ble_enable_result)
+                {
+                    NRF_LOG_ERROR("state: failed to enable BLE subsystem");
+                }
             }
             break;
         }
@@ -300,7 +334,6 @@ void load_nvconfig(Context& context)
     }
 }
 
-
 application::Mode get_operation_mode()
 {
     return _configuration.mode;
@@ -308,11 +341,11 @@ application::Mode get_operation_mode()
     
 bool is_record_start_by_cli_allowed(Context& context)
 {
-    if (context.is_record_active)
+    const auto operation_mode = get_operation_mode();
+    if ((operation_mode != decltype(operation_mode)::DEVELOPMENT) || context.is_record_active)
     {
         return false;
     }
-    // TODO: add another check to see if CLI commands are overall allowed
     return true;
 }
 
