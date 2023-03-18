@@ -50,14 +50,12 @@ void launch_cli_command_ble_operation(Context& context, const uint32_t command_i
 void launch_cli_command_system(Context& context, const uint32_t command_id);
 void launch_cli_command_opmode(Context& context, const uint32_t mode_id, application::NvConfig& nvc);
 
+void load_nvconfig(Context& context);
 application::Mode get_operation_mode();
-
 bool is_record_start_by_cli_allowed(Context& context);
-
 result::Result launch_record_timer(const TickType_t record_duration, Context& context);
-
 void shutdown_ldo();
-
+void configure_power_latch();
 result::Result enable_ble_subsystem(Context& context);
 
 }

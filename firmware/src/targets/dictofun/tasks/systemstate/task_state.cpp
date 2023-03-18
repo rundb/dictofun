@@ -1,6 +1,6 @@
 // SPDX-License-Identifier:  Apache-2.0
 /*
- * Copyright (c) 2022, Roman Turkin
+ * Copyright (c) 2023, Roman Turkin
  */
 
 #include "task_state.h"
@@ -8,7 +8,6 @@
 
 #include <nrf_gpio.h>
 #include <nrf_log.h>
-#include "nrf_log_ctrl.h"
 
 #include "task_cli_logger.h"
 #include "task_audio.h"
@@ -40,133 +39,8 @@ constexpr TickType_t ble_request_wait_ticks_type{1};
 constexpr TickType_t button_event_wait_ticks_type{1};
 
 Context * context{nullptr};
-static constexpr uint8_t power_flipflop_clk{26};
-static constexpr uint8_t power_flipflop_d{27};
-
-application::Mode get_operation_mode()
-{
-    return _configuration.mode;
-}
-    
-bool is_record_start_by_cli_allowed(Context& context)
-{
-    if (context.is_record_active)
-    {
-        return false;
-    }
-    // TODO: add another check to see if CLI commands are overall allowed
-    return true;
-}
-
-void configure_power_latch()
-{
-    nrf_gpio_cfg_output(power_flipflop_clk);
-    nrf_gpio_cfg_output(power_flipflop_d);
-
-    nrf_gpio_pin_clear(power_flipflop_clk);
-    nrf_gpio_pin_set(power_flipflop_d);
-
-    vTaskDelay(1);
-    nrf_gpio_pin_set(power_flipflop_clk);
-    vTaskDelay(1);
-    nrf_gpio_pin_clear(power_flipflop_clk);
-    vTaskDelay(1);
-
-}
-
-void shutdown_ldo()
-{
-    NRF_LOG_INFO("shutting the system down");
-    // Letting logger to print out all it needs to print
-    NRF_LOG_FLUSH();
-    vTaskDelay(100);
-    nrf_gpio_pin_clear(power_flipflop_d);
-    vTaskDelay(1);
-    nrf_gpio_pin_clear(power_flipflop_clk);
-    vTaskDelay(1);
-    nrf_gpio_pin_set(power_flipflop_clk);
-    vTaskDelay(1);
-    nrf_gpio_pin_clear(power_flipflop_clk);
-}
-
-result::Result enable_ble_subsystem(Context& context)
-{
-    if (!context._is_ble_system_active)
-    {
-        ble::CommandQueueElement cmd{ble::Command::START};
-        const auto ble_start_status = xQueueSend(
-            context.ble_commands_handle,
-            reinterpret_cast<void *>(&cmd), 
-            0);
-        if (ble_start_status != pdPASS)
-        {
-            NRF_LOG_ERROR("failed to queue BLE start operation");
-            return result::Result::ERROR_GENERAL;
-        }
-        context._is_ble_system_active = true;
-    }
-    return result::Result::OK;
-}
-
-void record_end_callback(TimerHandle_t timer)
-{
-    context->is_record_active = false;
-    audio::CommandQueueElement cmd{audio::Command::RECORD_STOP};
-    xQueueSend(context->audio_commands_handle, reinterpret_cast<void *>(&cmd), 0);
-    audio::StatusQueueElement response;
-    static constexpr uint32_t file_closure_max_wait_time{500};
-    const auto record_stop_status_result = xQueueReceive(context->audio_status_handle, reinterpret_cast<void *>(&response), file_closure_max_wait_time);
-    if (pdTRUE != record_stop_status_result)
-    {
-        NRF_LOG_ERROR("state: timed out to wait record close");
-    }
-
-    if (context->_should_record_be_stored)
-    {
-        memory::CommandQueueElement cmd{memory::Command::CLOSE_WRITTEN_FILE, {0,0}};
-        const auto create_file_res = xQueueSend(context->memory_commands_handle, reinterpret_cast<void *>(&cmd), 0);
-        if (create_file_res != pdPASS)
-        {
-            NRF_LOG_ERROR("task state: failed to request file closure");
-            return;
-        }
-    }
-    else
-    {
-        audio::tester::ControlQueueElement tester_cmd;
-        tester_cmd.should_enable_tester = false;
-        [[maybe_unused]] const auto tester_start_status = xQueueSend(
-            context->audio_tester_commands_handle,
-            reinterpret_cast<void *>(&tester_cmd), 
-            0);
-    }
-}
-
-result::Result launch_record_timer(const TickType_t record_duration, Context& context)
-{
-    const auto period_change_result = xTimerChangePeriod(
-        context.record_timer_handle,
-        record_duration,
-        0);
-
-    if (pdPASS != period_change_result)
-    {
-        return result::Result::ERROR_GENERAL;
-    }
-
-    const auto timer_start_result = xTimerStart(context.record_timer_handle, 0);
-    if (timer_start_result != pdPASS)
-    {
-        return result::Result::ERROR_GENERAL;
-    }
-
-    context.is_record_active = true;   
-    return result::Result::OK;
-}
 
 void process_button_event(button::Event event);
-
-void load_nvconfig(Context& context);
 
 void task_system_state(void * context_ptr)
 {
@@ -313,6 +187,97 @@ void load_nvconfig(Context& context)
         // FIXME: so far BLE subsystem can't be stopped/suspended due to how freertos SDH task API is implemented.
         //context._is_ble_system_active = false;
     }
+}
+
+
+application::Mode get_operation_mode()
+{
+    return _configuration.mode;
+}
+    
+bool is_record_start_by_cli_allowed(Context& context)
+{
+    if (context.is_record_active)
+    {
+        return false;
+    }
+    // TODO: add another check to see if CLI commands are overall allowed
+    return true;
+}
+
+result::Result enable_ble_subsystem(Context& context)
+{
+    if (!context._is_ble_system_active)
+    {
+        ble::CommandQueueElement cmd{ble::Command::START};
+        const auto ble_start_status = xQueueSend(
+            context.ble_commands_handle,
+            reinterpret_cast<void *>(&cmd), 
+            0);
+        if (ble_start_status != pdPASS)
+        {
+            NRF_LOG_ERROR("failed to queue BLE start operation");
+            return result::Result::ERROR_GENERAL;
+        }
+        context._is_ble_system_active = true;
+    }
+    return result::Result::OK;
+}
+
+void record_end_callback(TimerHandle_t timer)
+{
+    context->is_record_active = false;
+    audio::CommandQueueElement cmd{audio::Command::RECORD_STOP};
+    xQueueSend(context->audio_commands_handle, reinterpret_cast<void *>(&cmd), 0);
+    audio::StatusQueueElement response;
+    static constexpr uint32_t file_closure_max_wait_time{500};
+    const auto record_stop_status_result = xQueueReceive(context->audio_status_handle, reinterpret_cast<void *>(&response), file_closure_max_wait_time);
+    if (pdTRUE != record_stop_status_result)
+    {
+        NRF_LOG_ERROR("state: timed out to wait record close");
+    }
+
+    if (context->_should_record_be_stored)
+    {
+        memory::CommandQueueElement cmd{memory::Command::CLOSE_WRITTEN_FILE, {0,0}};
+        const auto create_file_res = xQueueSend(context->memory_commands_handle, reinterpret_cast<void *>(&cmd), 0);
+        if (create_file_res != pdPASS)
+        {
+            NRF_LOG_ERROR("task state: failed to request file closure");
+            return;
+        }
+    }
+    else
+    {
+        audio::tester::ControlQueueElement tester_cmd;
+        tester_cmd.should_enable_tester = false;
+        [[maybe_unused]] const auto tester_start_status = xQueueSend(
+            context->audio_tester_commands_handle,
+            reinterpret_cast<void *>(&tester_cmd), 
+            0);
+    }
+}
+
+result::Result launch_record_timer(const TickType_t record_duration, Context& context)
+{
+    const auto period_change_result = xTimerChangePeriod(
+        context.record_timer_handle,
+        record_duration,
+        0);
+
+    if (pdPASS != period_change_result)
+    {
+        return result::Result::ERROR_GENERAL;
+    }
+
+    const auto timer_start_result = xTimerStart(context.record_timer_handle, 0);
+    if (timer_start_result != pdPASS)
+    {
+        return result::Result::ERROR_GENERAL;
+    }
+
+    context.is_record_active = true;   
+    return result::Result::OK;
 }
 
 }
