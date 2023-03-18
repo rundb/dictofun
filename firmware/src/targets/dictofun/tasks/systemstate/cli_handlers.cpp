@@ -23,31 +23,18 @@ void launch_cli_command_record(Context& context, const uint32_t duration, bool s
         context._should_record_be_stored = should_store_the_record;
         if (should_store_the_record)
         {
-            memory::CommandQueueElement cmd{memory::Command::CREATE_RECORD, {0,0}};
-            const auto create_file_res = xQueueSend(context.memory_commands_handle, reinterpret_cast<void *>(&cmd), 0);
-            if (create_file_res != pdPASS)
+            const auto creation_result = request_record_creation(context);
+            if (decltype(creation_result)::OK != creation_result)
             {
-                NRF_LOG_ERROR("task state: failed to request file creation");
-                return;
-            }
-            memory::StatusQueueElement response;
-            static constexpr uint32_t file_creation_wait_time{500};
-            const auto create_file_response_res = xQueueReceive(context.memory_status_handle, reinterpret_cast<void*>(&response), file_creation_wait_time);
-            if (create_file_response_res != pdPASS)
-            {
-                NRF_LOG_ERROR("task state: response from mem timeout. Record won't be started");
+                NRF_LOG_ERROR("state: failed to create record per CLI request");
                 return;
             }
         }
 
-        audio::CommandQueueElement cmd{audio::Command::RECORD_START};
-        const auto record_start_status = xQueueSend(
-            context.audio_commands_handle,
-            reinterpret_cast<void *>(&cmd), 
-            0);
-        if (record_start_status != pdPASS)
+        const auto record_start_status = request_record_start(context);
+        if (decltype(record_start_status)::OK != record_start_status)
         {
-            NRF_LOG_ERROR("task state: failed to queue start_record command");
+            NRF_LOG_ERROR("task state: failed to queue start_record command (launched by cli)");
             return;
         }
 
