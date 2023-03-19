@@ -54,6 +54,13 @@ struct OpmodeConfigCommand
     uint32_t mode_id;
 };
 
+struct LedControlCommand
+{
+    bool is_active{false};
+    uint32_t color_id;
+    uint32_t mode_id;
+};
+
 enum class CliCommand
 {
     RECORD,
@@ -61,6 +68,7 @@ enum class CliCommand
     BLE_COMMAND,
     SYSTEM,
     OPMODE,
+    LED,
 };
 
 enum class CliStatus

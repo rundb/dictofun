@@ -6,6 +6,8 @@ target_include_directories(task_led PUBLIC ./)
 
 target_link_libraries(task_led PRIVATE
     nrf5_app_timer_v2
+    nrf5_nrfx_pwm
+    nrf5_drv_pwm
 )
 
 target_link_libraries(task_led PUBLIC 

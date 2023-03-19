@@ -295,3 +295,45 @@ static void cmd_opmode(nrf_cli_t const * p_cli, const size_t argc, char ** argv)
 }
 
 NRF_CLI_CMD_REGISTER(opmode, NULL, "Change operation mode", cmd_opmode);
+
+static led_control_callback _led_control_callback = NULL;
+void register_led_control_callback(led_control_callback callback)
+{
+    _led_control_callback = callback;
+}
+
+static void cmd_led(nrf_cli_t const * p_cli, const size_t argc, char ** argv)
+{
+    if (argc != 3)
+    {
+        nrf_cli_fprintf(p_cli, NRF_CLI_ERROR, "Wrong command syntax\n");
+        return;
+    }
+    
+    const int color_id = atoi(argv[1]);
+    if (color_id < 0 || color_id > 20)
+    {
+        nrf_cli_fprintf(p_cli, NRF_CLI_ERROR, "Wrong color ID\n");
+        return;
+    }
+    const int mode_id = atoi(argv[2]);
+    if (mode_id > 20)
+    {
+        nrf_cli_fprintf(p_cli, NRF_CLI_ERROR, "Wrong mode ID\n");
+        return;
+    }
+    nrf_cli_fprintf(p_cli, NRF_CLI_NORMAL, "Launching LED control command\n");
+    if (_led_control_callback != NULL)
+    {
+        _led_control_callback(color_id, mode_id);
+        nrf_cli_fprintf(p_cli, NRF_CLI_NORMAL, "LED #%d-%d is launched\n", color_id, mode_id);
+    }
+    else
+    {
+        nrf_cli_fprintf(p_cli,
+            NRF_CLI_WARNING,
+            "No LED control function registered. Command shall not be launched\n");
+    }
+}
+
+NRF_CLI_CMD_REGISTER(led, NULL, "Change operation mode", cmd_led);

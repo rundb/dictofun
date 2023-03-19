@@ -65,6 +65,7 @@ void launch_cli_command_memory_test(Context& context, const uint32_t test_id);
 void launch_cli_command_ble_operation(Context& context, const uint32_t command_id);
 void launch_cli_command_system(Context& context, const uint32_t command_id);
 void launch_cli_command_opmode(Context& context, const uint32_t mode_id, application::NvConfig& nvc);
+void launch_cli_command_led(Context& context, const uint32_t color_id, const uint32_t mode_id);
 
 void load_nvconfig(Context& context);
 application::Mode get_operation_mode();
