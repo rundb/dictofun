@@ -22,6 +22,7 @@ namespace target
 static QueueHandle_t _command_to_fs_queue{nullptr};
 static QueueHandle_t _status_from_fs_queue{nullptr};
 static QueueHandle_t _data_from_fs_queue{nullptr};
+static QueueHandle_t _keepalive_queue{nullptr};
 
 static constexpr uint32_t max_status_wait_time{400};
 static constexpr uint32_t max_short_data_wait_time{100};
@@ -41,6 +42,12 @@ void register_filesystem_queues(QueueHandle_t command_queue, QueueHandle_t statu
     _status_from_fs_queue = status_queue;
     _data_from_fs_queue = data_queue;
 }
+
+void register_keepalive_queue(QueueHandle_t keepalive_queue)
+{
+    _keepalive_queue = keepalive_queue;
+}
+
 
 result::Result get_file_list(uint32_t& files_count, file_id_type * files_list_ptr)
 {
@@ -84,6 +91,10 @@ result::Result get_file_list(uint32_t& files_count, file_id_type * files_list_pt
     
     files_count = data.size / sizeof(file_id_type);
     memcpy(files_list_ptr, data.data, data.size);
+
+    ble::KeepaliveQueueElement keepalive{ble::KeepaliveEvent::FILESYSTEM_EVENT};
+    xQueueSend(_keepalive_queue, &keepalive, 0);
+
     return result::Result::OK;
 }
 
@@ -128,6 +139,9 @@ result::Result get_file_info(file_id_type file_id, uint8_t * file_data, uint32_t
         NRF_LOG_ERROR("get file info: timed out recv data from mem");
         return result::Result::ERROR_GENERAL;
     }
+
+    ble::KeepaliveQueueElement keepalive{ble::KeepaliveEvent::FILESYSTEM_EVENT};
+    xQueueSend(_keepalive_queue, &keepalive, 0);
     
     file_data_size = data.size;
     memcpy(file_data, data.data, data.size);
@@ -165,6 +179,10 @@ result::Result open_file(const file_id_type file_id, uint32_t& file_size)
     {
     }
     NRF_LOG_DEBUG("opened file with size %d", response.data_size);
+
+    ble::KeepaliveQueueElement keepalive{ble::KeepaliveEvent::FILESYSTEM_EVENT};
+    xQueueSend(_keepalive_queue, &keepalive, 0);
+
     file_size = response.data_size;
     return result::Result::OK;
 }
@@ -198,6 +216,10 @@ result::Result close_file(const file_id_type file_id)
     else
     {
     }
+
+    ble::KeepaliveQueueElement keepalive{ble::KeepaliveEvent::FILESYSTEM_EVENT};
+    xQueueSend(_keepalive_queue, &keepalive, 0);
+
     NRF_LOG_DEBUG("closed file");
     return result::Result::OK;
 }
@@ -246,6 +268,9 @@ result::Result get_data(const file_id_type file_id, uint8_t * buffer, uint32_t& 
         NRF_LOG_ERROR("get file data: timed out recv data from mem");
         return result::Result::ERROR_GENERAL;
     }
+
+    ble::KeepaliveQueueElement keepalive{ble::KeepaliveEvent::FILESYSTEM_EVENT};
+    xQueueSend(_keepalive_queue, &keepalive, 0);
     
     actual_size = data.size;
 
@@ -295,6 +320,9 @@ result::Result fs_status(FileSystemInterface::FSStatus& status)
     {
         NRF_LOG_ERROR("fs stat: struct size mismatch")
     }
+
+    ble::KeepaliveQueueElement keepalive{ble::KeepaliveEvent::FILESYSTEM_EVENT};
+    xQueueSend(_keepalive_queue, &keepalive, 0);
 
     memcpy(&status, data.data, sizeof(status));
     return result::Result::OK;

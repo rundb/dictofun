@@ -72,6 +72,11 @@ void services::register_fs_communication_queues(QueueHandle_t commands_queue, Qu
     integration::target::register_filesystem_queues(commands_queue, status_queue, data_queue);
 }
 
+void services::register_keepalive_queue(QueueHandle_t keepalive_queue)
+{
+    integration::target::register_keepalive_queue(keepalive_queue);
+}
+
 bool services::is_fts_active()
 {
     return fts_service.is_file_transmission_running();

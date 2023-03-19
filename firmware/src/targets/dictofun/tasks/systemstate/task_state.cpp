@@ -256,6 +256,10 @@ void process_button_event(button::Event event, Context& context)
                 }
                 NRF_LOG_INFO("state: launched record start");
                 context.timestamps.last_record_start_timestamp = xTaskGetTickCount();
+
+                // Also at this point we should tell BLE to switch to access the real FS (not the simulated one). Operation result in this case doesn't really matter.
+                ble::CommandQueueElement cmd{ble::Command::CONNECT_FS};
+                xQueueSend(context.ble_commands_handle, reinterpret_cast<void *>(&cmd), 0);
             }
             else
             {
@@ -442,7 +446,7 @@ void process_timeouts(Context& context)
     }
     ble::KeepaliveQueueElement keepalive;
     const auto ble_keepalive_receive_result = xQueueReceive(
-        &context.ble_keepalive_handle,
+        context.ble_keepalive_handle,
         &keepalive,
         0
     );
