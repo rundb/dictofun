@@ -30,6 +30,9 @@ void register_system_control_callback(system_control_callback callback);
 typedef void (*opmode_config_callback)(uint32_t);
 void register_opmode_config_callback(opmode_config_callback callback);
 
+typedef void (*led_control_callback)(uint32_t, uint32_t);
+void register_led_control_callback(led_control_callback callback);
+
 #ifdef __cplusplus
 }
 #endif

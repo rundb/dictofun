@@ -107,6 +107,11 @@ void task_system_state(void * context_ptr)
                     launch_cli_command_opmode(*context, cli_command_buffer.args[0], _nvconfig);
                     break;
                 }
+                case logger::CliCommand::LED:
+                {
+                    launch_cli_command_led(*context, cli_command_buffer.args[0], cli_command_buffer.args[1]);
+                    break;
+                }
             }
         }
         const auto ble_request_receive_status = xQueueReceive(

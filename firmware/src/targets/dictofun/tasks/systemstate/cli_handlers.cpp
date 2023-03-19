@@ -149,4 +149,9 @@ void launch_cli_command_opmode(Context& context, const uint32_t mode_id, applica
     }
 }
 
+void launch_cli_command_led(Context& context, const uint32_t color_id, const uint32_t mode_id)
+{
+    NRF_LOG_INFO("setting led color %d to %d", color_id, mode_id);
+}
+
 }

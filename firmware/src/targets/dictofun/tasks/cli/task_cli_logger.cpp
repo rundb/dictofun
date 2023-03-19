@@ -59,6 +59,15 @@ void opmode_config_callback(uint32_t mode_id)
     _opmode_config_command.mode_id = mode_id;
 }
 
+static LedControlCommand _led_control_command;
+void led_control_callback(uint32_t color_id, uint32_t mode_id)
+{
+    if (_led_control_command.is_active) return;
+    _led_control_command.is_active = true;
+    _led_control_command.color_id = color_id;
+    _led_control_command.mode_id = mode_id;
+}
+
 uint32_t get_timestamp()
 {
     return xTaskGetTickCount();
@@ -80,6 +89,7 @@ void task_cli_logger(void * cli_context)
     register_ble_control_callback(ble_operation_callback);
     register_system_control_callback(system_operation_callback);
     register_opmode_config_callback(opmode_config_callback);
+    register_led_control_callback(led_control_callback);
     while (1)
     {
         vTaskDelay(5);
@@ -92,7 +102,7 @@ void task_cli_logger(void * cli_context)
             CliCommandQueueElement cmd{
                 CliCommand::RECORD, 
                 {
-                    static_cast<uint32_t>(_record_launch_command.duration), 
+                    static_cast<uint32_t>(_record_launch_command.duration),
                     static_cast<uint32_t>(_record_launch_command.should_be_stored)
                 }
             };
@@ -112,7 +122,10 @@ void task_cli_logger(void * cli_context)
             _memory_test_command.is_active = false;
             CliCommandQueueElement cmd{
                 CliCommand::MEMORY_TEST, 
-                { static_cast<uint32_t>(_memory_test_command.test_id), 0 }
+                { 
+                    _memory_test_command.test_id,
+                    0 
+                }
             };
             const auto send_result = xQueueSend(context.cli_commands_handle, &cmd, 0U);
             if (pdPASS != send_result)
@@ -130,7 +143,10 @@ void task_cli_logger(void * cli_context)
             _ble_operation_command.is_active = false;
             CliCommandQueueElement cmd{
                 CliCommand::BLE_COMMAND, 
-                { static_cast<uint32_t>(_ble_operation_command.command_id), 0 }
+                { 
+                    _ble_operation_command.command_id, 
+                    0 
+                }
             };
             const auto send_result = xQueueSend(context.cli_commands_handle, &cmd, 0U);
             if (pdPASS != send_result)
@@ -147,7 +163,10 @@ void task_cli_logger(void * cli_context)
             _system_command.is_active = false;
             CliCommandQueueElement cmd{
                 CliCommand::SYSTEM, 
-                { static_cast<uint32_t>(_system_command.command_id), 0 }
+                {
+                    _system_command.command_id, 
+                    0 
+                }
             };
             const auto send_result = xQueueSend(context.cli_commands_handle, &cmd, 0U);
             if (pdPASS != send_result)
@@ -164,7 +183,10 @@ void task_cli_logger(void * cli_context)
             _opmode_config_command.is_active = false;
             CliCommandQueueElement cmd{
                 CliCommand::OPMODE, 
-                { static_cast<uint32_t>(_opmode_config_command.mode_id), 0 }
+                { 
+                    _opmode_config_command.mode_id, 
+                    0 
+                }
             };
             const auto send_result = xQueueSend(context.cli_commands_handle, &cmd, 0U);
             if (pdPASS != send_result)
@@ -174,6 +196,26 @@ void task_cli_logger(void * cli_context)
             else
             {
                 NRF_LOG_INFO("cli: opmode config command has been queued");
+            }
+        }
+        if (_led_control_command.is_active)
+        {
+            _led_control_command.is_active = false;
+            CliCommandQueueElement cmd{
+                CliCommand::LED, 
+                { 
+                    _led_control_command.color_id, 
+                    _led_control_command.mode_id 
+                }
+            };
+            const auto send_result = xQueueSend(context.cli_commands_handle, &cmd, 0U);
+            if (pdPASS != send_result)
+            {
+                NRF_LOG_WARNING("cli: failed to launch led command");
+            }
+            else
+            {
+                NRF_LOG_INFO("cli: led control command has been queued");
             }
         }
     }
