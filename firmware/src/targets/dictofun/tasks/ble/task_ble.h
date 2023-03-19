@@ -18,6 +18,7 @@ struct Context
 {
     QueueHandle_t command_queue{nullptr};
     QueueHandle_t requests_queue{nullptr};
+    QueueHandle_t keepalive_queue{nullptr};
     QueueHandle_t command_to_mem_queue{nullptr};
     QueueHandle_t status_from_mem_queue{nullptr};
     QueueHandle_t data_from_mem_queue{nullptr};
@@ -46,6 +47,18 @@ struct RequestQueueElement
     Request request;
     static constexpr size_t max_args_count{1};
     uint32_t args[max_args_count];
+};
+
+enum class KeepaliveEvent
+{
+    CONNECTED,
+    FILESYSTEM_EVENT,
+    DISCONNECTED,
+};
+
+struct KeepaliveQueueElement
+{
+    KeepaliveEvent event;
 };
 
 enum class CommandToMemory
