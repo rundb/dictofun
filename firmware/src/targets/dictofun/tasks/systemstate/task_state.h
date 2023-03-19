@@ -30,6 +30,7 @@ struct Context
 
     QueueHandle_t ble_commands_handle{nullptr};
     QueueHandle_t ble_requests_handle{nullptr};
+    QueueHandle_t ble_keepalive_handle{nullptr};
 
     QueueHandle_t led_commands_handle{nullptr};
 
@@ -40,6 +41,21 @@ struct Context
     bool is_record_active{false};
     bool _should_record_be_stored{false};
     bool _is_ble_system_active{false};
+
+    struct Timestamps
+    {
+        uint32_t last_record_start_timestamp{timestamp_uninitialized_value};
+        uint32_t last_record_end_timestamp{0};
+        uint32_t last_ble_activity_timestamp{timestamp_uninitialized_value};
+        uint32_t ble_disconnect_event_timestamp{timestamp_uninitialized_value};
+
+        bool has_start_timestamp_been_updated() { return last_record_start_timestamp != timestamp_uninitialized_value; }
+        bool has_disconnect_timestamp_been_updated() { return ble_disconnect_event_timestamp != timestamp_uninitialized_value; }
+        bool has_ble_timestamp_been_updated() { return last_ble_activity_timestamp != timestamp_uninitialized_value; }
+    private:
+        static constexpr uint32_t timestamp_uninitialized_value{0xaf1bfb98};
+    };
+    Timestamps timestamps;
 };
 
 void record_end_callback(TimerHandle_t timer);
@@ -56,6 +72,7 @@ bool is_record_start_by_cli_allowed(Context& context);
 result::Result launch_record_timer(const TickType_t record_duration, Context& context);
 void shutdown_ldo();
 void configure_power_latch();
+void process_timeouts(Context& context);
 result::Result enable_ble_subsystem(Context& context);
 
 result::Result request_record_creation(const Context& context);

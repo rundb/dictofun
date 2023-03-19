@@ -61,7 +61,8 @@ application::QueueDescriptor<memory::CommandQueueElement, 1>         memory_comm
 application::QueueDescriptor<memory::StatusQueueElement, 1>          memory_status_queue; 
 
 application::QueueDescriptor<ble::CommandQueueElement, 1>            ble_commands_queue;
-application::QueueDescriptor<ble::RequestQueueElement, 1>            ble_requests_queue; 
+application::QueueDescriptor<ble::RequestQueueElement, 1>            ble_requests_queue;
+application::QueueDescriptor<ble::KeepaliveQueueElement, 1>          ble_keepalive_queue;
 
 application::QueueDescriptor<ble::CommandToMemoryQueueElement, 1>    ble_to_mem_commands_queue;
 application::QueueDescriptor<ble::StatusFromMemoryQueueElement, 1>   ble_from_mem_status_queue;
@@ -179,6 +180,12 @@ int main()
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
+    const auto ble_keepalive_queue_init_result = ble_keepalive_queue.init();
+    if (result::Result::OK != ble_keepalive_queue_init_result)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
     const auto ble_to_mem_commands_queue_init_result = ble_to_mem_commands_queue.init();
     if (result::Result::OK != ble_to_mem_commands_queue_init_result)
     {
@@ -270,6 +277,7 @@ int main()
     systemstate_context.memory_status_handle = memory_status_queue.handle;
     systemstate_context.ble_commands_handle = ble_commands_queue.handle;
     systemstate_context.ble_requests_handle = ble_requests_queue.handle;
+    systemstate_context.ble_keepalive_handle = ble_keepalive_queue.handle;
     systemstate_context.led_commands_handle = led_commands_queue.handle;
     systemstate_context.button_events_handle = button_event_queue.handle;
 
@@ -302,6 +310,7 @@ int main()
 
     ble_context.command_queue = ble_commands_queue.handle;
     ble_context.requests_queue = ble_requests_queue.handle;
+    ble_context.keepalive_queue = ble_keepalive_queue.handle;
     ble_context.command_to_mem_queue = ble_to_mem_commands_queue.handle;
     ble_context.status_from_mem_queue = ble_from_mem_status_queue.handle;
     ble_context.data_from_mem_queue = ble_from_mem_data_queue.handle;

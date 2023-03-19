@@ -138,6 +138,8 @@ void task_system_state(void * context_ptr)
             is_operation_mode_defined = true;
             load_nvconfig(*context);
         }
+
+        process_timeouts(*context);
     }
 }   
 
@@ -253,6 +255,7 @@ void process_button_event(button::Event event, Context& context)
                     return;
                 }
                 NRF_LOG_INFO("state: launched record start");
+                context.timestamps.last_record_start_timestamp = xTaskGetTickCount();
             }
             else
             {
@@ -415,6 +418,94 @@ result::Result launch_record_timer(const TickType_t record_duration, Context& co
 
     context.is_record_active = true;   
     return result::Result::OK;
+}
+
+void process_timeouts(Context& context)
+{
+    const auto operation_mode = get_operation_mode();
+    if (operation_mode == decltype(operation_mode)::DEVELOPMENT)
+    {
+        return;
+    }
+
+    static constexpr uint32_t norecord_launch_timeout{30000};
+    static constexpr uint32_t after_record_timeout{30000};
+    static constexpr uint32_t ble_keepalive_timeout{30000};
+    static constexpr uint32_t ble_after_disconnect_timeout{5000};
+    // We should unconditionally shutdown after 10 minutes of operation
+    static constexpr uint32_t max_operation_duration{10*60*1000};
+
+    // First update all relevant timeouts
+    if (context.is_record_active)
+    {
+        context.timestamps.last_record_end_timestamp = xTaskGetTickCount();
+    }
+    ble::KeepaliveQueueElement keepalive;
+    const auto ble_keepalive_receive_result = xQueueReceive(
+        &context.ble_keepalive_handle,
+        &keepalive,
+        0
+    );
+    if (pdTRUE == ble_keepalive_receive_result)
+    {
+        const auto event = keepalive.event;
+        using event_type = decltype(event);
+        if (event == event_type::CONNECTED || event == event_type::FILESYSTEM_EVENT)
+        {
+            context.timestamps.last_ble_activity_timestamp = xTaskGetTickCount();
+        }
+        else if (event == event_type::DISCONNECTED)
+        {
+            context.timestamps.ble_disconnect_event_timestamp = xTaskGetTickCount();
+        }
+    }
+
+    // At this stage depending on record state and presence of timestamps make decision 
+    // whether we should shutdown
+    const auto tick = xTaskGetTickCount();
+    if (!context.timestamps.has_start_timestamp_been_updated())
+    {
+        // Record has never been launched.
+        if (tick > norecord_launch_timeout)
+        {
+            shutdown_ldo();
+        }
+        return;
+    }
+    if (context.is_record_active)
+    {
+        return;
+    }
+    // At this point recording is over.
+    const auto time_since_record_end = tick - context.timestamps.last_record_end_timestamp;
+    if (!context.timestamps.has_ble_timestamp_been_updated() && time_since_record_end > after_record_timeout)
+    {
+        shutdown_ldo();
+    }
+
+    if (context.timestamps.has_ble_timestamp_been_updated())
+    {
+        if (context.timestamps.has_disconnect_timestamp_been_updated())
+        {
+            const auto time_since_disconnect = tick - context.timestamps.ble_disconnect_event_timestamp;
+            if (time_since_disconnect > ble_after_disconnect_timeout)
+            {
+                shutdown_ldo();
+            }
+        }
+        else
+        {
+            const auto time_since_last_keepalive = tick - context.timestamps.last_ble_activity_timestamp;
+            if (time_since_last_keepalive > ble_keepalive_timeout)
+            {
+                shutdown_ldo();
+            }
+        }
+    }
+    if (tick > max_operation_duration)
+    {
+        shutdown_ldo();
+    }
 }
 
 }
