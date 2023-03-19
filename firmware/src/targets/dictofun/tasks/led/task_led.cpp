@@ -96,7 +96,6 @@ void task_led(void * context_ptr)
     {
         NRF_LOG_WARNING("led: error at PWM init call (%d)", nrfx_init_result);
     }
-    // TODO: add result check
     
     nrf_pwm_values_individual_t seq_values{0, 0, 0, 0};
     
