@@ -311,7 +311,7 @@ static void cmd_led(nrf_cli_t const * p_cli, const size_t argc, char ** argv)
     }
     
     const int color_id = atoi(argv[1]);
-    if (color_id < 1 || color_id > 20)
+    if (color_id < 0 || color_id > 20)
     {
         nrf_cli_fprintf(p_cli, NRF_CLI_ERROR, "Wrong color ID\n");
         return;
