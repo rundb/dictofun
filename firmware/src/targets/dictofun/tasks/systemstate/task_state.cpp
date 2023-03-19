@@ -59,6 +59,16 @@ void task_system_state(void * context_ptr)
     else
     {
         NRF_LOG_INFO("state: operation mode %s", _configuration.mode == application::DEVELOPMENT ? "DEV" : _configuration.mode == application::ENGINEERING ? "ENG" : "FIELD");
+        if (application::DEVELOPMENT == _configuration.mode)
+        {
+            led::CommandQueueElement led_command{led::Color::WHITE, led::State::SLOW_GLOW};
+            xQueueSend(context->led_commands_handle, reinterpret_cast<void *>(&led_command), 0);
+        }
+        else
+        {
+            led::CommandQueueElement led_command{led::Color::GREEN, led::State::SLOW_GLOW};
+            xQueueSend(context->led_commands_handle, reinterpret_cast<void *>(&led_command), 0);
+        }
     }
 
     while(1)
@@ -262,6 +272,10 @@ void process_button_event(button::Event event, Context& context)
                 NRF_LOG_INFO("state: launched record start");
                 context.timestamps.last_record_start_timestamp = xTaskGetTickCount();
 
+                // This is the point where LED indication should be changed
+                led::CommandQueueElement led_command{led::Color::RED, led::State::FAST_GLOW};
+                xQueueSend(context.led_commands_handle, reinterpret_cast<void *>(&led_command), 0);
+
                 // Also at this point we should tell BLE to switch to access the real FS (not the simulated one). Operation result in this case doesn't really matter.
                 ble::CommandQueueElement cmd{ble::Command::CONNECT_FS};
                 xQueueSend(context.ble_commands_handle, reinterpret_cast<void *>(&cmd), 0);
@@ -290,6 +304,9 @@ void process_button_event(button::Event event, Context& context)
                 {
                     NRF_LOG_ERROR("state: failed to request owner switch to BLE.");
                 }
+
+                led::CommandQueueElement led_command{led::Color::DARK_BLUE, led::State::SLOW_GLOW};
+                xQueueSend(context.led_commands_handle, reinterpret_cast<void *>(&led_command), 0);
 
                 // Enable BLE subsystem, if it's not enabled yet
                 const auto ble_enable_result = enable_ble_subsystem(context);
@@ -377,6 +394,7 @@ result::Result enable_ble_subsystem(Context& context)
         }
         context._is_ble_system_active = true;
     }
+
     return result::Result::OK;
 }
 
@@ -459,6 +477,11 @@ void process_timeouts(Context& context)
     {
         const auto event = keepalive.event;
         using event_type = decltype(event);
+        if (event == event_type::CONNECTED)
+        {
+            led::CommandQueueElement led_command{led::Color::DARK_BLUE, led::State::FAST_GLOW};
+            xQueueSend(context.led_commands_handle, reinterpret_cast<void *>(&led_command), 0);
+        }
         if (event == event_type::CONNECTED || event == event_type::FILESYSTEM_EVENT)
         {
             context.timestamps.last_ble_activity_timestamp = xTaskGetTickCount();
@@ -466,6 +489,8 @@ void process_timeouts(Context& context)
         else if (event == event_type::DISCONNECTED)
         {
             context.timestamps.ble_disconnect_event_timestamp = xTaskGetTickCount();
+            led::CommandQueueElement led_command{led::Color::PURPLE, led::State::SLOW_GLOW};
+            xQueueSend(context.led_commands_handle, reinterpret_cast<void *>(&led_command), 0);
         }
     }
 
