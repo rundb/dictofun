@@ -104,6 +104,7 @@ void task_ble(void * context_ptr)
                         context.command_to_mem_queue,
                         context.status_from_mem_queue,
                         context.data_from_mem_queue);
+                    ble_system.register_keepalive_queue(context.keepalive_queue);
                     ble_system.connect_fts_to_target_fs();
                     break;
                 }
@@ -125,6 +126,33 @@ void task_ble(void * context_ptr)
         }
 
         ble_system.process();
+        // process keepalive packets
+        if (ble_system.has_connect_happened())
+        {
+            KeepaliveQueueElement evt{KeepaliveEvent::CONNECTED};
+            const auto keepalive_send_result = xQueueSend(
+                context.keepalive_queue,
+                reinterpret_cast<void *>(&evt),
+                0
+            );
+            if (pdTRUE != keepalive_send_result)
+            {
+                NRF_LOG_WARNING("keepalive on-connect send has failed");
+            }
+        }
+        if (ble_system.has_disconnect_happened())
+        {
+            KeepaliveQueueElement evt{KeepaliveEvent::DISCONNECTED};
+            const auto keepalive_send_result = xQueueSend(
+                context.keepalive_queue,
+                reinterpret_cast<void *>(&evt),
+                0
+            );
+            if (pdTRUE != keepalive_send_result)
+            {
+                NRF_LOG_WARNING("keepalive on-disconnect send has failed");
+            }
+        }
     }
 }
 

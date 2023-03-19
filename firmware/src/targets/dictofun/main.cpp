@@ -60,7 +60,7 @@ application::QueueDescriptor<audio::CodecOutputType, 4>              audio_data_
 application::QueueDescriptor<memory::CommandQueueElement, 1>         memory_commands_queue;
 application::QueueDescriptor<memory::StatusQueueElement, 1>          memory_status_queue; 
 
-application::QueueDescriptor<ble::CommandQueueElement, 1>            ble_commands_queue;
+application::QueueDescriptor<ble::CommandQueueElement, 2>            ble_commands_queue;
 application::QueueDescriptor<ble::RequestQueueElement, 1>            ble_requests_queue;
 application::QueueDescriptor<ble::KeepaliveQueueElement, 1>          ble_keepalive_queue;
 

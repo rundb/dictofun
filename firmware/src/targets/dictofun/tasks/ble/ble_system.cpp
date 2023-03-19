@@ -64,6 +64,7 @@ constexpr uint32_t FIRST_CONN_PARAMS_UPDATE_DELAY{20000};
 constexpr uint32_t NEXT_CONN_PARAMS_UPDATE_DELAY{5000};
 constexpr uint32_t MAX_CONN_PARAMS_UPDATE_COUNT{3};
 
+BleSystem * BleSystem::_instance{nullptr};
 
 result::Result BleSystem::configure(ble_lbs_led_write_handler_t led_write_handler)
 {
@@ -157,12 +158,14 @@ void BleSystem::ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             {
                 NRF_LOG_ERROR("ble: evt conn error (%s)", helpers::decode_error(err_code));
             }
+            BleSystem::instance()._has_connect_happened = true;
             break;
 
         case BLE_GAP_EVT_DISCONNECTED:
             NRF_LOG_INFO("Disconnected");
             //bsp_board_led_off(CONNECTED_LED);
             m_conn_handle = BLE_CONN_HANDLE_INVALID;
+            BleSystem::instance()._has_disconnect_happened = true;
             break;
 
         case BLE_GAP_EVT_SEC_PARAMS_REQUEST:
@@ -425,7 +428,7 @@ result::Result BleSystem::init_advertising()
     static constexpr size_t MAX_UUIDS_COUNT{2U};
     ble_uuid_t adv_uuids[MAX_UUIDS_COUNT]{0};
     
-    const auto uuids_count = get_services_uuids(adv_uuids, MAX_UUIDS_COUNT); 
+    [[maybe_unused]] const auto uuids_count = get_services_uuids(adv_uuids, MAX_UUIDS_COUNT); 
 
     init.advdata.name_type               = BLE_ADVDATA_FULL_NAME;
     init.advdata.include_appearance      = true;
@@ -517,6 +520,11 @@ void BleSystem::register_fs_communication_queues(
     QueueHandle_t data_queue)
 {
     services::register_fs_communication_queues(commands_queue, status_queue, data_queue);
+}
+
+void BleSystem::register_keepalive_queue(QueueHandle_t keepalive_queue)
+{
+    services::register_keepalive_queue(keepalive_queue);
 }
 
 bool BleSystem::is_fts_active()

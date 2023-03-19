@@ -22,7 +22,7 @@ namespace ble
 class BleSystem
 {
 public:
-    BleSystem() {}
+    explicit BleSystem() { _instance = this; }
     BleSystem(const BleSystem&) = delete;
     BleSystem(BleSystem&&) = delete;
     BleSystem& operator=(const BleSystem&) = delete;
@@ -37,8 +37,13 @@ public:
     void process();
     void connect_fts_to_target_fs();
     void register_fs_communication_queues(QueueHandle_t commands_queue, QueueHandle_t status_queue, QueueHandle_t data_queue);
+    void register_keepalive_queue(QueueHandle_t keepalive_queue);
     bool is_fts_active();
+    bool has_connect_happened() { const auto ret = _has_connect_happened; _has_connect_happened = false; return ret;};
+    bool has_disconnect_happened() { const auto ret = _has_disconnect_happened; _has_disconnect_happened = false; return ret;};
 private:
+    static BleSystem * _instance;
+    static BleSystem& instance() { return *_instance;}
     result::Result init_sdh();
     result::Result init_gap();
     result::Result init_gatt();
@@ -53,6 +58,9 @@ private:
     static void bonded_client_add(pm_evt_t const * p_evt);
     static void bonded_client_remove_all();
     static void on_bonded_peer_reconnection_lvl_notify(pm_evt_t const * p_evt);
+
+    bool _has_connect_happened{false};
+    bool _has_disconnect_happened{false};
 };
 
 }
