@@ -17,10 +17,12 @@ namespace led
 
 enum class State
 {
-    OFF,
-    SLOW_GLOW,
-    FAST_GLOW,
-    ON
+    OFF = 0,
+    SLOW_GLOW = 1,
+    FAST_GLOW = 2,
+    ON = 3,
+
+    COUNT,
 };
 
 enum class Color
@@ -32,6 +34,7 @@ enum class Color
     YELLOW = 4,
     BRIGHT_BLUE = 5,
     WHITE = 6,
+    COUNT 
 };
 
 constexpr Color user_color{Color::GREEN};

@@ -10,6 +10,7 @@
 #include "task_audio.h"
 #include "task_ble.h"
 #include "task_audio_tester.h"
+#include "task_led.h"
 
 #include "nrf_log.h"
 
@@ -152,6 +153,28 @@ void launch_cli_command_opmode(Context& context, const uint32_t mode_id, applica
 void launch_cli_command_led(Context& context, const uint32_t color_id, const uint32_t mode_id)
 {
     NRF_LOG_INFO("setting led color %d to %d", color_id, mode_id);
+    if (color_id >= static_cast<uint32_t>(led::Color::COUNT))
+    {
+        NRF_LOG_ERROR("state: wrong color id (%d >= %d)", color_id, led::Color::COUNT);
+        return;
+    }
+    if (mode_id >= static_cast<uint32_t>(led::State::COUNT))
+    {
+        NRF_LOG_ERROR("state: wrong LED mode id (%d >= %d)", mode_id, led::State::COUNT);
+        return;
+    }
+    const auto color = static_cast<led::Color>(color_id);
+    const auto state = static_cast<led::State>(mode_id);
+    led::CommandQueueElement cmd{color, state};
+    const auto led_command_send_status = xQueueSend(
+        context.led_commands_handle,
+        reinterpret_cast<void *>(&cmd),
+        0
+    );
+    if (pdTRUE != led_command_send_status)
+    {
+        NRF_LOG_ERROR("state: failed to send message to LED");
+    }
 }
 
 }

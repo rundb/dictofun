@@ -92,8 +92,8 @@ void task_cli_logger(void * cli_context)
     register_led_control_callback(led_control_callback);
     while (1)
     {
-        vTaskDelay(5);
         NRF_LOG_PROCESS();
+        vTaskDelay(5);
         cli_process();
         if (_record_launch_command.is_active)
         {
