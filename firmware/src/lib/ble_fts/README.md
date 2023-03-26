@@ -115,6 +115,8 @@ Assuming that file system on device contains N files, data consists of following
 
 (N+1). Last file identifier
 
+If list size extends the available to char size, data can be sent in several portions.
+
 #### File info
 
 File info is a JSON string containing descriptor of a file. Format is straight forward: first 2 bytes contain the JSON size (little endian), rest is a JSON containing meta information about the target file.

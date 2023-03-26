@@ -24,9 +24,9 @@ static QueueHandle_t _status_from_fs_queue{nullptr};
 static QueueHandle_t _data_from_fs_queue{nullptr};
 static QueueHandle_t _keepalive_queue{nullptr};
 
-static constexpr uint32_t max_status_wait_time{400};
+static constexpr uint32_t max_status_wait_time{2000};
 static constexpr uint32_t max_short_data_wait_time{100};
-static constexpr uint32_t max_long_data_wait_time{400};
+static constexpr uint32_t max_long_data_wait_time{1000};
 
 // this queue element is allocated statically, as it's rather huge (~260 bytes) and it's better to avoid putting it on stack
 ble::FileDataFromMemoryQueueElement data_from_memory_queue_element;
