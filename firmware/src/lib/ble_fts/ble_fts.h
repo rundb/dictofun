@@ -88,6 +88,7 @@ private:
     static constexpr uint32_t file_data_char_uuid{0x1005};
     static constexpr uint32_t fs_status_char_uuid{0x1006};
     static constexpr uint32_t status_char_uuid{0x1007};
+    static constexpr uint32_t pairing_char_uuid{0x10FE};
 
     static constexpr uint32_t cp_char_max_len{9};
     static constexpr uint32_t file_list_char_max_len{32};
@@ -95,6 +96,7 @@ private:
     static constexpr uint32_t file_data_char_max_len{200};
     static constexpr uint32_t fs_status_char_max_len{14};
     static constexpr uint32_t status_char_max_len{9};
+    static constexpr uint32_t pairing_char_max_len{1};
 
     // TODO: separate BLE commands from internal states
     enum class ControlPointOpcode: uint8_t
@@ -136,6 +138,7 @@ private:
         ble_gatts_char_handles_t file_data;
         ble_gatts_char_handles_t fs_status;
         ble_gatts_char_handles_t status;
+        ble_gatts_char_handles_t pairer;
 
         uint16_t conn_handle;
         bool is_notification_enabled; 
@@ -164,7 +167,8 @@ private:
         uint32_t uuid, 
         uint32_t max_len, 
         ble_gatts_char_handles_t * handle, 
-        CharacteristicInUseType char_type);
+        CharacteristicInUseType char_type,
+        bool should_be_secured = false);
 
     void on_write(ble_evt_t const * p_ble_evt, ClientContext& client_context);
     void on_connect(ble_evt_t const * p_ble_evt, ClientContext& client_context);

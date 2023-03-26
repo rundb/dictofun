@@ -34,6 +34,9 @@ public:
 
     result::Result start();
     result::Result stop();
+
+    result::Result reset_pairing();
+
     void process();
     void connect_fts_to_target_fs();
     void register_fs_communication_queues(QueueHandle_t commands_queue, QueueHandle_t status_queue, QueueHandle_t data_queue);
@@ -41,6 +44,7 @@ public:
     bool is_fts_active();
     bool has_connect_happened() { const auto ret = _has_connect_happened; _has_connect_happened = false; return ret;};
     bool has_disconnect_happened() { const auto ret = _has_disconnect_happened; _has_disconnect_happened = false; return ret;};
+
 private:
     static BleSystem * _instance;
     static BleSystem& instance() { return *_instance;}
@@ -61,6 +65,10 @@ private:
 
     bool _has_connect_happened{false};
     bool _has_disconnect_happened{false};
+
+    bool _has_pairing_reset_been_requested{false};
+
+    static constexpr uint8_t default_peer_id{0};
 };
 
 }

@@ -166,6 +166,16 @@ void BleSystem::ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             //bsp_board_led_off(CONNECTED_LED);
             m_conn_handle = BLE_CONN_HANDLE_INVALID;
             BleSystem::instance()._has_disconnect_happened = true;
+            if (BleSystem::instance()._has_pairing_reset_been_requested)
+            {
+                const auto peer_delete_result = pm_peer_delete(BleSystem::default_peer_id);
+                if (NRF_SUCCESS != peer_delete_result)
+                {
+                    NRF_LOG_ERROR("ble: peer delete has failed (%d)", peer_delete_result);
+                }
+                BleSystem::instance()._has_pairing_reset_been_requested = false;
+            }
+            BleSystem::instance()._has_connect_happened = false;
             break;
 
         case BLE_GAP_EVT_SEC_PARAMS_REQUEST:
@@ -530,6 +540,29 @@ void BleSystem::register_keepalive_queue(QueueHandle_t keepalive_queue)
 bool BleSystem::is_fts_active()
 {
     return services::is_fts_active();
+}
+
+result::Result BleSystem::reset_pairing()
+{
+    // If connection is not established, peer can be removed straight away
+    if (!_has_connect_happened || _has_disconnect_happened)
+    {
+        const auto peer_delete_result = pm_peer_delete(BleSystem::default_peer_id);
+        if (NRF_SUCCESS != peer_delete_result)
+        {
+            NRF_LOG_ERROR("ble: peer delete has failed (%d)", peer_delete_result);
+        }
+        else
+        {
+            NRF_LOG_INFO("ble: peer delete succeeded");
+        }
+    }
+    else
+    {
+        // If device is connected, one has to wait until disconnect.
+        _has_pairing_reset_been_requested = true;
+    }
+    return result::Result::OK;
 }
 
 }

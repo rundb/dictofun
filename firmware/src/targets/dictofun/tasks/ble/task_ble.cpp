@@ -95,7 +95,15 @@ void task_ble(void * context_ptr)
                 }
                 case Command::RESET_PAIRING:
                 {
-                    NRF_LOG_ERROR("task ble: pairing reset is not yet implemented");
+                    const auto pairing_reset_result = ble_system.reset_pairing();
+                    if (result::Result::OK != pairing_reset_result)
+                    {
+                        NRF_LOG_ERROR("ble: failed to reset pairing");
+                    }
+                    else
+                    {
+                        NRF_LOG_INFO("task ble: pairing reset command succeeded");
+                    }
                     break;
                 }
                 case Command::CONNECT_FS:
