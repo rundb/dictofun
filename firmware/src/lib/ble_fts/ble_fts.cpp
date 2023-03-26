@@ -26,7 +26,7 @@ blcm_link_ctx_storage_t FtsService::_link_ctx_storage =
 
 FtsService::Context FtsService::_context {
     0, 0, 
-    {0,0,0,0,}, {0,0,0,0,}, {0,0,0,0,}, {0,0,0,0,}, {0,0,0,0,}, {0,0,0,0,},
+    {0,0,0,0,}, {0,0,0,0,}, {0,0,0,0,}, {0,0,0,0,}, {0,0,0,0,}, {0,0,0,0,}, {0,0,0,0,},
     0, false,
     &_link_ctx_storage
 };
@@ -60,7 +60,9 @@ result::Result FtsService::add_characteristic(
     const uint32_t uuid, 
     const uint32_t max_len, 
     ble_gatts_char_handles_t * handle,
-    CharacteristicInUseType char_type)
+    CharacteristicInUseType char_type,
+    bool should_be_secured
+    )
 {
     ble_gatts_char_md_t char_md;
     ble_gatts_attr_t    attr_char_value;
@@ -83,8 +85,16 @@ result::Result FtsService::add_characteristic(
 
     memset(&attr_md, 0, sizeof(attr_md));
 
-    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&attr_md.read_perm);
-    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&attr_md.write_perm);
+    if (should_be_secured)
+    {
+        BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&attr_md.read_perm);
+        BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&attr_md.write_perm);
+    }
+    else
+    {
+        BLE_GAP_CONN_SEC_MODE_SET_OPEN(&attr_md.read_perm);
+        BLE_GAP_CONN_SEC_MODE_SET_OPEN(&attr_md.write_perm);
+    }
 
     attr_md.vloc    = BLE_GATTS_VLOC_STACK;
     attr_md.rd_auth = 0;
@@ -205,6 +215,20 @@ result::Result FtsService::init()
     if (result::Result::OK != status_char_add_result)
     {
         return status_char_add_result;
+    }
+
+    const auto pairing_char_add_result = add_characteristic(
+        BLE_UUID_TYPE_BLE,
+        pairing_char_uuid, 
+        pairing_char_max_len,
+        &_context.pairer,
+        CharacteristicInUseType::WRITE,
+        true
+    );
+
+    if (result::Result::OK != pairing_char_add_result)
+    {
+        return pairing_char_add_result;
     }
 
     _context.conn_handle = BLE_CONN_HANDLE_INVALID;
