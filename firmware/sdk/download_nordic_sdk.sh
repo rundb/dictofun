@@ -9,6 +9,9 @@ unzip $FILE_NAME -d ./
 
 rm $FILE_NAME
 
+# Step 2: apply patches, if any
+
+patch "./nRF5_SDK_17.1.0_ddde560/components/softdevice/common/nrf_sdh_freertos.c" < "sdh_stack_size_increase.patch"
 
 # # Step 2: install uECC (for the bootloader, uncomment when this functionality is enabled)
 
