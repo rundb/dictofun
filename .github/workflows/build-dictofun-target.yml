@@ -13,3 +13,16 @@ jobs:
     runs-on: [self-hosted, linux]
     steps:
       - run: cd firmware && docker run -v $(pwd):/code  dictofun_builder /bin/bash -c "mkdir -p /code/build && cd /code/build && rm -rf ./* && ../ci/build_dictofun.sh"
+  store-artefacts:
+    needs: run-cmake-target-build
+    runs-on: [self-hosted, linux]
+    steps:
+    - name: Generate release path
+      id: generate_release_path
+      run: echo "release_path=$(date +"%Y-%m-%d_%H-%M-%S")_$(git rev-parse --abbrev-ref HEAD | tr / _)" >> $GITHUB_OUTPUT
+    - name: Create output folder
+      run: mkdir -p "/home/pi/artefacts/${{ steps.generate_release_path.outputs.release_path }}"
+    - name: Copy artefacts
+      run: cp firmware/build/src/targets/dictofun/Dictofun.hex /home/pi/artefacts/${{ steps.generate_release_path.outputs.release_path }}
+    # - name: Send artefacts' name to the next workflow
+    #   run: 

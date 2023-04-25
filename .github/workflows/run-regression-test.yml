@@ -1,0 +1,14 @@
+name: Run regression tests
+run-name: run regression test cases
+on:
+  workflow_run:
+    workflows: ["Build target"]
+    types:
+      - completed
+
+jobs:
+  skip:
+    runs-on: [self-hosted, linux]
+    steps:
+    - name: Do nothing
+      run: echo "do nothing"
