@@ -23,6 +23,6 @@ jobs:
     - name: Create output folder
       run: mkdir -p "/home/pi/artefacts/${{ steps.generate_release_path.outputs.release_path }}"
     - name: Copy artefacts
-      run: cp firmware/build/src/targets/dictofun/Dictofun.hex /home/pi/artefacts/${{ steps.generate_release_path.outputs.release_path }}
+      run: cp firmware/build/src/targets/dictofun/*.hex /home/pi/artefacts/${{ steps.generate_release_path.outputs.release_path }}
     # - name: Send artefacts' name to the next workflow
     #   run: 
