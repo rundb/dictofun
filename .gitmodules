@@ -1,3 +1,3 @@
 [submodule "firmware/src/lib/third_party/littlefs"]
 	path = firmware/src/lib/third_party/littlefs
-	url = git@github.com:littlefs-project/littlefs.git
+	url = https://github.com/littlefs-project/littlefs.git

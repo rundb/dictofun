@@ -5,15 +5,18 @@ on:
     workflows: ["Build target"]
     types:
       - completed
+  workflow_dispatch:
+  
 
 jobs:
   flash-application:
     runs-on: [self-hosted, linux]
     steps:
-    - name: Hello
-      run: echo "Hello"
     - name: Download application hex
-      uses: actions/download-artifact@v3
+      uses: dawidd6/action-download-artifact@v2
       with:
-        path: bin
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        workflow: build-dictofun-target.yml
         name: application-hex
+    - name: Flash application hex file to the dut
+      run: nrfjprog --reset --program ./Dictofun.hex --sectorerase --family NRF52 --verify
