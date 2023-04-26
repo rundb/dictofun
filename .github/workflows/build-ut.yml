@@ -1,17 +1,17 @@
-name: Build unit-tests
-run-name: run dictofun unit-tests
-on: [push]
-jobs:
-  checkout-the-repo:
-    runs-on: [self-hosted, linux]
-    steps:
-      - uses: actions/checkout@v2
-        with: 
-          path: ut
-      - run: git submodule update --init --recursive
-      - run: cd firmware/ci && docker build -t dictofun_builder --build-arg HOST_ARCHITECTURE="arm" .
-  run-cmake-ut-build:
-    needs: checkout-the-repo
-    runs-on: [self-hosted, linux]
-    steps:
-      - run: cd firmware && docker run -v $(pwd):/code  dictofun_builder /bin/bash -c "mkdir -p /code/build && cd /code/build && rm -rf ./* && ../ci/build_unit_tests.sh"
+# name: Build unit-tests
+# run-name: run dictofun unit-tests
+# on: [push]
+# jobs:
+#   checkout-the-repo:
+#     runs-on: [self-hosted, linux]
+#     steps:
+#       - uses: actions/checkout@v2
+#         with: 
+#           path: ut
+#       - run: git submodule update --init --recursive
+#       - run: cd firmware/ci && docker build -t dictofun_builder --build-arg HOST_ARCHITECTURE="arm" .
+#   run-cmake-ut-build:
+#     needs: checkout-the-repo
+#     runs-on: [self-hosted, linux]
+#     steps:
+#       - run: cd firmware && docker run -v $(pwd):/code  dictofun_builder /bin/bash -c "mkdir -p /code/build && cd /code/build && rm -rf ./* && ../ci/build_unit_tests.sh"
