@@ -3,13 +3,13 @@ run-name: run dictofun unit-tests
 on: [push]
 jobs:
   checkout-the-repo:
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu #[self-hosted, linux]
     steps:
       - uses: actions/checkout@v2
         with: 
           path: ut
       - run: git submodule update --init --recursive
-      - run: cd firmware/ci && docker build -t dictofun_builder --build-arg HOST_ARCHITECTURE="arm" .
+      - run: cd firmware/ci && docker build -t dictofun_builder --build-arg HOST_ARCHITECTURE="x86" .
   run-cmake-ut-build:
     needs: checkout-the-repo
     runs-on: [self-hosted, linux]

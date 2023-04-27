@@ -7,8 +7,13 @@ on:
       - completed
 
 jobs:
-  skip:
+  flash-application:
     runs-on: [self-hosted, linux]
     steps:
-    - name: Do nothing
-      run: echo "do nothing"
+    - name: Hello
+      run: echo "Hello"
+    - name: Download application hex
+      uses: actions/download-artifact@v3
+      with:
+        path: bin
+        name: application-hex
