@@ -15,4 +15,6 @@ sudo usermod -a -G dialout "$(whoami)"
 rm -f "nrf-command-line-tools_10.21.0_arm64.deb"
 rm -f "nrf-udev_1.0.1-all.deb"
 
+sudo apt install -y picocom
+
 echo "A re-login is required after execution of the script"
