@@ -6,8 +6,8 @@ jobs:
     runs-on: [self-hosted, linux]
     steps:
       - uses: actions/checkout@v2
-        with:
-          path: target
+        # with:
+        #   path: target
       - run: git submodule update --init --recursive
       - run: echo "$(pwd)" && cd firmware/ci && docker build -t dictofun_builder --build-arg HOST_ARCHITECTURE="arm" .
 
