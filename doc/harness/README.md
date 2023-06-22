@@ -19,6 +19,7 @@ Here is the list of steps to perform (particular revision of repo is used in ord
 
 ```
 # Assumption: we are in our working folder
+# export DICTOFUN_PATH=/home/user/dictofun
 git clone https://github.com/raspberrypi/pico-sdk.git
 cd pico-sdk
 git checkout 6a7db34ff63345a7badec79ebea3aaef1712f374
@@ -28,7 +29,7 @@ git clone https://github.com/raspberrypi/picoprobe.git
 cd picoprobe
 git checkout 7de418cce3dae75ad854029b14e8869955f0afaa
 git submodule update --init --recursive
-git apply <PATH/TO/DICTOFUN>/doc/harness/dictofun_harness_config.patch
+git apply $DICTOFUN_PATH/doc/harness/dictofun_harness_config.patch
 mkdir build && cd build
 export PICO_SDK_PATH=../../pico-sdk
 cmake ..
@@ -44,8 +45,7 @@ OpenOCD has to be built according to `Appendix A` in [Getting started with Raspb
 
 ```
 cd <DEVELOPMENT/FOLDER>
-sudo apt install automake autoconf build-essential texinfo libtool libftdi-dev libusb-1.0-0-
-dev
+sudo apt install automake autoconf build-essential texinfo libtool libftdi-dev libusb-1.0-0-dev
 git clone https://github.com/raspberrypi/openocd.git --branch rp2040 --depth=1
 cd openocd
 ./bootstrap
@@ -93,5 +93,5 @@ openocd -f interface/cmsis-dap.cfg -f target/nrf52.cfg -c "program ./src/targets
 This command performs a reset:
 
 ```
-openocd -f interface/cmsis-dap.cfg -f target/nrf52.cfg -c "reset"
+openocd -f interface/cmsis-dap.cfg -f target/nrf52.cfg -c "init ; reset run; exit" 
 ```
