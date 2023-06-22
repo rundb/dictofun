@@ -33,6 +33,8 @@ RUN cd /tools && mkdir cmake && cd cmake && \
    && chmod +x ./${CMAKE_INSTALL_SCRIPT}  && ./${CMAKE_INSTALL_SCRIPT} --skip-license
 
 ENV PATH="${PATH}:/tools/cmake/bin:/tools/${GCC_PATH}/bin"
+ENV LD_LIBRARY_PATH="/usr/aarch64-linux-gnu/lib/"
+
 
 # Set up Nordic instruments
 ARG SDK_FOLDER_NAME="nrf5_sdk_17.1.0_ddde560"
