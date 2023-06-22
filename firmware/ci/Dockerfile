@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ARG HOST_ARCHITECTURE
 
 RUN echo "deb http://archive.debian.org/debian stretch main contrib non-free" > /etc/apt/sources.list
-RUN apt update && apt install -f --no-install-recommends -y  wget bzip2 unzip make gcc g++ git 
+RUN apt update && apt install -f --no-install-recommends -y  wget bzip2 unzip make gcc g++ git libc6-arm64-cross
 
 ARG GCC_VERSION="gcc-arm-none-eabi-10.3-2021.10"
 ARG GCC_PATH="${GCC_VERSION}"
@@ -33,7 +33,10 @@ RUN cd /tools && mkdir cmake && cd cmake && \
    && chmod +x ./${CMAKE_INSTALL_SCRIPT}  && ./${CMAKE_INSTALL_SCRIPT} --skip-license
 
 ENV PATH="${PATH}:/tools/cmake/bin:/tools/${GCC_PATH}/bin"
+
+# These 2 lines are added to workaround issue with cmake not being found
 ENV LD_LIBRARY_PATH="/usr/aarch64-linux-gnu/lib/"
+RUN ln -s /usr/aarch64-linux-gnu/lib/ld-linux-aarch64.so.1 /lib/ld-linux-aarch64.so.1
 
 
 # Set up Nordic instruments
