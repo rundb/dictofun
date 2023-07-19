@@ -73,7 +73,7 @@ result::Result FtsService::add_characteristic(
 
     char_md.char_props.write         = (char_type == CharacteristicInUseType::WRITE) ? 1 : 0;
     char_md.char_props.read          = (char_type == CharacteristicInUseType::READ_NOTIFY) ? 1 : 0;
-    char_md.char_props.notify        = (char_type == CharacteristicInUseType::READ_NOTIFY) ? 1 : 0;
+    char_md.char_props.notify        = (char_type == CharacteristicInUseType::READ_NOTIFY || char_type == CharacteristicInUseType::WRITE) ? 1 : 0;
     char_md.p_char_user_desc         = NULL;
     char_md.p_char_pf                = NULL;
     char_md.p_user_desc_md           = NULL;
