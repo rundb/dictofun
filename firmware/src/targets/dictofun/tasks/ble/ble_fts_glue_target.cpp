@@ -25,8 +25,8 @@ static QueueHandle_t _data_from_fs_queue{nullptr};
 static QueueHandle_t _keepalive_queue{nullptr};
 
 static constexpr uint32_t max_status_wait_time{400};
-static constexpr uint32_t max_short_data_wait_time{100};
-static constexpr uint32_t max_long_data_wait_time{400};
+static constexpr uint32_t max_short_data_wait_time{500};
+static constexpr uint32_t max_long_data_wait_time{1000};
 
 // this queue element is allocated statically, as it's rather huge (~260 bytes) and it's better to avoid putting it on stack
 ble::FileDataFromMemoryQueueElement data_from_memory_queue_element;
@@ -57,6 +57,7 @@ result::Result get_file_list(uint32_t& files_count, file_id_type * files_list_pt
     }
     ble::CommandToMemoryQueueElement cmd{ble::CommandToMemory::GET_FILES_LIST};
     ble::StatusFromMemoryQueueElement response;
+    xQueueReset(_data_from_fs_queue);
 
     const auto cmd_result = xQueueSend(_command_to_fs_queue, &cmd, 0);
     if (pdTRUE != cmd_result)

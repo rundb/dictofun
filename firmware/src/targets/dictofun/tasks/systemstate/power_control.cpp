@@ -46,6 +46,10 @@ void shutdown_ldo()
     nrf_gpio_pin_set(power_flipflop_clk);
     vTaskDelay(1);
     nrf_gpio_pin_clear(power_flipflop_clk);
+    vTaskDelay(2000);
+    // In some setups it happens, that at this point there is still power provided
+    // (in particular, when the device is in the harness). Enforcing a reset for this case.
+    NVIC_SystemReset();
 }
 
 }
