@@ -222,8 +222,8 @@ result::Result FtsService::init()
         pairing_char_uuid, 
         pairing_char_max_len,
         &_context.pairer,
-        CharacteristicInUseType::WRITE
-        ,true
+        CharacteristicInUseType::WRITE,
+        true
     );
 
     if (result::Result::OK != pairing_char_add_result)
