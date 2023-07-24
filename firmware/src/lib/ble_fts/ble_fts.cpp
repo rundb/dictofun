@@ -222,8 +222,8 @@ result::Result FtsService::init()
         pairing_char_uuid, 
         pairing_char_max_len,
         &_context.pairer,
-        CharacteristicInUseType::WRITE,
-        true
+        CharacteristicInUseType::WRITE
+        ,true
     );
 
     if (result::Result::OK != pairing_char_add_result)
@@ -604,6 +604,7 @@ result::Result FtsService::send_files_list()
         (void)update_general_status(GeneralStatus::FS_CORRUPT, 0);
         return result::Result::ERROR_GENERAL;
     }
+
     if (count >= files_list_max_count)
     {
         NRF_LOG_ERROR("ble::fts: FS reported more files than this FTS implementation supports");
@@ -817,6 +818,41 @@ result::Result FtsService::update_general_status(GeneralStatus status, uint64_t 
     return result::Result::OK;
 }
 
+struct HvxError {
+    uint16_t code;
+    char * description;
+};
+
+static const HvxError hvx_error_decoder[] = {
+    {0xFFFE, "unknown"},
+    {NRF_SUCCESS, "SUCCESS"},
+    {BLE_ERROR_INVALID_CONN_HANDLE, "BLE_ERROR_INVALID_CONN_HANDLE"},
+    {NRF_ERROR_INVALID_STATE, "NRF_ERROR_INVALID_STATE"},
+    {NRF_ERROR_INVALID_ADDR, "NRF_ERROR_INVALID_ADDR"},
+    {NRF_ERROR_INVALID_PARAM, "NRF_ERROR_INVALID_PARAM"},
+    {BLE_ERROR_INVALID_ATTR_HANDLE, "BLE_ERROR_INVALID_ATTR_HANDLE"},
+    {BLE_ERROR_GATTS_INVALID_ATTR_TYPE, "BLE_ERROR_GATTS_INVALID_ATTR_TYPE"},
+    {NRF_ERROR_NOT_FOUND, "NRF_ERROR_NOT_FOUND"},
+    {NRF_ERROR_FORBIDDEN, "NRF_ERROR_FORBIDDEN"},
+    {NRF_ERROR_DATA_SIZE, "NRF_ERROR_DATA_SIZE"},
+    {NRF_ERROR_BUSY, "NRF_ERROR_BUSY"},
+    {BLE_ERROR_GATTS_SYS_ATTR_MISSING, "BLE_ERROR_GATTS_SYS_ATTR_MISSING"},
+    {NRF_ERROR_RESOURCES, "NRF_ERROR_RESOURCES"},
+    {NRF_ERROR_TIMEOUT, "NRF_ERROR_TIMEOUT"},
+};
+
+char * get_hvx_error_description(uint16_t code) 
+{
+    int i = 0;
+    for (i = 0; i < sizeof(hvx_error_decoder)/sizeof(hvx_error_decoder[0]); ++i) 
+    {
+        if (code == hvx_error_decoder[i].code) {
+            return hvx_error_decoder[i].description;
+        }
+    }
+    return hvx_error_decoder[0].description;
+}
+
 result::Result FtsService::push_data_packets(ControlPointOpcode opcode)
 {
     _transaction_ctx.update_next_packet_size();
@@ -830,6 +866,7 @@ result::Result FtsService::push_data_packets(ControlPointOpcode opcode)
                         (opcode == ControlPointOpcode::REQ_FS_STATUS) ? _context.fs_status.value_handle :
                         (opcode == ControlPointOpcode::GENERAL_STATUS) ? _context.status.value_handle :
                         BLE_CONN_HANDLE_INVALID;
+
     hvx_params.p_data = &_transaction_ctx.buffer[_transaction_ctx.idx];
     hvx_params.p_len  = &_transaction_ctx.packet_size;
     hvx_params.type   = BLE_GATT_HVX_NOTIFICATION;
@@ -837,7 +874,8 @@ result::Result FtsService::push_data_packets(ControlPointOpcode opcode)
     const auto send_result = sd_ble_gatts_hvx(_context.conn_handle, &hvx_params);
     if (NRF_SUCCESS != send_result)
     {
-        NRF_LOG_ERROR("sd_ble_gatts_hvx: %d", static_cast<int>(send_result));
+        const auto error_description = get_hvx_error_description(send_result);
+        NRF_LOG_ERROR("sd_ble_gatts_hvx: %x (%s)", static_cast<int>(send_result), error_description);
         return send_result == NRF_ERROR_RESOURCES ? result::Result::ERROR_BUSY : result::Result::ERROR_GENERAL;
     }
     return result::Result::OK;
