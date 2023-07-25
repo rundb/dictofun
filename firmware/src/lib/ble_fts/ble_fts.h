@@ -19,7 +19,10 @@ using file_id_type = uint64_t;
 /// @brief This structure provides a glue to the file system
 struct FileSystemInterface
 {
+    // First parameter in this call corresponds to the total amount of files in the filesystem
     using file_list_get_function_type = std::function<result::Result (uint32_t&, file_id_type *)>;
+    // First parameter in this call, unlike above, shows, how many files have been placed to the file_id_type* array
+    using file_list_get_next_function_type = std::function<result::Result (uint32_t&, file_id_type *)>;
     // file data is a minimal json string describing the contents of a particular file
     using file_info_get_function_type = std::function<result::Result (file_id_type, uint8_t *, uint32_t&, uint32_t)>;
     using file_open_function_type = std::function<result::Result (file_id_type, uint32_t&)>;
@@ -40,6 +43,7 @@ struct FileSystemInterface
     file_close_function_type file_close_function;
     file_data_get_function_type file_data_get_function;
     fs_status_function_type fs_status_function;
+    file_list_get_next_function_type file_list_get_next_function;
 };
 
 // TODO: consider replacing the glue structures above with a template

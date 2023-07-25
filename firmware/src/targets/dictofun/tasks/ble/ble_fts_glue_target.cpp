@@ -51,7 +51,7 @@ void register_keepalive_queue(QueueHandle_t keepalive_queue)
 
 result::Result get_file_list(uint32_t& files_count, file_id_type * files_list_ptr)
 {
-    if (!is_fs_communication_valid())
+    if (!is_fs_communication_valid() || nullptr == files_list_ptr)
     {
         return result::Result::ERROR_GENERAL;
     }
@@ -76,9 +76,6 @@ result::Result get_file_list(uint32_t& files_count, file_id_type * files_list_pt
         NRF_LOG_ERROR("get file list: recv error status(%d)", static_cast<int>(response.status));
         return result::Result::ERROR_GENERAL;
     }
-    else
-    {
-    }
 
     ble::FileDataFromMemoryQueueElement& data{data_from_memory_queue_element};
 
@@ -90,7 +87,52 @@ result::Result get_file_list(uint32_t& files_count, file_id_type * files_list_pt
         return result::Result::ERROR_GENERAL;
     }
     
-    files_count = data.size / sizeof(file_id_type);
+    files_count = response.data_size / sizeof(file_id_type);
+    memcpy(files_list_ptr, data.data, data.size);
+
+    ble::KeepaliveQueueElement keepalive{ble::KeepaliveEvent::FILESYSTEM_EVENT};
+    xQueueSend(_keepalive_queue, &keepalive, 0);
+
+    return result::Result::OK;
+}
+
+result::Result get_files_list_next(uint32_t& added_files_count, file_id_type * files_list_ptr) {
+    if (!is_fs_communication_valid() || nullptr == files_list_ptr)
+    {
+        return result::Result::ERROR_GENERAL;
+    }
+    ble::CommandToMemoryQueueElement cmd{ble::CommandToMemory::GET_FILES_LIST_NEXT};
+    ble::StatusFromMemoryQueueElement response;
+
+    const auto cmd_result = xQueueSend(_command_to_fs_queue, &cmd, 0);
+    if (pdTRUE != cmd_result)
+    {
+        NRF_LOG_ERROR("get file list next: failed to send cmd to mem");
+        return result::Result::ERROR_GENERAL;
+    }
+    const auto status_result = xQueueReceive(_status_from_fs_queue, &response, max_status_wait_time);
+    if (pdTRUE != status_result)
+    {
+        NRF_LOG_ERROR("get file list next: timed out recv status from mem");
+        return result::Result::ERROR_GENERAL; 
+    }
+    if (response.status != ble::StatusFromMemory::OK)
+    {
+        NRF_LOG_ERROR("get file list next: recv error status(%d)", static_cast<int>(response.status));
+        return result::Result::ERROR_GENERAL;
+    }
+
+    ble::FileDataFromMemoryQueueElement& data{data_from_memory_queue_element};
+
+    // TODO: make sure to test cases of both short lists (fitting to the data element) and longer lists
+    const auto data_result = xQueueReceive(_data_from_fs_queue, &data, max_short_data_wait_time);
+    if (pdTRUE != data_result)
+    {
+        NRF_LOG_ERROR("get file list next: timed out recv data from mem");
+        return result::Result::ERROR_GENERAL;
+    }
+    
+    added_files_count = data.size / sizeof(file_id_type);
     memcpy(files_list_ptr, data.data, data.size);
 
     ble::KeepaliveQueueElement keepalive{ble::KeepaliveEvent::FILESYSTEM_EVENT};

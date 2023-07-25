@@ -20,6 +20,11 @@ static lfs_file_t _active_file;
 static lfs_dir_t _active_dir;
 static lfs_file_config _active_file_config;
 static bool _is_file_open{false};
+static bool _is_files_list_next_needed{false};
+static constexpr uint32_t invalid_files_count{0xFEFEFEFDUL};
+static uint32_t _total_files_left{0};
+
+static uint32_t get_files_count(lfs_t& lfs);
 
 result::Result init_littlefs(lfs_t& lfs, const lfs_config& config)
 {
@@ -47,6 +52,9 @@ result::Result init_littlefs(lfs_t& lfs, const lfs_config& config)
         NRF_LOG_ERROR("failed to open dir ./");
         return result::Result::ERROR_GENERAL;
     }
+    _is_files_list_next_needed = false;
+    _is_file_open = false;
+    
     return result::Result::OK;
 }
 
@@ -70,13 +78,21 @@ result::Result deinit_littlefs(lfs_t& lfs)
     return result::Result::OK;
 }
 
-result::Result get_files_list(lfs_t& lfs, uint32_t& data_size_bytes, uint8_t * buffer, const uint32_t max_data_size)
+result::Result get_files_list(lfs_t& lfs, uint32_t& total_data_size_bytes, uint8_t * buffer, const uint32_t max_data_size)
 {
+    // TODO: add an assert if max_data_size % single_entry_size != 0
     if (buffer == nullptr || max_data_size < 8)
     {
         return result::Result::ERROR_INVALID_PARAMETER;
     }
 
+    // First perform a dry run, to get the idea of how many files we've got in the FS
+    const auto total_files_count = get_files_count(lfs);
+    if (total_files_count == invalid_files_count) 
+    {
+        return result::Result::ERROR_GENERAL;
+    }
+    
     const auto rewind_result = lfs_dir_rewind(&lfs, &_active_dir);
     if (rewind_result < 0)
     {
@@ -86,14 +102,13 @@ result::Result get_files_list(lfs_t& lfs, uint32_t& data_size_bytes, uint8_t * b
 
     lfs_info info;
     static constexpr uint32_t single_entry_size{sizeof(ble::fts::file_id_type)};
+    static const uint32_t max_files_fitting_in_buffer{max_data_size / single_entry_size};
     uint8_t buffer_pos{0};
-    while (true) 
+    uint32_t file_ids_count{0};
+    
+    // TODO: check off-by-1 chance here (if there is -1 file ID in the list)
+    while (file_ids_count < max_files_fitting_in_buffer)
     {
-        if (buffer_pos >= (max_data_size - single_entry_size))
-        {
-            NRF_LOG_WARNING("too many files in the filesystem. breaking at this point.")
-            break;
-        }
         const auto dir_read_res = lfs_dir_read(&lfs, &_active_dir, &info);
         if (dir_read_res < 0) {
             NRF_LOG_ERROR("dir read operation failed (%d)", dir_read_res);
@@ -115,6 +130,7 @@ result::Result get_files_list(lfs_t& lfs, uint32_t& data_size_bytes, uint8_t * b
                     memset(&buffer[buffer_pos + name_len], 0, single_entry_size - name_len);
                 }
                 buffer_pos += single_entry_size;
+                ++file_ids_count;
                 break;
             }
             default:
@@ -122,6 +138,67 @@ result::Result get_files_list(lfs_t& lfs, uint32_t& data_size_bytes, uint8_t * b
                 break;
             }
         }
+    }
+
+    if (file_ids_count < total_files_count) {
+        _is_files_list_next_needed = true;
+        _total_files_left = total_files_count - file_ids_count;
+    }
+
+    total_data_size_bytes = total_files_count * single_entry_size;
+    return result::Result::OK;
+}
+
+result::Result get_files_list_next(lfs_t& lfs, uint32_t& data_size_bytes, uint8_t * buffer, uint32_t max_data_size)
+{
+    if (!_is_files_list_next_needed || buffer == nullptr) {
+        return result::Result::ERROR_GENERAL;
+    }
+
+    lfs_info info;
+    static constexpr uint32_t single_entry_size{sizeof(ble::fts::file_id_type)};
+    static const uint32_t max_files_fitting_in_buffer{max_data_size / single_entry_size};
+
+    uint8_t buffer_pos{0};
+    uint32_t file_ids_count{0};
+    
+    // TODO: check off-by-1 chance here (if there is -1 file ID in the list)
+    while (file_ids_count < max_files_fitting_in_buffer)
+    {
+        const auto dir_read_res = lfs_dir_read(&lfs, &_active_dir, &info);
+        if (dir_read_res < 0) {
+            NRF_LOG_ERROR("dir read operation failed (%d)", dir_read_res);
+            return result::Result::ERROR_GENERAL;
+        }
+
+        if (dir_read_res == 0) {
+            break;
+        }
+
+        switch (info.type) 
+        {
+            case LFS_TYPE_REG:
+            {   
+                const uint32_t name_len = strlen(info.name);
+                memcpy(&buffer[buffer_pos], info.name, std::min(name_len,single_entry_size));
+                if (name_len < single_entry_size)
+                {
+                    memset(&buffer[buffer_pos + name_len], 0, single_entry_size - name_len);
+                }
+                buffer_pos += single_entry_size;
+                ++file_ids_count;
+                break;
+            }
+            default:
+            {
+                break;
+            }
+        }
+    }
+
+    if (file_ids_count < _total_files_left) {
+        _is_files_list_next_needed = true;
+        _total_files_left -= file_ids_count;
     }
 
     data_size_bytes = buffer_pos;
@@ -362,6 +439,47 @@ result::Result write_data(lfs_t& lfs, const uint8_t * data, const uint32_t data_
     }
     return result::Result::OK;
 }
+
+static uint32_t get_files_count(lfs_t& lfs)
+{
+    const auto rewind_result = lfs_dir_rewind(&lfs, &_active_dir);
+    if (rewind_result < 0)
+    {
+        NRF_LOG_ERROR("rewind has failed (%d)", rewind_result);
+        return invalid_files_count;
+    }
+
+    uint32_t files_count{0};
+    lfs_info info;
+    // TODO: check off-by-1 chance here (if there is -1 file ID in the list)
+    while (true)
+    {
+        const auto dir_read_res = lfs_dir_read(&lfs, &_active_dir, &info);
+        if (dir_read_res < 0) {
+            NRF_LOG_ERROR("dir read operation failed (%d)", dir_read_res);
+            return invalid_files_count;
+        }
+
+        if (dir_read_res == 0) {
+            break;
+        }
+
+        switch (info.type) 
+        {
+            case LFS_TYPE_REG:
+            {   
+                ++files_count;
+                break;
+            }
+            default:
+            {
+                break;
+            }
+        }
+    }
+    return files_count;
+}
+
 
 }
 }

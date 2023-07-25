@@ -69,6 +69,7 @@ enum class CommandToMemory
     GET_FILE_DATA,
     CLOSE_FILE,
     GET_FS_STATUS,
+    GET_FILES_LIST_NEXT,
 };
 
 struct CommandToMemoryQueueElement

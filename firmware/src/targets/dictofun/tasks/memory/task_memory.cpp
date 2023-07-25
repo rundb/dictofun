@@ -208,9 +208,10 @@ void process_request_from_ble(Context& context, ble::CommandToMemory command_id,
     {
         case ble::CommandToMemory::GET_FILES_LIST:
         {
+            uint32_t total_files_list_data_size{0};
             const auto ls_result = memory::filesystem::get_files_list(
                 lfs, 
-                data_queue_elem.size, 
+                total_files_list_data_size, 
                 data_queue_elem.data, 
                 ble::FileDataFromMemoryQueueElement::element_max_size);
             if (result::Result::OK != ls_result)
@@ -219,6 +220,25 @@ void process_request_from_ble(Context& context, ble::CommandToMemory command_id,
                 status.status = ble::StatusFromMemory::ERROR_OTHER;
                 status.data_size = 0;
             }
+            data_queue_elem.size = std::min(total_files_list_data_size, static_cast<uint32_t>(ble::FileDataFromMemoryQueueElement::element_max_size));
+            status.data_size = total_files_list_data_size;
+
+            break;
+        }
+
+        case ble::CommandToMemory::GET_FILES_LIST_NEXT: {
+            const auto ls_result = memory::filesystem::get_files_list_next(
+                lfs, 
+                data_queue_elem.size, 
+                data_queue_elem.data, 
+                ble::FileDataFromMemoryQueueElement::element_max_size);
+            if (result::Result::OK != ls_result)
+            {
+                NRF_LOG_ERROR("mem: failed to continue fetching files list");
+                status.status = ble::StatusFromMemory::ERROR_OTHER;
+                status.data_size = 0;
+            }
+
             break;
         }
         case ble::CommandToMemory::GET_FILE_INFO:
