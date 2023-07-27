@@ -96,11 +96,14 @@ result::Result get_file_list(uint32_t& files_count, file_id_type * files_list_pt
     return result::Result::OK;
 }
 
-result::Result get_files_list_next(uint32_t& added_files_count, file_id_type * files_list_ptr) {
+result::Result get_files_list_next(uint32_t& added_files_count, file_id_type * files_list_ptr) 
+{
     if (!is_fs_communication_valid() || nullptr == files_list_ptr)
     {
         return result::Result::ERROR_GENERAL;
     }
+    xQueueReset(_command_to_fs_queue);
+
     ble::CommandToMemoryQueueElement cmd{ble::CommandToMemory::GET_FILES_LIST_NEXT};
     ble::StatusFromMemoryQueueElement response;
 
@@ -378,7 +381,8 @@ FileSystemInterface dictofun_fs_if
     open_file,
     close_file,
     get_data,
-    fs_status
+    fs_status,
+    get_files_list_next,
 };
 
 }

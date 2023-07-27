@@ -26,7 +26,7 @@ blcm_link_ctx_storage_t FtsService::_link_ctx_storage =
 
 FtsService::Context FtsService::_context {
     0, 0, 
-    {0,0,0,0,}, {0,0,0,0,}, {0,0,0,0,}, {0,0,0,0,}, {0,0,0,0,}, {0,0,0,0,}, {0,0,0,0,},
+    {0,0,0,0,}, {0,0,0,0,}, {0,0,0,0,}, {0,0,0,0,}, {0,0,0,0,}, {0,0,0,0,}, {0,0,0,0,}, {0,0,0,0,},
     0, false,
     &_link_ctx_storage
 };
@@ -113,6 +113,9 @@ result::Result FtsService::add_characteristic(
                                            &char_md,
                                            &attr_char_value,
                                            handle);
+    if (char_add_result != NRF_SUCCESS) {
+        NRF_LOG_ERROR("add char failed: %x : %x", uuid, char_add_result);
+    }
 
     return (char_add_result == NRF_SUCCESS) ? result::Result::OK : result::Result::ERROR_GENERAL;
 }
@@ -163,6 +166,19 @@ result::Result FtsService::init()
     if (result::Result::OK != file_list_char_add_result)
     {
         return file_list_char_add_result;
+    }
+
+    const auto file_list_next_char_add_result = add_characteristic(
+        BLE_UUID_TYPE_BLE,
+        file_list_next_char_uuid, 
+        file_list_next_char_max_len,
+        &_context.files_list_next,
+        CharacteristicInUseType::READ_NOTIFY
+    );
+
+    if (result::Result::OK != file_list_next_char_add_result)
+    {
+        return file_list_next_char_add_result;
     }
 
     const auto file_info_char_add_result = add_characteristic(
@@ -247,6 +263,11 @@ void FtsService::on_write(ble_evt_t const * p_ble_evt, ClientContext& client_con
     else if ((p_evt_write->handle == _context.files_list.cccd_handle) && (p_evt_write->len == 2))
     {
         client_context.is_file_list_notifications_enabled = ble_srv_is_notification_enabled(p_evt_write->data);
+    }
+    else if ((p_evt_write->handle == _context.files_list_next.cccd_handle) && (p_evt_write->len == 2))
+    {
+        NRF_LOG_DEBUG("file list next notif enabled");
+        client_context.is_file_list_next_notifications_enabled = ble_srv_is_notification_enabled(p_evt_write->data);
     }
     else if ((p_evt_write->handle == _context.file_info.cccd_handle) && (p_evt_write->len == 2))
     {
@@ -440,8 +461,10 @@ void FtsService::process_hvn_tx_callback()
     }
 }
 
+static volatile int ROTU_cnt{1};
 void FtsService::process()
 {
+    if (ROTU_cnt%10 == 0) NRF_LOG_DEBUG("*");
     if (_context.pending_command == FtsService::ControlPointOpcode::FINALIZE_TRANSACTION)
     {
         if (_context.active_command == FtsService::ControlPointOpcode::REQ_FILE_DATA)
@@ -470,6 +493,25 @@ void FtsService::process()
                     NRF_LOG_ERROR("failed to continue sending file data");
                 }
                 _context.pending_command = FtsService::ControlPointOpcode::IDLE;
+            }
+        }
+        else if (_context.active_command == FtsService::ControlPointOpcode::REQ_FILES_LIST || _context.active_command == FtsService::ControlPointOpcode::REQ_FILES_LIST_NEXT) 
+        {
+            NRF_LOG_INFO("finalize called on req files list. left: %d files", _transaction_ctx.files_count_left);
+            if (_transaction_ctx.files_count_left > 0) 
+            {
+                const auto continue_result = continue_sending_files_list();
+                if (result::Result::OK != continue_result)
+                {
+                    _context.active_command = FtsService::ControlPointOpcode::IDLE;
+                    NRF_LOG_ERROR("failed to continue sending file list");
+                }
+                _context.pending_command = FtsService::ControlPointOpcode::IDLE;
+            }
+            else
+            {
+                _context.active_command = FtsService::ControlPointOpcode::IDLE;
+                _context.pending_command = FtsService::ControlPointOpcode::IDLE;                
             }
         }
         else
@@ -509,7 +551,9 @@ void FtsService::process_client_request(ControlPointOpcode client_request)
         case FtsService::ControlPointOpcode::REQ_FILES_LIST:
         {
             NRF_LOG_DEBUG("ble::fts::processing files' list request");
-            if (_context.client_context == nullptr || !_context.client_context->is_file_list_notifications_enabled)
+            if (_context.client_context == nullptr || 
+                !_context.client_context->is_file_list_notifications_enabled || 
+                !_context.client_context->is_file_list_next_notifications_enabled)
             {
                 NRF_LOG_ERROR("ble::fts::files_list: notifications are not enabled. Aborting");
                 _context.pending_command = FtsService::ControlPointOpcode::IDLE;
@@ -604,13 +648,12 @@ result::Result FtsService::send_files_list()
         (void)update_general_status(GeneralStatus::FS_CORRUPT, 0);
         return result::Result::ERROR_GENERAL;
     }
+    NRF_LOG_INFO("files list: count=%d, max_count=%d", count, files_list_max_count);
 
-    if (count >= files_list_max_count)
-    {
-        NRF_LOG_ERROR("ble::fts: FS reported more files than this FTS implementation supports");
-        (void)update_general_status(GeneralStatus::FS_CORRUPT, 0);
-        return result::Result::ERROR_GENERAL;
-    }
+    _transaction_ctx.files_count_left = (count > files_list_max_count) ? count - files_list_max_count : 0;
+
+    const auto count_per_this_transaction = std::min(count, files_list_max_count);
+
     // Serialize the files list.
     // First 8 bytes -> files' count (N)
     _transaction_ctx.idx = 0;
@@ -618,6 +661,47 @@ result::Result FtsService::send_files_list()
     _transaction_ctx.idx += sizeof(count);
     memset(&_transaction_ctx.buffer[_transaction_ctx.idx], 0, sizeof(uint32_t));
     _transaction_ctx.idx += sizeof(uint32_t);
+    // After that N elements, 8 bytes each.
+    for (auto i = 0U; i < count_per_this_transaction; ++i)
+    {
+        memcpy(&_transaction_ctx.buffer[_transaction_ctx.idx], &files_list[i], sizeof(file_id_type));
+        _transaction_ctx.idx += sizeof(file_id_type);
+    }
+
+    _transaction_ctx.size = _transaction_ctx.idx;
+    _transaction_ctx.idx = 0;
+
+    const auto push_result = push_data_packets(ControlPointOpcode::REQ_FILES_LIST);
+    if (push_result == result::Result::OK)
+    {
+        NRF_LOG_DEBUG("ble::fts::send: sending %d bytes", _transaction_ctx.size);
+    }
+    else
+    {
+        NRF_LOG_ERROR("ble::fts::send: push has failed");
+    }
+    
+    return result::Result::OK;
+}
+
+
+result::Result FtsService::continue_sending_files_list() {
+    uint32_t count{0};
+
+    file_id_type files_list[files_list_max_count * sizeof(file_id_type)]{{0}};
+    const auto fs_call = _fs_if.file_list_get_next_function(count, files_list);
+    if (result::Result::OK != fs_call)
+    {
+        NRF_LOG_ERROR("ble::fts: FS files' list next getter has failed");
+        (void)update_general_status(GeneralStatus::FS_CORRUPT, 0);
+        return result::Result::ERROR_GENERAL;
+    }
+
+    _transaction_ctx.files_count_left = (_transaction_ctx.files_count_left > count) ? (_transaction_ctx.files_count_left - count) : 0;
+
+    NRF_LOG_INFO("continue sending files list is called. left: %d, count: %d", _transaction_ctx.files_count_left, count);
+
+    _transaction_ctx.idx = 0;
     // After that N elements, 8 bytes each.
     for (auto i = 0U; i < count; ++i)
     {
@@ -628,7 +712,7 @@ result::Result FtsService::send_files_list()
     _transaction_ctx.size = _transaction_ctx.idx;
     _transaction_ctx.idx = 0;
 
-    const auto push_result = push_data_packets(ControlPointOpcode::REQ_FILES_LIST);
+    const auto push_result = push_data_packets(ControlPointOpcode::REQ_FILES_LIST_NEXT);
     if (push_result == result::Result::OK)
     {
         NRF_LOG_DEBUG("ble::fts::send: sending %d bytes", _transaction_ctx.size);
@@ -864,6 +948,7 @@ result::Result FtsService::push_data_packets(ControlPointOpcode opcode)
                         (opcode == ControlPointOpcode::REQ_FILE_INFO) ? _context.file_info.value_handle : 
                         (opcode == ControlPointOpcode::REQ_FILE_DATA) ? _context.file_data.value_handle : 
                         (opcode == ControlPointOpcode::REQ_FS_STATUS) ? _context.fs_status.value_handle :
+                        (opcode == ControlPointOpcode::REQ_FILES_LIST_NEXT) ? _context.files_list_next.value_handle : 
                         (opcode == ControlPointOpcode::GENERAL_STATUS) ? _context.status.value_handle :
                         BLE_CONN_HANDLE_INVALID;
 

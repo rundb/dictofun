@@ -213,7 +213,7 @@ void process_request_from_ble(Context& context, ble::CommandToMemory command_id,
                 lfs, 
                 total_files_list_data_size, 
                 data_queue_elem.data, 
-                ble::FileDataFromMemoryQueueElement::element_max_size);
+                ble::fts::FtsService::get_file_list_char_size());
             if (result::Result::OK != ls_result)
             {
                 NRF_LOG_ERROR("mem: failed to fetch files list");
@@ -226,12 +226,13 @@ void process_request_from_ble(Context& context, ble::CommandToMemory command_id,
             break;
         }
 
-        case ble::CommandToMemory::GET_FILES_LIST_NEXT: {
+        case ble::CommandToMemory::GET_FILES_LIST_NEXT: 
+        {
             const auto ls_result = memory::filesystem::get_files_list_next(
                 lfs, 
-                data_queue_elem.size, 
-                data_queue_elem.data, 
-                ble::FileDataFromMemoryQueueElement::element_max_size);
+                data_queue_elem.size,
+                data_queue_elem.data,
+                ble::fts::FtsService::get_file_list_char_size());
             if (result::Result::OK != ls_result)
             {
                 NRF_LOG_ERROR("mem: failed to continue fetching files list");

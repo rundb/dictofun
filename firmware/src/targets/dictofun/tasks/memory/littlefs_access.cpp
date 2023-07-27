@@ -85,6 +85,7 @@ result::Result get_files_list(lfs_t& lfs, uint32_t& total_data_size_bytes, uint8
     {
         return result::Result::ERROR_INVALID_PARAMETER;
     }
+    _is_files_list_next_needed = false;
 
     // First perform a dry run, to get the idea of how many files we've got in the FS
     const auto total_files_count = get_files_count(lfs);
@@ -102,7 +103,8 @@ result::Result get_files_list(lfs_t& lfs, uint32_t& total_data_size_bytes, uint8
 
     lfs_info info;
     static constexpr uint32_t single_entry_size{sizeof(ble::fts::file_id_type)};
-    static const uint32_t max_files_fitting_in_buffer{max_data_size / single_entry_size};
+    // FIXME: need to properly think of how to organize buffers
+    static const uint32_t max_files_fitting_in_buffer{(max_data_size - 8) / single_entry_size};
     uint8_t buffer_pos{0};
     uint32_t file_ids_count{0};
     
@@ -140,6 +142,7 @@ result::Result get_files_list(lfs_t& lfs, uint32_t& total_data_size_bytes, uint8
         }
     }
 
+    NRF_LOG_DEBUG("req files list: ids %d, max %d", file_ids_count, total_files_count);
     if (file_ids_count < total_files_count) {
         _is_files_list_next_needed = true;
         _total_files_left = total_files_count - file_ids_count;
@@ -154,6 +157,7 @@ result::Result get_files_list_next(lfs_t& lfs, uint32_t& data_size_bytes, uint8_
     if (!_is_files_list_next_needed || buffer == nullptr) {
         return result::Result::ERROR_GENERAL;
     }
+    NRF_LOG_DEBUG("params ok")
 
     lfs_info info;
     static constexpr uint32_t single_entry_size{sizeof(ble::fts::file_id_type)};
