@@ -461,10 +461,8 @@ void FtsService::process_hvn_tx_callback()
     }
 }
 
-static volatile int ROTU_cnt{1};
 void FtsService::process()
 {
-    if (ROTU_cnt%10 == 0) NRF_LOG_DEBUG("*");
     if (_context.pending_command == FtsService::ControlPointOpcode::FINALIZE_TRANSACTION)
     {
         if (_context.active_command == FtsService::ControlPointOpcode::REQ_FILE_DATA)
@@ -685,7 +683,8 @@ result::Result FtsService::send_files_list()
 }
 
 
-result::Result FtsService::continue_sending_files_list() {
+result::Result FtsService::continue_sending_files_list() 
+{
     uint32_t count{0};
 
     file_id_type files_list[files_list_max_count * sizeof(file_id_type)]{{0}};
@@ -702,7 +701,6 @@ result::Result FtsService::continue_sending_files_list() {
     NRF_LOG_INFO("continue sending files list is called. left: %d, count: %d", _transaction_ctx.files_count_left, count);
 
     _transaction_ctx.idx = 0;
-    // After that N elements, 8 bytes each.
     for (auto i = 0U; i < count; ++i)
     {
         memcpy(&_transaction_ctx.buffer[_transaction_ctx.idx], &files_list[i], sizeof(file_id_type));

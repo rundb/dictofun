@@ -78,7 +78,8 @@ Service advertises following set of characteristics.
 ##### Opcode 0x01 - Request list of files
 
 If operation is successful, device shall immediately provide list of existing files through the `Files' list` characteristic. Status code shall be returned otherwise. Data format for the files' list is defined in the characteristic description.
-feature/refactor_files_list_characteristics_to_unlimited_files
+
+##### Opcode 0x02 - Request file info
 
 If operation is successful, device shall ASAP provide information about the file in JSON format through the `File info` characteristic.
 Command format: byte 0 - opcode, bytes 1..8 contain the file ID in little endian format. 

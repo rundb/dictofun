@@ -157,7 +157,6 @@ result::Result get_files_list_next(lfs_t& lfs, uint32_t& data_size_bytes, uint8_
     if (!_is_files_list_next_needed || buffer == nullptr) {
         return result::Result::ERROR_GENERAL;
     }
-    NRF_LOG_DEBUG("params ok")
 
     lfs_info info;
     static constexpr uint32_t single_entry_size{sizeof(ble::fts::file_id_type)};

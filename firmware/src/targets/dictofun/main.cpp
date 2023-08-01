@@ -39,10 +39,10 @@
 
 application::TaskDescriptor<256,  3> audio_task;
 application::TaskDescriptor<256,  1> audio_tester_task;
-application::TaskDescriptor<256,  3> log_task;
+application::TaskDescriptor<256,  1> log_task;
 application::TaskDescriptor<256,  3> systemstate_task;
 application::TaskDescriptor<1024, 2> memory_task;
-application::TaskDescriptor<1200, 2> ble_task;
+application::TaskDescriptor<1024, 2> ble_task;
 application::TaskDescriptor<96,   1>  led_task;
 application::TaskDescriptor<128,  2>  rtc_task;
 application::TaskDescriptor<96,   3>  button_task;
