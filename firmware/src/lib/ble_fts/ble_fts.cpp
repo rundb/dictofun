@@ -495,7 +495,7 @@ void FtsService::process()
         }
         else if (_context.active_command == FtsService::ControlPointOpcode::REQ_FILES_LIST || _context.active_command == FtsService::ControlPointOpcode::REQ_FILES_LIST_NEXT) 
         {
-            NRF_LOG_INFO("finalize called on req files list. left: %d files", _transaction_ctx.files_count_left);
+            NRF_LOG_DEBUG("finalize called on req files list. left: %d files", _transaction_ctx.files_count_left);
             if (_transaction_ctx.files_count_left > 0) 
             {
                 const auto continue_result = continue_sending_files_list();
@@ -646,7 +646,7 @@ result::Result FtsService::send_files_list()
         (void)update_general_status(GeneralStatus::FS_CORRUPT, 0);
         return result::Result::ERROR_GENERAL;
     }
-    NRF_LOG_INFO("files list: count=%d, max_count=%d", count, files_list_max_count);
+    NRF_LOG_DEBUG("files list: count=%d, max_count=%d", count, files_list_max_count);
 
     _transaction_ctx.files_count_left = (count > files_list_max_count) ? count - files_list_max_count : 0;
 
@@ -670,11 +670,7 @@ result::Result FtsService::send_files_list()
     _transaction_ctx.idx = 0;
 
     const auto push_result = push_data_packets(ControlPointOpcode::REQ_FILES_LIST);
-    if (push_result == result::Result::OK)
-    {
-        NRF_LOG_DEBUG("ble::fts::send: sending %d bytes", _transaction_ctx.size);
-    }
-    else
+    if (push_result != result::Result::OK)
     {
         NRF_LOG_ERROR("ble::fts::send: push has failed");
     }
@@ -698,7 +694,7 @@ result::Result FtsService::continue_sending_files_list()
 
     _transaction_ctx.files_count_left = (_transaction_ctx.files_count_left > count) ? (_transaction_ctx.files_count_left - count) : 0;
 
-    NRF_LOG_INFO("continue sending files list is called. left: %d, count: %d", _transaction_ctx.files_count_left, count);
+    NRF_LOG_DEBUG("continue sending files list is called. left: %d, count: %d", _transaction_ctx.files_count_left, count);
 
     _transaction_ctx.idx = 0;
     for (auto i = 0U; i < count; ++i)
@@ -711,11 +707,7 @@ result::Result FtsService::continue_sending_files_list()
     _transaction_ctx.idx = 0;
 
     const auto push_result = push_data_packets(ControlPointOpcode::REQ_FILES_LIST_NEXT);
-    if (push_result == result::Result::OK)
-    {
-        NRF_LOG_DEBUG("ble::fts::send: sending %d bytes", _transaction_ctx.size);
-    }
-    else
+    if (push_result != result::Result::OK)
     {
         NRF_LOG_ERROR("ble::fts::send: push has failed");
     }
