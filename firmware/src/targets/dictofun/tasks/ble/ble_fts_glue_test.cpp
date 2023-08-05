@@ -51,6 +51,12 @@ result::Result dictofun_test_get_file_list(uint32_t& files_count, ble::fts::file
     return result::Result::OK;
 }
 
+result::Result dictofun_test_get_file_list_next(uint32_t& added_files_count, ble::fts::file_id_type * files_list_ptr)
+{
+    added_files_count = 0;
+    return result::Result::OK;
+}
+
 result::Result dictofun_test_get_file_info(const ble::fts::file_id_type file_id, uint8_t * file_data, uint32_t& file_data_size, const uint32_t max_data_size)
 {
     if (file_data == nullptr)
@@ -149,7 +155,8 @@ FileSystemInterface dictofun_test_fs_if
     dictofun_test_open_file,
     dictofun_test_close_file,
     dictofun_test_get_data,
-    dictofun_test_fs_status
+    dictofun_test_fs_status,
+    dictofun_test_get_file_list_next
 };
 
 }

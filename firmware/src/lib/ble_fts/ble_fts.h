@@ -19,7 +19,10 @@ using file_id_type = uint64_t;
 /// @brief This structure provides a glue to the file system
 struct FileSystemInterface
 {
+    // First parameter in this call corresponds to the total amount of files in the filesystem
     using file_list_get_function_type = std::function<result::Result (uint32_t&, file_id_type *)>;
+    // First parameter in this call, unlike above, shows, how many files have been placed to the file_id_type* array
+    using file_list_get_next_function_type = std::function<result::Result (uint32_t&, file_id_type *)>;
     // file data is a minimal json string describing the contents of a particular file
     using file_info_get_function_type = std::function<result::Result (file_id_type, uint8_t *, uint32_t&, uint32_t)>;
     using file_open_function_type = std::function<result::Result (file_id_type, uint32_t&)>;
@@ -40,6 +43,7 @@ struct FileSystemInterface
     file_close_function_type file_close_function;
     file_data_get_function_type file_data_get_function;
     fs_status_function_type fs_status_function;
+    file_list_get_next_function_type file_list_get_next_function;
 };
 
 // TODO: consider replacing the glue structures above with a template
@@ -69,6 +73,7 @@ public:
 
     void process();
     bool is_file_transmission_running() { return _context.active_command != FtsService::ControlPointOpcode::IDLE; }
+    static constexpr uint32_t get_file_list_char_size() { return file_list_char_max_len; }
 private:
     static FtsService * _instance;
     FileSystemInterface& _fs_if;
@@ -88,12 +93,14 @@ private:
     static constexpr uint32_t file_data_char_uuid{0x1005};
     static constexpr uint32_t fs_status_char_uuid{0x1006};
     static constexpr uint32_t status_char_uuid{0x1007};
+    static constexpr uint32_t file_list_next_char_uuid{0x1008};
     static constexpr uint32_t pairing_char_uuid{0x10FE};
 
     static constexpr uint32_t cp_char_max_len{9};
-    static constexpr uint32_t file_list_char_max_len{256};
+    static constexpr uint32_t file_list_char_max_len{128};
+    static constexpr uint32_t file_list_next_char_max_len{file_list_char_max_len};
     static constexpr uint32_t file_info_char_max_len{32};
-    static constexpr uint32_t file_data_char_max_len{200};
+    static constexpr uint32_t file_data_char_max_len{256};
     static constexpr uint32_t fs_status_char_max_len{14};
     static constexpr uint32_t status_char_max_len{9};
     static constexpr uint32_t pairing_char_max_len{1};
@@ -105,6 +112,7 @@ private:
         REQ_FILE_INFO = 2,
         REQ_FILE_DATA = 3,
         REQ_FS_STATUS = 4,
+        REQ_FILES_LIST_NEXT = 5,
 
         GENERAL_STATUS = 240,
         
@@ -122,6 +130,7 @@ private:
     struct ClientContext
     {
         bool is_file_list_notifications_enabled{false};
+        bool is_file_list_next_notifications_enabled{false};
         bool is_file_data_notifications_enabled{false};
         bool is_file_info_notifications_enabled{false};
         bool is_fs_status_notifications_enabled{false};
@@ -134,6 +143,7 @@ private:
         uint16_t service_handle;
         ble_gatts_char_handles_t control_point_handles;
         ble_gatts_char_handles_t files_list;
+        ble_gatts_char_handles_t files_list_next;
         ble_gatts_char_handles_t file_info;
         ble_gatts_char_handles_t file_data;
         ble_gatts_char_handles_t fs_status;
@@ -186,6 +196,7 @@ private:
     // API for functions that initiate transfer of FS data (executed from OS context)
     result::Result send_files_list();
     result::Result send_file_info();
+    result::Result continue_sending_files_list();
     result::Result send_file_data();
     result::Result continue_sending_file_data();
     result::Result send_fs_status();
@@ -213,6 +224,7 @@ private:
         file_id_type file_id{0};
         uint32_t file_size{0};
         uint32_t file_sent_size{0};
+        uint32_t files_count_left{0};
         void update_next_packet_size() 
         {
             const auto leftover_size{size-idx};
@@ -220,7 +232,7 @@ private:
         }
     } _transaction_ctx;
 
-    static constexpr uint32_t files_list_max_count{(TransactionContext::buffer_size - 8) / file_id_size};
+    static constexpr uint32_t files_list_max_count{(file_list_char_max_len - 8) / file_id_size};
 
     // trigger the BLE transaction specified by the opcode.
     result::Result push_data_packets(ControlPointOpcode opcode);

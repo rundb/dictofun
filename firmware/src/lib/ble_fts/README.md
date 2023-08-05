@@ -61,6 +61,7 @@ Service advertises following set of characteristics.
 | 0004              | File Data        | Read/Notify |
 | 0005              | FS Status        | Read/Notify |
 | 0006              | General Status   | Read/Notify |
+| 0007              |Files' list(cont) | Read/Notify |
 
 #### Control point
 
@@ -83,8 +84,6 @@ If operation is successful, device shall immediately provide list of existing fi
 If operation is successful, device shall ASAP provide information about the file in JSON format through the `File info` characteristic.
 Command format: byte 0 - opcode, bytes 1..8 contain the file ID in little endian format. 
 
-TODO: specify way to signal error to the host (f.e. if file doesn't exist)
-
 ##### Opcode 0x03 - Request file data
 
 If operation is successful, device shall ASAP start sending the contents of the file using `File data` characteristic. It will send the whole file, so it's a host's responsibility to figure out the size of the data to expect 
@@ -103,7 +102,7 @@ Data transaction is performed in the following way:
 
 #### Files' list
 
-Files list is a list of unique-per-FS 64-bit identifiers, each of which corresponds to a file existing in the file system on the device. 
+Files' list is a list of unique-per-FS 64-bit identifiers, each of which corresponds to a file existing in the file system on the device. 
 
 `NB`: basic idea for the particular use-case is to have ID generated from the file creation date and time: YYYY-MM-DD-HH-MM-SS.
 
@@ -115,6 +114,8 @@ Assuming that file system on device contains N files, data consists of following
 
 (N+1). Last file identifier
 
+If there are more IDs than fitting into the characteristic size, FTS should provide the list of first IDs that fit into a single char, the rest can be accessed via `Files' list (cont)` characteristic. 
+
 #### File info
 
 File info is a JSON string containing descriptor of a file. Format is straight forward: first 2 bytes contain the JSON size (little endian), rest is a JSON containing meta information about the target file.
@@ -123,6 +124,18 @@ It could also be used in order to signal errors in case of a broken file or anyt
 #### File data
 
 File data is the raw content of the file as it is contained in the memory on the device. In order to interptet the file host must first read out the metadata of the device.
+
+#### Files' list (cont)
+
+This characteristic provides the end of the identifiers' list, in case if the list has been too long to fit into a single characteristic. Assuming that file system contains N files, and M < N fitted into 
+files' list, data in this characteristic should have the following format:
+1. Identifier of file `M+1`
+....
+N-M. Identifier of file `N`, if the end of the list is fitting into the char, 
+or
+2M-1. Identifier of file `2M-1`, if there are more files in the file system.
+
+This process should continue until all IDs have been sent to the host.
 
 #### FS Status
 
