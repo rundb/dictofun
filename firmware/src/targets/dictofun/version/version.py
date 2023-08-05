@@ -7,7 +7,7 @@ hostname = platform.node()
 
 build_info_data = "\"Dictofun FW. " + git_show_output + ". " + "branch: " + git_branch_output + ". Built at: " + hostname + "\""
 
-with open("src/targets/dictofun/version/version.cpp", "w") as f:
+with open("../../../../../firmware/src/targets/dictofun/version/version.cpp", "w") as f:
     f.write("#include \"version.h\"\n")
     f.write("namespace version\n{\n")
     f.write("const char BUILD_SUMMARY_STRING[] = \n    " + build_info_data + ";\n")

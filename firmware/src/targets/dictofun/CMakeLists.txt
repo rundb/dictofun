@@ -60,5 +60,10 @@ target_link_libraries(dictofun_main PRIVATE
 )
 
 add_custom_command(TARGET dictofun_main
+    PRE_BUILD
+    COMMAND python3 ARGS ../../../../../firmware/src/targets/dictofun/version/version.py
+)
+
+add_custom_command(TARGET dictofun_main
     POST_BUILD
     COMMAND ${CMAKE_OBJCOPY} ARGS -O ihex dictofun_main ${PROJECT_NAME}.hex)
