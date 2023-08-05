@@ -8,7 +8,7 @@
 namespace version 
 {
 
-extern const char * BUILD_SUMMARY_STRING;
+extern const char BUILD_SUMMARY_STRING[];
 extern const int BUILD_SUMMARY_STRING_LENGTH;
 
 }
