@@ -15,6 +15,8 @@
 
 #include "cli_commands.h"
 
+#include "version.h"
+
 namespace logger
 {
 
@@ -82,7 +84,7 @@ void log_init()
 
 void task_cli_logger(void * cli_context)
 {
-    NRF_LOG_INFO("task logger: initialized");
+    NRF_LOG_INFO("%s", version::BUILD_SUMMARY_STRING);
     CliContext& context = *(reinterpret_cast<CliContext *>(cli_context));
     register_record_launch_callback(record_launch_callback);
     register_memory_test_callback(memory_test_callback);

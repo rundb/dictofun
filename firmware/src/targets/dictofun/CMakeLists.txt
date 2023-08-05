@@ -7,6 +7,7 @@ add_executable(dictofun_main
 add_subdirectory(tasks)
 add_subdirectory(config)
 add_subdirectory(application)
+add_subdirectory(version)
 
 nrf5_target(dictofun_main)
 
