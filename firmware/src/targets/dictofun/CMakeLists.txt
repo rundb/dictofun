@@ -7,6 +7,7 @@ add_executable(dictofun_main
 add_subdirectory(tasks)
 add_subdirectory(config)
 add_subdirectory(application)
+add_subdirectory(version)
 
 nrf5_target(dictofun_main)
 
@@ -56,6 +57,11 @@ target_link_libraries(dictofun_main PRIVATE
     nrf5_sortlist
     nrf5_hardfault
     nrf5_hardfault_handler
+)
+
+add_custom_command(TARGET dictofun_main
+    PRE_BUILD
+    COMMAND python3 ARGS ../../../../../firmware/src/targets/dictofun/version/version.py
 )
 
 add_custom_command(TARGET dictofun_main

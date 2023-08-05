@@ -9,6 +9,7 @@ target_link_libraries(task_cli_logger PRIVATE
     nrf5_cli
     nrf5_cli_uart
     nrf5_queue
+    version
 )
 target_link_libraries(task_cli_logger PUBLIC 
     application
