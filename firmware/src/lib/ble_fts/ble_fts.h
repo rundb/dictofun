@@ -97,7 +97,7 @@ private:
     static constexpr uint32_t pairing_char_uuid{0x10FE};
 
     static constexpr uint32_t cp_char_max_len{9};
-    static constexpr uint32_t file_list_char_max_len{32};
+    static constexpr uint32_t file_list_char_max_len{128};
     static constexpr uint32_t file_list_next_char_max_len{file_list_char_max_len};
     static constexpr uint32_t file_info_char_max_len{32};
     static constexpr uint32_t file_data_char_max_len{256};
