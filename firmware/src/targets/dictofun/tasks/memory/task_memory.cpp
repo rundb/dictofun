@@ -541,10 +541,10 @@ void generate_next_file_name(char * name, const Context& context)
     }
     // FIXME: for now use day, hour, minute and second of the record
     snprintf(name, strlen(name) + 1, "%02d%02d%02d%02d", 
-        response.content[3],
-        response.content[2],
-        response.content[1],
-        response.content[0]
+        response.content[3] % 31,
+        response.content[2] % 24,
+        response.content[1] % 60,
+        response.content[0] % 60
     );
 }
 
