@@ -429,7 +429,18 @@ void FtsService::on_ble_evt(ble_evt_t const * p_ble_evt, void * p_context)
         }
         case BLE_GAP_EVT_CONN_PARAM_UPDATE:
         {
-            NRF_LOG_DEBUG("ble::fts::evt_conn_param_upd");
+            NRF_LOG_DEBUG("ble::fts::evt_conn_param_upd. id=%d, len=%d", 
+                p_ble_evt->header.evt_id, 
+                p_ble_evt->header.evt_len);
+            const auto& conn_param_upd_evt = p_ble_evt->evt.gap_evt.params.conn_param_update;
+            
+            NRF_LOG_DEBUG("conn param event: min=%d, max=%d, lat=%d, timeout=%d", 
+                conn_param_upd_evt.conn_params.min_conn_interval,
+                conn_param_upd_evt.conn_params.max_conn_interval,
+                conn_param_upd_evt.conn_params.slave_latency,
+                conn_param_upd_evt.conn_params.conn_sup_timeout
+                );
+            FtsService::_context.is_connection_params_request_needed = true;
             break;
         }
         case BLE_GATTS_EVT_HVN_TX_COMPLETE:
@@ -540,6 +551,25 @@ void FtsService::process()
     {
         process_client_request(_context.pending_command);
     }
+
+    if (_context.is_connection_params_request_needed && 
+       (_context.current_timestamp - _context.last_connection_params_request_timestamp) >= Context::min_connection_params_change_request_time)
+    {
+        _context.is_connection_params_request_needed = false;
+        ble_gap_conn_params_t gap_conn_params;
+        gap_conn_params.min_conn_interval = 12;
+        gap_conn_params.max_conn_interval = 20;
+        gap_conn_params.conn_sup_timeout = 200;
+        gap_conn_params.slave_latency = 0;
+        const auto res = sd_ble_gap_conn_param_update(_context.conn_handle, &gap_conn_params);
+        if (NRF_SUCCESS != res) 
+        {
+            NRF_LOG_ERROR("failed to update connection parameters");
+        }
+        _context.last_connection_params_request_timestamp = _context.current_timestamp;
+    }
+
+    _context.current_timestamp += Context::process_period;
 }
 
 void FtsService::process_client_request(ControlPointOpcode client_request)

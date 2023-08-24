@@ -509,7 +509,7 @@ void BleSystem::start_advertising(void * /*context_ptr*/)
 void on_conn_params_evt(ble_conn_params_evt_t * p_evt)
 {
     ret_code_t err_code;
-    NRF_LOG_DEBUG("ble: on conn param evt");
+    NRF_LOG_DEBUG("ble: on conn param evt, type=%d", p_evt->evt_type);
 
     if (p_evt->evt_type == BLE_CONN_PARAMS_EVT_FAILED)
     {
