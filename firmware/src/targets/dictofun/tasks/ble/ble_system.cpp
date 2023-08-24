@@ -506,15 +506,6 @@ void BleSystem::start_advertising(void * /*context_ptr*/)
     }
 }
 
-void BleSystem::stop_advertising(void * /*context_ptr*/)
-{
-    const auto err_code = sd_ble_gap_adv_stop(m_advertising.adv_handle);
-    if (NRF_SUCCESS != err_code) 
-    {
-        NRF_LOG_ERROR("ble: adv stop error (%d)", err_code);
-    }
-}
-
 void on_conn_params_evt(ble_conn_params_evt_t * p_evt)
 {
     ret_code_t err_code;

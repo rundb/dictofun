@@ -56,7 +56,6 @@ private:
     result::Result init_conn_params();
 
     static void start_advertising(void * context_ptr);
-    static void stop_advertising(void * context_ptr);
 
     static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context);
     static void pm_evt_handler(pm_evt_t const * p_evt);

@@ -82,7 +82,6 @@ void task_ble(void * context_ptr)
                 }
                 case Command::STOP:
                 {
-                    NRF_LOG_DEBUG("stopping ble");
                     const auto stop_result = ble_system.stop();
                     if (result::Result::OK != stop_result)
                     {
