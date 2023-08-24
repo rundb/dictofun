@@ -158,6 +158,12 @@ private:
         ControlPointOpcode pending_command{ControlPointOpcode::IDLE};
         ControlPointOpcode active_command{ControlPointOpcode::IDLE};
         ClientContext * client_context;
+
+        bool is_connection_params_request_needed{false};
+        uint32_t current_timestamp{0};
+        static constexpr uint32_t process_period{10};
+        uint32_t last_connection_params_request_timestamp{0};
+        static constexpr uint32_t min_connection_params_change_request_time{1000};
     };
 
     static constexpr uint8_t _max_clients{1};
