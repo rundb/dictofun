@@ -56,6 +56,7 @@ private:
     result::Result init_conn_params();
 
     static void start_advertising(void * context_ptr);
+    static void stop_advertising(void * context_ptr);
 
     static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context);
     static void pm_evt_handler(pm_evt_t const * p_evt);
@@ -67,6 +68,9 @@ private:
     bool _has_disconnect_happened{false};
 
     bool _has_pairing_reset_been_requested{false};
+    // set to true on start() and to false on stop() calls
+    bool _is_active{false};
+    bool _is_cold_start_required{true};
 
     static constexpr uint8_t default_peer_id{0};
 };

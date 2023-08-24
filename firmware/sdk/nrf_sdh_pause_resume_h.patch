@@ -1,0 +1,12 @@
+--- ./nRF5_SDK_17.1.0_ddde560/components/softdevice/common/nrf_sdh_freertos.h	2023-08-24 11:29:24.611185036 +0200
++++ ./nRF5_SDK_17.1.0_ddde560/components/softdevice/common/nrf_sdh_freertos_new.h	2023-08-24 11:29:11.502824285 +0200
+@@ -60,6 +60,9 @@
+  */
+ void nrf_sdh_freertos_init(nrf_sdh_freertos_task_hook_t hook, void * p_context);
+ 
++void nrf_sdh_freertos_task_pause();
++void nrf_sdh_freertos_task_resume();
++
+ /**
+  * @}
+  */

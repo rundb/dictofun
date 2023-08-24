@@ -1,0 +1,17 @@
+--- ./nRF5_SDK_17.1.0_ddde560/components/softdevice/common/nrf_sdh_freertos.c	2023-08-06 18:02:39.530419919 +0200
++++ ./nRF5_SDK_17.1.0_ddde560/components/softdevice/common/nrf_sdh_freertos_new.c	2023-08-24 11:25:02.939178000 +0200
+@@ -107,3 +107,14 @@
+         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+     }
+ }
++
++void nrf_sdh_freertos_task_pause()
++{
++    vTaskSuspend(&m_softdevice_task);
++}
++
++void nrf_sdh_freertos_task_resume()
++{
++    vTaskResume(&m_softdevice_task);
++}
++

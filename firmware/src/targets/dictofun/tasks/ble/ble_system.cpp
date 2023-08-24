@@ -122,7 +122,15 @@ result::Result BleSystem::configure(ble_lbs_led_write_handler_t led_write_handle
 
 result::Result BleSystem::start()
 {
-    nrf_sdh_freertos_init(start_advertising, nullptr);
+    if (_is_cold_start_required)
+    {
+        nrf_sdh_freertos_init(start_advertising, nullptr);
+    }
+    else 
+    {
+        // TODO: if needed, resume the SDH task
+    }
+    _is_active = true;
 
     return result::Result::OK;
 }
@@ -130,12 +138,28 @@ result::Result BleSystem::start()
 result::Result BleSystem::stop()
 {
     // TODO: close existing connections, stop services and then stop advertising
-    return result::Result::ERROR_NOT_IMPLEMENTED;
+    const auto disconnect_result = sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+    if (NRF_SUCCESS != disconnect_result) 
+    {
+        NRF_LOG_ERROR("ble: failed to disconnect current connection");
+        return result::Result::ERROR_GENERAL;
+    }
+
+    m_conn_handle = BLE_CONN_HANDLE_INVALID;
+
+    stop_advertising(nullptr);
+
+    _is_active = false;
+
+    return result::Result::OK;
 }
 
 void BleSystem::process()
 {
-    services_process();
+    if (_is_active)
+    {
+        services_process();
+    }
 }
 
 void BleSystem::connect_fts_to_target_fs()
@@ -476,6 +500,15 @@ void BleSystem::start_advertising(void * /*context_ptr*/)
     if (err_code != 0)
     {
         NRF_LOG_ERROR("ble: adv start error (%s)", helpers::decode_error(err_code));
+    }
+}
+
+void BleSystem::stop_advertising(void * /*context_ptr*/)
+{
+    const auto err_code = sd_ble_gap_adv_stop(m_advertising.adv_handle);
+    if (NRF_SUCCESS != err_code) 
+    {
+        NRF_LOG_ERROR("ble: adv stop error (%d)", err_code);
     }
 }
 

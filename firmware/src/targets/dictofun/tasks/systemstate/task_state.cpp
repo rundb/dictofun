@@ -239,6 +239,12 @@ void process_button_event(button::Event event, Context& context)
             {
                 if (context._is_ble_system_active)
                 {
+                    const auto ble_disable_status = disable_ble_subsystem(context);
+                    if (result::Result::OK != ble_disable_status) 
+                    {
+                        NRF_LOG_ERROR("state: failed to request BLE disable");
+                    }
+
                     xQueueReset(context.memory_status_handle);
                     memory::CommandQueueElement command_to_memory{memory::Command::SELECT_OWNER_AUDIO, {0, 0}};
                     const auto owner_switch_result = xQueueSend(context.memory_commands_handle, reinterpret_cast<void *>(&command_to_memory), 0);
@@ -395,6 +401,25 @@ result::Result enable_ble_subsystem(Context& context)
         context._is_ble_system_active = true;
     }
 
+    return result::Result::OK;
+}
+
+result::Result disable_ble_subsystem(Context& context) 
+{
+    if (context._is_ble_system_active) 
+    {
+        ble::CommandQueueElement cmd{ble::Command::STOP};
+        const auto ble_stop_status = xQueueSend(
+            context.ble_commands_handle,
+            reinterpret_cast<void *>(&cmd), 
+            0);
+        if (ble_stop_status != pdPASS)
+        {
+            NRF_LOG_ERROR("failed to queue BLE stop operation");
+            return result::Result::ERROR_GENERAL;
+        }
+        context._is_ble_system_active = false;
+    }
     return result::Result::OK;
 }
 
