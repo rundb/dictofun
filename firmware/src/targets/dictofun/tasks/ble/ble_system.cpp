@@ -129,7 +129,6 @@ result::Result BleSystem::start()
     }
     else 
     {
-        // TODO: if needed, resume the SDH task
         nrf_sdh_freertos_task_resume();
     }
     _is_active = true;
@@ -151,8 +150,6 @@ result::Result BleSystem::stop()
             m_conn_handle = BLE_CONN_HANDLE_INVALID;
         }
     }
-
-    // stop_advertising(nullptr);
 
     _is_active = false;
     nrf_sdh_freertos_task_pause();
