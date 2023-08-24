@@ -122,20 +122,47 @@ result::Result BleSystem::configure(ble_lbs_led_write_handler_t led_write_handle
 
 result::Result BleSystem::start()
 {
-    nrf_sdh_freertos_init(start_advertising, nullptr);
+    if (_is_cold_start_required)
+    {
+        nrf_sdh_freertos_init(start_advertising, nullptr);
+        _is_cold_start_required = false;
+    }
+    else 
+    {
+        nrf_sdh_freertos_task_resume();
+    }
+    _is_active = true;
 
     return result::Result::OK;
 }
 
 result::Result BleSystem::stop()
 {
-    // TODO: close existing connections, stop services and then stop advertising
-    return result::Result::ERROR_NOT_IMPLEMENTED;
+    if (BLE_CONN_HANDLE_INVALID != m_conn_handle)
+    {
+        const auto disconnect_result = sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+        if (NRF_SUCCESS != disconnect_result) 
+        {
+            NRF_LOG_ERROR("ble: failed to disconnect current connection");
+        }
+        else 
+        {
+            m_conn_handle = BLE_CONN_HANDLE_INVALID;
+        }
+    }
+
+    _is_active = false;
+    nrf_sdh_freertos_task_pause();
+
+    return result::Result::OK;
 }
 
 void BleSystem::process()
 {
-    services_process();
+    if (_is_active)
+    {
+        services_process();
+    }
 }
 
 void BleSystem::connect_fts_to_target_fs()

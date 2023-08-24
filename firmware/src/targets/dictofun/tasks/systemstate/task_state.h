@@ -75,6 +75,7 @@ void shutdown_ldo();
 void configure_power_latch();
 void process_timeouts(Context& context);
 result::Result enable_ble_subsystem(Context& context);
+result::Result disable_ble_subsystem(Context& context);
 
 result::Result request_record_creation(const Context& context);
 result::Result request_record_start(const Context& context);
