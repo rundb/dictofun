@@ -125,10 +125,12 @@ result::Result BleSystem::start()
     if (_is_cold_start_required)
     {
         nrf_sdh_freertos_init(start_advertising, nullptr);
+        _is_cold_start_required = false;
     }
     else 
     {
         // TODO: if needed, resume the SDH task
+        nrf_sdh_freertos_task_resume();
     }
     _is_active = true;
 
@@ -137,19 +139,23 @@ result::Result BleSystem::start()
 
 result::Result BleSystem::stop()
 {
-    // TODO: close existing connections, stop services and then stop advertising
-    const auto disconnect_result = sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
-    if (NRF_SUCCESS != disconnect_result) 
+    if (BLE_CONN_HANDLE_INVALID != m_conn_handle)
     {
-        NRF_LOG_ERROR("ble: failed to disconnect current connection");
-        return result::Result::ERROR_GENERAL;
+        const auto disconnect_result = sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+        if (NRF_SUCCESS != disconnect_result) 
+        {
+            NRF_LOG_ERROR("ble: failed to disconnect current connection");
+        }
+        else 
+        {
+            m_conn_handle = BLE_CONN_HANDLE_INVALID;
+        }
     }
 
-    m_conn_handle = BLE_CONN_HANDLE_INVALID;
-
-    stop_advertising(nullptr);
+    // stop_advertising(nullptr);
 
     _is_active = false;
+    nrf_sdh_freertos_task_pause();
 
     return result::Result::OK;
 }

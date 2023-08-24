@@ -7,11 +7,11 @@
 +
 +void nrf_sdh_freertos_task_pause()
 +{
-+    vTaskSuspend(&m_softdevice_task);
++    vTaskSuspend(m_softdevice_task);
 +}
 +
 +void nrf_sdh_freertos_task_resume()
 +{
-+    vTaskResume(&m_softdevice_task);
++    vTaskResume(m_softdevice_task);
 +}
 +
