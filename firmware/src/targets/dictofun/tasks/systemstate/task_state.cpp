@@ -68,6 +68,7 @@ void task_system_state(void * context_ptr)
         {
             led::CommandQueueElement led_command{led::Color::GREEN, led::State::SLOW_GLOW};
             xQueueSend(context->led_commands_handle, reinterpret_cast<void *>(&led_command), 0);
+            // TODO: add BLE enable, if button was not pressed
         }
     }
 
