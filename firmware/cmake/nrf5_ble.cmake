@@ -187,13 +187,11 @@ target_include_directories(nrf5_ble_db_discovery PUBLIC
 target_link_libraries(nrf5_ble_db_discovery PUBLIC
   nrf5_ble_common
   nrf5_log
+) 
+target_link_libraries(nrf5_ble_db_discovery PUBLIC
+  nrf5_ble_gq
 )
-if(NRF5_SDK_VERSION VERSION_EQUAL 16.0.0)
-  
-  target_link_libraries(nrf5_ble_db_discovery PUBLIC
-    nrf5_ble_gq
-  )
-endif()
+
 list(APPEND NRF5_LIBRARY_NRF5_BLE_DB_DISCOVERY_DEPENDENCIES
   nrf5_app_error
   nrf5_app_scheduler

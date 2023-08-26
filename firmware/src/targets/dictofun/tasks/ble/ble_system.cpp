@@ -157,6 +157,7 @@ result::Result BleSystem::stop()
     return result::Result::OK;
 }
 
+
 void BleSystem::process()
 {
     if (_is_active)
@@ -415,6 +416,7 @@ void BleSystem::pm_evt_handler(pm_evt_t const * p_evt)
 
         case PM_EVT_CONN_SEC_SUCCEEDED:
             bonded_client_add(p_evt);
+            services::start_db_discovery(p_evt->conn_handle);
             break;
 
         case PM_EVT_PEERS_DELETE_SUCCEEDED:
@@ -462,7 +464,7 @@ result::Result BleSystem::init_advertising()
 
     memset(&init, 0, sizeof(init));
 
-    static constexpr size_t MAX_UUIDS_COUNT{2U};
+    static constexpr size_t MAX_UUIDS_COUNT{3U};
     ble_uuid_t adv_uuids[MAX_UUIDS_COUNT]{0};
     
     [[maybe_unused]] const auto uuids_count = get_services_uuids(adv_uuids, MAX_UUIDS_COUNT); 
@@ -590,6 +592,16 @@ result::Result BleSystem::reset_pairing()
         _has_pairing_reset_been_requested = true;
     }
     return result::Result::OK;
+}
+
+bool BleSystem::is_time_update_pending() 
+{
+    return services::is_current_time_update_pending();
+}
+
+result::Result BleSystem::get_current_cts_time(time::DateTime& datetime) 
+{
+    return services::get_current_time_update(datetime);
 }
 
 }

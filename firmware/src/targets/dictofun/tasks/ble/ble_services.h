@@ -14,6 +14,7 @@
 #include "ble_fts.h"
 #include "FreeRTOS.h"
 #include "queue.h"
+#include "time.h"
 
 /// This module aggregates instantiations of all BLE services
 namespace ble
@@ -32,5 +33,11 @@ namespace services
 void register_fs_communication_queues(QueueHandle_t commands_queue, QueueHandle_t status_queue, QueueHandle_t data_queue);
 void register_keepalive_queue(QueueHandle_t keepalive_queue);
 bool is_fts_active();
+void start_db_discovery(uint16_t conn_handle);
+void request_current_time();
+
+bool is_current_time_update_pending();
+result::Result get_current_time_update(time::DateTime& datetime);
+
 }
 }

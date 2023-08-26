@@ -13,6 +13,7 @@
 #include "ble_fts.h"
 #include "FreeRTOS.h"
 #include "queue.h"
+#include "time.h"
 
 namespace ble
 {
@@ -44,6 +45,9 @@ public:
     bool is_fts_active();
     bool has_connect_happened() { const auto ret = _has_connect_happened; _has_connect_happened = false; return ret;};
     bool has_disconnect_happened() { const auto ret = _has_disconnect_happened; _has_disconnect_happened = false; return ret;};
+
+    bool is_time_update_pending();
+    result::Result get_current_cts_time(time::DateTime& datetime);
 
 private:
     static BleSystem * _instance;
