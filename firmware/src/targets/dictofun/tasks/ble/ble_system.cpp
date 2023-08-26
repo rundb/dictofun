@@ -157,11 +157,18 @@ result::Result BleSystem::stop()
     return result::Result::OK;
 }
 
+
+static int ROTU_cnt{0};
 void BleSystem::process()
 {
     if (_is_active)
     {
         services_process();
+        ROTU_cnt++;
+        if (ROTU_cnt == 2000)
+        {
+            ble::services::request_current_time();
+        }
     }
 }
 
@@ -415,6 +422,7 @@ void BleSystem::pm_evt_handler(pm_evt_t const * p_evt)
 
         case PM_EVT_CONN_SEC_SUCCEEDED:
             bonded_client_add(p_evt);
+            services::start_db_discovery(p_evt->conn_handle);
             break;
 
         case PM_EVT_PEERS_DELETE_SUCCEEDED:
@@ -462,7 +470,7 @@ result::Result BleSystem::init_advertising()
 
     memset(&init, 0, sizeof(init));
 
-    static constexpr size_t MAX_UUIDS_COUNT{2U};
+    static constexpr size_t MAX_UUIDS_COUNT{3U};
     ble_uuid_t adv_uuids[MAX_UUIDS_COUNT]{0};
     
     [[maybe_unused]] const auto uuids_count = get_services_uuids(adv_uuids, MAX_UUIDS_COUNT); 

@@ -32,5 +32,7 @@ namespace services
 void register_fs_communication_queues(QueueHandle_t commands_queue, QueueHandle_t status_queue, QueueHandle_t data_queue);
 void register_keepalive_queue(QueueHandle_t keepalive_queue);
 bool is_fts_active();
+void start_db_discovery(uint16_t conn_handle);
+void request_current_time();
 }
 }
