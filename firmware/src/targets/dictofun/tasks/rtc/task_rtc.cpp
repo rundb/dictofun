@@ -91,19 +91,6 @@ void task_rtc(void * context_ptr)
                 datetime.second
             );
         }
-        // // This should be called once in the power cycle of the whole setup, for the sake of testing
-        // datetime.year = 23;
-        // datetime.month = 3;
-        // datetime.day = 13;
-        // datetime.weekday = 1;
-        // datetime.hour = 16;
-        // datetime.minute = 22;
-        // datetime.second = 0;
-        // const auto rtc_set_result = rtc.set_date_time(datetime);
-        // if (result::Result::OK != rtc_set_result)
-        // {
-        //     NRF_LOG_ERROR("rtc: failed to set time");
-        // }
     }
 
     CommandQueueElement command;
@@ -147,7 +134,24 @@ void task_rtc(void * context_ptr)
                 }
                 case Command::SET_TIME:
                 {
-                    NRF_LOG_ERROR("rtc: set time not implemented yet");
+                    rtc::Rv4162::DateTime datetime;
+                    datetime.year = command.content[0];
+                    datetime.month = command.content[1];
+                    datetime.day = command.content[2];
+                    datetime.hour = command.content[3];
+                    datetime.minute = command.content[4];
+                    datetime.second = command.content[5];
+                    datetime.weekday = 7;
+
+                    const auto rtc_set_result = rtc.set_date_time(datetime);
+                    if (result::Result::OK != rtc_set_result)
+                    {
+                        NRF_LOG_ERROR("rtc: failed to set time");
+                    }
+                    else 
+                    {
+                        NRF_LOG_DEBUG("rtc: successfully updated current time");
+                    }
                     break;
                 }
             }
