@@ -9,6 +9,7 @@
 #include "FreeRTOS.h"
 #include "queue.h"
 #include "task.h"
+#include "task_rtc.h"
 
 #include "ble_system.h"
 
@@ -159,6 +160,39 @@ void task_ble(void * context_ptr)
             if (pdTRUE != keepalive_send_result)
             {
                 NRF_LOG_WARNING("keepalive on-disconnect send has failed");
+            }
+        }
+
+        if (ble_system.is_time_update_pending())
+        {
+            time::DateTime current_time;
+            const auto cts_get_result = ble_system.get_current_cts_time(current_time);
+            if (result::Result::OK != cts_get_result)
+            {
+                NRF_LOG_ERROR("failed to retrieve current CTS time");
+            }
+            else 
+            {
+                rtc::CommandQueueElement cmd{rtc::Command::SET_TIME, 
+                    {
+                        static_cast<uint8_t>(current_time.year % 2000),
+                        current_time.month,
+                        current_time.day,
+                        current_time.hour,
+                        current_time.minute,
+                        current_time.second
+                    }
+                };
+                const auto send_result = xQueueSend(context.commands_to_rtc_queue,
+                    &cmd,
+                    0
+                );
+                if (pdTRUE != send_result)
+                {
+                    // Queue operation has failed
+                    NRF_LOG_WARNING("ble: set time request has failed.");
+                    return;
+                }
             }
         }
     }

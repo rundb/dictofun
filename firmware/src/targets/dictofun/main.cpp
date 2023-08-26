@@ -314,6 +314,7 @@ int main()
     ble_context.command_to_mem_queue = ble_to_mem_commands_queue.handle;
     ble_context.status_from_mem_queue = ble_from_mem_status_queue.handle;
     ble_context.data_from_mem_queue = ble_from_mem_data_queue.handle;
+    ble_context.commands_to_rtc_queue = rtc_commands_queue.handle;
     const auto ble_task_init_result = ble_task.init(
         ble::task_ble,
         "BLE",

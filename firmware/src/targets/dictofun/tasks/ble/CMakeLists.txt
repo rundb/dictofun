@@ -36,6 +36,7 @@ target_link_libraries(task_ble PRIVATE
     nrf5_ble_srv_cts_c
     nrf5_ble_gq
     nrf5_ble_db_discovery
+    task_rtc_interface
     boards
 )
 target_link_libraries(task_ble PUBLIC 
@@ -45,6 +46,7 @@ target_link_libraries(task_ble PUBLIC
     nrf5_freertos_portable_memmang_1
     common
     ble_fts
+    time
 )
 
 add_library(task_ble_interface INTERFACE)

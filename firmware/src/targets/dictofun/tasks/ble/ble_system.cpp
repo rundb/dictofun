@@ -158,17 +158,11 @@ result::Result BleSystem::stop()
 }
 
 
-static int ROTU_cnt{0};
 void BleSystem::process()
 {
     if (_is_active)
     {
         services_process();
-        ROTU_cnt++;
-        if (ROTU_cnt == 2000)
-        {
-            ble::services::request_current_time();
-        }
     }
 }
 
@@ -598,6 +592,16 @@ result::Result BleSystem::reset_pairing()
         _has_pairing_reset_been_requested = true;
     }
     return result::Result::OK;
+}
+
+bool BleSystem::is_time_update_pending() 
+{
+    return services::is_current_time_update_pending();
+}
+
+result::Result BleSystem::get_current_cts_time(time::DateTime& datetime) 
+{
+    return services::get_current_time_update(datetime);
 }
 
 }

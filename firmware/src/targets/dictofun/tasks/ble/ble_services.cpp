@@ -11,6 +11,7 @@
 #include "ble_cts_c.h"
 #include "ble_db_discovery.h"
 #include "nrf_ble_gq.h"
+#include "time.h"
 
 namespace ble
 {
@@ -37,6 +38,9 @@ ble_uuid_t adv_uuids[] = {
     },
 };
 
+volatile bool _is_current_time_update_pending{false};
+time::DateTime _current_time;
+
 constexpr size_t uuids_count{sizeof(adv_uuids) / sizeof(adv_uuids[0])};
 
 static void db_discovery_init();
@@ -46,6 +50,31 @@ static void nrf_qwr_error_handler(uint32_t nrf_error)
     NRF_LOG_ERROR("ble: QWR error %d", nrf_error);
 }
 
+static void current_time_set(ble_cts_c_evt_t * p_evt)
+{
+    NRF_LOG_DEBUG("Received current time from CTS");
+    _current_time.year = p_evt->params.current_time.exact_time_256.day_date_time.date_time.year;
+    _current_time.month = p_evt->params.current_time.exact_time_256.day_date_time.date_time.month;
+    _current_time.day = p_evt->params.current_time.exact_time_256.day_date_time.date_time.day;
+    _current_time.weekday = p_evt->params.current_time.exact_time_256.day_date_time.day_of_week;
+    _current_time.hour = p_evt->params.current_time.exact_time_256.day_date_time.date_time.hours;
+    _current_time.minute = p_evt->params.current_time.exact_time_256.day_date_time.date_time.minutes;
+    _current_time.second = p_evt->params.current_time.exact_time_256.day_date_time.date_time.seconds;
+
+    _is_current_time_update_pending = true;
+}
+
+result::Result services::get_current_time_update(time::DateTime& datetime)
+{
+    if (_is_current_time_update_pending)
+    {
+        _is_current_time_update_pending = false;
+        datetime = _current_time;
+        return result::Result::OK;
+    }
+    return result::Result::OK;
+}
+
 static void on_cts_c_evt(ble_cts_c_t * p_cts, ble_cts_c_evt_t * p_evt)
 {
     ret_code_t err_code;
@@ -53,36 +82,33 @@ static void on_cts_c_evt(ble_cts_c_t * p_cts, ble_cts_c_evt_t * p_evt)
     switch (p_evt->evt_type)
     {
         case BLE_CTS_C_EVT_DISCOVERY_COMPLETE:
-            NRF_LOG_INFO("Current Time Service discovered on server.");
+            // NRF_LOG_INFO("Current Time Service discovered on server.");
             err_code = ble_cts_c_handles_assign(&m_cts_c,
                                                 p_evt->conn_handle,
                                                 &p_evt->params.char_handles);
-            APP_ERROR_CHECK(err_code);
-            break;
-
-        case BLE_CTS_C_EVT_DISCOVERY_FAILED:
-            NRF_LOG_INFO("Current Time Service not found on server. ");
-            // CTS not found in this case we just disconnect. There is no reason to stay
-            // in the connection for this simple app since it all wants is to interact with CT
-            if (p_evt->conn_handle != BLE_CONN_HANDLE_INVALID)
+            if (err_code != NRF_SUCCESS) 
             {
-                err_code = sd_ble_gap_disconnect(p_evt->conn_handle,
-                                                 BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
-                APP_ERROR_CHECK(err_code);
+                NRF_LOG_ERROR("Failed to assign CTS handles")
+            }
+            else 
+            {
+                services::request_current_time();
             }
             break;
 
+        case BLE_CTS_C_EVT_DISCOVERY_FAILED:
+            break;
+
         case BLE_CTS_C_EVT_DISCONN_COMPLETE:
-            NRF_LOG_INFO("Disconnect Complete.");
+            // NRF_LOG_INFO("Disconnect Complete.");
             break;
 
         case BLE_CTS_C_EVT_CURRENT_TIME:
-            NRF_LOG_INFO("Current Time received.");
-            // current_time_print(p_evt);
+            current_time_set(p_evt);
             break;
 
         case BLE_CTS_C_EVT_INVALID_TIME:
-            NRF_LOG_INFO("Invalid Time received.");
+            // NRF_LOG_INFO("Invalid Time received.");
             break;
 
         default:
@@ -189,11 +215,15 @@ bool services::is_fts_active()
     return fts_service.is_file_transmission_running();
 }
 
+bool services::is_current_time_update_pending() 
+{
+    return _is_current_time_update_pending;
+}
+
 void services::request_current_time() 
 {
     if (m_cts_c.conn_handle != BLE_CONN_HANDLE_INVALID)
     {
-        NRF_LOG_DEBUG("ROTU requesting CTS time");
         const auto err_code = ble_cts_c_current_time_read(&m_cts_c);
         if (err_code == NRF_ERROR_NOT_FOUND)
         {

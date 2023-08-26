@@ -22,6 +22,7 @@ struct Context
     QueueHandle_t command_to_mem_queue{nullptr};
     QueueHandle_t status_from_mem_queue{nullptr};
     QueueHandle_t data_from_mem_queue{nullptr};
+    QueueHandle_t commands_to_rtc_queue{nullptr};
 };
 
 enum class Command
