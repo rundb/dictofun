@@ -84,6 +84,8 @@ constexpr uint32_t ble_command_wait_ticks{5};
 constexpr uint32_t data_send_wait_ticks{10};
 constexpr uint32_t audio_data_wait_ticks{5};
 
+constexpr uint32_t file_name_size_bytes{16UL};
+
 // This element allocated statically, as it's rather big (~260 bytes)
 ble::FileDataFromMemoryQueueElement data_queue_elem;
 
@@ -182,7 +184,7 @@ static bool is_ble_access_allowed()
     return _memory_owner == MemoryOwner::BLE;
 }
 
-static constexpr uint32_t max_file_name_size{8 + 1};
+static constexpr uint32_t max_file_name_size{ble::fts::file_id_size + 1};
 
 void convert_file_id_to_string(ble::fts::file_id_type file_id, char * buffer)
 {
@@ -302,7 +304,7 @@ void process_request_from_ble(Context& context, ble::CommandToMemory command_id,
                 break;
             }
             _file_operation_context.is_file_open = false;
-            _file_operation_context.file_id = 0;
+            _file_operation_context.file_id.reset();
             
             break;
         }
@@ -540,7 +542,9 @@ void generate_next_file_name(char * name, const Context& context)
         return;
     }
     // FIXME: for now use day, hour, minute and second of the record
-    snprintf(name, strlen(name) + 1, "%02d%02d%02d%02d", 
+    snprintf(name, strlen(name) + 1, "%02d%02d%02d%02d%02d%02d",
+        response.content[5] % 100,
+        response.content[4] % 12,
         response.content[3] % 31,
         response.content[2] % 24,
         response.content[1] % 60,

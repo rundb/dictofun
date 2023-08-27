@@ -14,7 +14,41 @@ namespace ble
 namespace fts
 {
 
-using file_id_type = uint64_t;
+constexpr uint32_t file_id_size{16};
+
+struct file_id_type 
+{
+    uint8_t data[file_id_size]{0};
+
+    file_id_type& operator = (const file_id_type& rhs) 
+    {
+        memcpy(data, rhs.data, file_id_size);
+        return *this;
+    }
+
+    bool operator == (const file_id_type& rhs) 
+    {
+        for (auto i = 0U; i < file_id_size; ++i) 
+        {
+            if (data[i] != rhs.data[i]) 
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    bool operator != (const file_id_type& rhs) {
+        return !(*this == rhs);
+    }
+
+    void reset() 
+    {
+        memset(data, 0, file_id_size);
+    }
+};
+
+// using file_id_type = uint8_t[file_id_size];
 
 /// @brief This structure provides a glue to the file system
 struct FileSystemInterface
@@ -216,7 +250,7 @@ private:
         GENERIC_ERROR = 5
     };
 
-    result::Result update_general_status(GeneralStatus status, uint64_t parameter);
+    result::Result update_general_status(GeneralStatus status, ble::fts::file_id_type parameter);
 
     void process_client_request(ControlPointOpcode client_request);
 

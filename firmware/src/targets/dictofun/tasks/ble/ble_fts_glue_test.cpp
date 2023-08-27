@@ -18,8 +18,8 @@ namespace test
 
 constexpr size_t test_files_count{2};
 ble::fts::file_id_type test_files_ids[test_files_count] {
-    0x0102030405060708ULL,
-    0x0102030405060709ULL,
+    {1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8},
+    {1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 9},
 };
 
 constexpr uint32_t file_0_size{512};
@@ -66,7 +66,7 @@ result::Result dictofun_test_get_file_info(const ble::fts::file_id_type file_id,
 
     static constexpr size_t max_buffer_size{64};
     char tmp[max_buffer_size]{0};
-    if (file_id == test_files_ids[0])
+    if (test_files_ids[0] == file_id)
     {
         // let first file have a size of 512 bytes, no codec used, frequency 16000
         // TODO: consider using string primitives from ESTL here (good chance)
@@ -76,7 +76,7 @@ result::Result dictofun_test_get_file_info(const ble::fts::file_id_type file_id,
         memcpy(file_data, tmp, std::min(max_data_size - 1, idx));
         file_data_size = idx;
     }
-    else if (file_id == test_files_ids[1])
+    else if (test_files_ids[1] == file_id)
     {
         return result::Result::ERROR_NOT_IMPLEMENTED;
     }
@@ -95,7 +95,7 @@ result::Result dictofun_test_close_file(file_id_type file_id)
     }
     _test_ctx.is_file_open = false;
     _test_ctx.position = 0;
-    _test_ctx.current_file_id = 0;
+    _test_ctx.current_file_id.reset();
 
     return result::Result::OK;
 }
