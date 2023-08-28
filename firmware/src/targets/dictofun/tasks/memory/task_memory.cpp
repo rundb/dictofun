@@ -84,6 +84,8 @@ constexpr uint32_t ble_command_wait_ticks{5};
 constexpr uint32_t data_send_wait_ticks{10};
 constexpr uint32_t audio_data_wait_ticks{5};
 
+constexpr uint32_t file_name_size_bytes{16UL};
+
 // This element allocated statically, as it's rather big (~260 bytes)
 ble::FileDataFromMemoryQueueElement data_queue_elem;
 
@@ -182,7 +184,7 @@ static bool is_ble_access_allowed()
     return _memory_owner == MemoryOwner::BLE;
 }
 
-static constexpr uint32_t max_file_name_size{8 + 1};
+static constexpr uint32_t max_file_name_size{ble::fts::file_id_size + 1};
 
 void convert_file_id_to_string(ble::fts::file_id_type file_id, char * buffer)
 {
@@ -302,7 +304,7 @@ void process_request_from_ble(Context& context, ble::CommandToMemory command_id,
                 break;
             }
             _file_operation_context.is_file_open = false;
-            _file_operation_context.file_id = 0;
+            _file_operation_context.file_id.reset();
             
             break;
         }
@@ -376,15 +378,6 @@ void process_request_from_state(Context& context, const Command command_id)
         }
         case Command::CREATE_RECORD:
         {
-            uint32_t tmp_length{0};
-            const auto name_read_result = memory::filesystem::get_latest_file_name(lfs, active_record_name, tmp_length);
-            if (result::Result::OK != name_read_result)
-            {
-                NRF_LOG_ERROR("failed to read latest record name. aborting the test");
-                StatusQueueElement response{Command::CREATE_RECORD, Status::ERROR_GENERAL};
-                xQueueSend(context.status_queue, reinterpret_cast<void *>(&response), 0);
-                return;
-            }
             memory::generate_next_file_name(active_record_name, context);
 
             const auto create_result = memory::filesystem::create_file(lfs, active_record_name);
@@ -499,19 +492,31 @@ void process_request_from_state(Context& context, const Command command_id)
 
 void generate_next_file_name_fallback(char * name)
 {
-    if (strlen(name) != 8)
+    if (name == nullptr)
     {
-        NRF_LOG_ERROR("wrong file name specified. aborting");
+        NRF_LOG_ERROR("File name generation error: nullptr");
         return;
     }
-    const auto last_id = (name[6] - '0') * 10 + (name[7] - '0');
+
+    uint32_t tmp_length{0};
+    const auto name_read_result = memory::filesystem::get_latest_file_name(lfs, name, tmp_length);
+    if (result::Result::OK != name_read_result)
+    {
+        NRF_LOG_WARNING("Failed to read latest record name. Using the default name");
+        memset(name, '0', ble::fts::file_id_size);
+        return;
+    }
+
+    const auto last_id = (name[ble::fts::file_id_size - 2] - '0') * 10 + (name[ble::fts::file_id_size - 1] - '0');
     const auto next_id = last_id + 1;
-    name[6] = ((next_id / 10) % 10) + '0';
-    name[7] =  (next_id % 10) + '0';
+    name[ble::fts::file_id_size - 2] = ((next_id / 10) % 10) + '0';
+    name[ble::fts::file_id_size - 1] =  (next_id % 10) + '0';
 }
 
 void generate_next_file_name(char * name, const Context& context)
 {
+    if (nullptr == name) return;
+
     // send request to RTC task to figure out if RTC is available
     rtc::CommandQueueElement cmd{rtc::Command::GET_TIME, {}};
     const auto send_result = xQueueSend(context.commands_to_rtc_queue,
@@ -540,7 +545,9 @@ void generate_next_file_name(char * name, const Context& context)
         return;
     }
     // FIXME: for now use day, hour, minute and second of the record
-    snprintf(name, strlen(name) + 1, "%02d%02d%02d%02d", 
+    snprintf(name, ble::fts::file_id_size + 1, "0000%02d%02d%02d%02d%02d%02d",
+        response.content[5] % 100,
+        response.content[4] % 12,
         response.content[3] % 31,
         response.content[2] % 24,
         response.content[1] % 60,

@@ -15,6 +15,18 @@ namespace ble
 namespace fts
 {
 
+bool operator == (const file_id_type& lhs, const file_id_type& rhs) 
+{
+    for (auto i = 0U; i < file_id_size; ++i) 
+    {
+        if (lhs.data[i] != rhs.data[i]) 
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
 uint32_t FtsService::_ctx_data_pool[_max_clients * _link_ctx_size]{0};
 
 blcm_link_ctx_storage_t FtsService::_link_ctx_storage =
@@ -340,9 +352,9 @@ void FtsService::on_req_files_list(const uint32_t size)
 
 file_id_type FtsService::get_file_id_from_raw(const uint8_t * data) const
 {
-    const uint32_t low_half = (data[0]) |  (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
-    const uint32_t high_half = (data[4]) | (data[5] << 8) | (data[6] << 16) | (data[7] << 24);
-    return low_half | (static_cast<file_id_type>(high_half) << 32);
+    file_id_type result;
+    memcpy(result.data, data, ble::fts::file_id_size);
+    return result;
 }
 
 void FtsService::on_req_file_info(const uint32_t data_size, const uint8_t * file_id_data)
@@ -668,12 +680,12 @@ void FtsService::process_client_request(ControlPointOpcode client_request)
 result::Result FtsService::send_files_list()
 {
     uint32_t count{0};
-    file_id_type files_list[files_list_max_count * sizeof(file_id_type)]{{0}};
+    file_id_type files_list[files_list_max_count * file_id_size]{{0}};
     const auto fs_call = _fs_if.file_list_get_function(count, files_list);
     if (result::Result::OK != fs_call)
     {
         NRF_LOG_ERROR("ble::fts: FS files' list getter has failed");
-        (void)update_general_status(GeneralStatus::FS_CORRUPT, 0);
+        (void)update_general_status(GeneralStatus::FS_CORRUPT, file_id_type());
         return result::Result::ERROR_GENERAL;
     }
     NRF_LOG_DEBUG("files list: count=%d, max_count=%d", count, files_list_max_count);
@@ -718,7 +730,7 @@ result::Result FtsService::continue_sending_files_list()
     if (result::Result::OK != fs_call)
     {
         NRF_LOG_ERROR("ble::fts: FS files' list next getter has failed");
-        (void)update_general_status(GeneralStatus::FS_CORRUPT, 0);
+        (void)update_general_status(GeneralStatus::FS_CORRUPT, file_id_type());
         return result::Result::ERROR_GENERAL;
     }
 
@@ -760,7 +772,7 @@ result::Result FtsService::send_file_info()
     if (result::Result::OK != file_info_call_result)
     {
         NRF_LOG_ERROR("ble::fts::send_info: error");
-        (void)update_general_status(GeneralStatus::FS_CORRUPT, 0);
+        (void)update_general_status(GeneralStatus::FS_CORRUPT, file_id_type());
         return file_info_call_result;
     }
 
@@ -810,7 +822,7 @@ result::Result FtsService::send_file_data()
     if (result::Result::OK != read_result)
     {
         NRF_LOG_ERROR("ble::fts::send_data: FS read failed");
-        (void)update_general_status(GeneralStatus::FS_CORRUPT, 0);
+        (void)update_general_status(GeneralStatus::FS_CORRUPT, file_id_type());
         return read_result;
     }
 
@@ -863,7 +875,7 @@ result::Result FtsService::send_fs_status()
     if (result::Result::OK != fs_status_result)
     {
         NRF_LOG_ERROR("ble::fts::send fs status failed");
-        (void)update_general_status(GeneralStatus::FS_CORRUPT, 0);
+        (void)update_general_status(GeneralStatus::FS_CORRUPT, file_id_type());
         return fs_status_result;
     }    
 
@@ -888,13 +900,12 @@ result::Result FtsService::send_fs_status()
     return result::Result::OK;
 }
 
-result::Result FtsService::update_general_status(GeneralStatus status, uint64_t parameter)
+result::Result FtsService::update_general_status(GeneralStatus status, ble::fts::file_id_type parameter)
 {
     _transaction_ctx.buffer[0] = static_cast<uint8_t>(status);
     if (status == GeneralStatus::TRANSACTION_ABORTED)
     {
-        // Intentionally casting 64->8, as the user should put abortion reason to the first byte
-        _transaction_ctx.buffer[1] = static_cast<uint8_t>(parameter);
+        _transaction_ctx.buffer[1] = parameter.data[0];
         _transaction_ctx.size = 2;
     }
     else if (status == GeneralStatus::FILE_NOT_FOUND)

@@ -27,6 +27,7 @@ static QueueHandle_t _keepalive_queue{nullptr};
 static constexpr uint32_t max_status_wait_time{1000};
 static constexpr uint32_t max_short_data_wait_time{1000};
 static constexpr uint32_t max_long_data_wait_time{2000};
+static constexpr uint32_t max_get_files_list_wait_time{6000};
 
 // this queue element is allocated statically, as it's rather huge (~260 bytes) and it's better to avoid putting it on stack
 ble::FileDataFromMemoryQueueElement data_from_memory_queue_element;
@@ -65,7 +66,7 @@ result::Result get_file_list(uint32_t& files_count, file_id_type * files_list_pt
         NRF_LOG_ERROR("get file list: failed to send cmd to mem");
         return result::Result::ERROR_GENERAL;
     }
-    const auto status_result = xQueueReceive(_status_from_fs_queue, &response, max_status_wait_time);
+    const auto status_result = xQueueReceive(_status_from_fs_queue, &response, max_get_files_list_wait_time);
     if (pdTRUE != status_result)
     {
         NRF_LOG_ERROR("get file list: timed out recv status from mem");
@@ -80,7 +81,7 @@ result::Result get_file_list(uint32_t& files_count, file_id_type * files_list_pt
     ble::FileDataFromMemoryQueueElement& data{data_from_memory_queue_element};
 
     // TODO: make sure to test cases of both short lists (fitting to the data element) and longer lists
-    const auto data_result = xQueueReceive(_data_from_fs_queue, &data, max_short_data_wait_time);
+    const auto data_result = xQueueReceive(_data_from_fs_queue, &data, max_get_files_list_wait_time);
     if (pdTRUE != data_result)
     {
         NRF_LOG_ERROR("get file list: timed out recv data from mem");
@@ -113,7 +114,7 @@ result::Result get_files_list_next(uint32_t& added_files_count, file_id_type * f
         NRF_LOG_ERROR("get file list next: failed to send cmd to mem");
         return result::Result::ERROR_GENERAL;
     }
-    const auto status_result = xQueueReceive(_status_from_fs_queue, &response, max_status_wait_time);
+    const auto status_result = xQueueReceive(_status_from_fs_queue, &response, max_get_files_list_wait_time);
     if (pdTRUE != status_result)
     {
         NRF_LOG_ERROR("get file list next: timed out recv status from mem");
@@ -128,7 +129,7 @@ result::Result get_files_list_next(uint32_t& added_files_count, file_id_type * f
     ble::FileDataFromMemoryQueueElement& data{data_from_memory_queue_element};
 
     // TODO: make sure to test cases of both short lists (fitting to the data element) and longer lists
-    const auto data_result = xQueueReceive(_data_from_fs_queue, &data, max_short_data_wait_time);
+    const auto data_result = xQueueReceive(_data_from_fs_queue, &data, max_get_files_list_wait_time);
     if (pdTRUE != data_result)
     {
         NRF_LOG_ERROR("get file list next: timed out recv data from mem");

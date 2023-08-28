@@ -376,7 +376,7 @@ result::Result get_latest_file_name(lfs_t& lfs, char * name, uint32_t& name_len)
     }
 
     static constexpr uint32_t single_entry_size{sizeof(ble::fts::file_id_type)};
-    char tmp[single_entry_size + 1] = "record00";
+    char tmp[single_entry_size + 1] = "awesome_record00";
     while (true) 
     {
         const auto dir_read_res = lfs_dir_read(&lfs, &_active_dir, &info);
