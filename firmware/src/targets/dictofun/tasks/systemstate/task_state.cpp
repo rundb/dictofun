@@ -171,7 +171,7 @@ result::Result request_record_creation(const Context& context)
         return result::Result::ERROR_GENERAL;
     }
     memory::StatusQueueElement response;
-    static constexpr uint32_t file_creation_wait_time{2000};
+    static constexpr uint32_t file_creation_wait_time{6000};
     const auto create_file_response_res = xQueueReceive(context.memory_status_handle, reinterpret_cast<void*>(&response), file_creation_wait_time);
     if (create_file_response_res != pdPASS)
     {
