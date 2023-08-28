@@ -1,0 +1,11 @@
+--- ./nRF5_SDK_17.1.0_ddde560/components/ble/ble_services/ble_cts_c/ble_cts_c.c	2021-08-21 16:20:04.000000000 +0200
++++ ./nRF5_SDK_17.1.0_ddde560/components/ble/ble_services/ble_cts_c/ble_cts_c_new.c	2023-08-28 10:12:33.898310772 +0200
+@@ -341,7 +341,7 @@
+ void ble_cts_c_on_ble_evt(ble_evt_t const * p_ble_evt, void * p_context)
+ {
+     ble_cts_c_t * p_cts = (ble_cts_c_t *)p_context;
+-    NRF_LOG_DEBUG("BLE event handler called with event 0x%x", p_ble_evt->header.evt_id);
++    // NRF_LOG_DEBUG("BLE event handler called with event 0x%x", p_ble_evt->header.evt_id);
+ 
+     switch (p_ble_evt->header.evt_id)
+     {

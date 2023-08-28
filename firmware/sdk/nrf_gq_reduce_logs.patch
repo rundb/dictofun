@@ -1,0 +1,11 @@
+--- ./nRF5_SDK_17.1.0_ddde560/components/ble/nrf_ble_gq/nrf_ble_gq.c	2021-08-21 16:20:04.000000000 +0200
++++ ./nRF5_SDK_17.1.0_ddde560/components/ble/nrf_ble_gq/nrf_ble_gq_new.c	2023-08-28 10:16:05.894068370 +0200
+@@ -180,7 +180,7 @@
+     ret_code_t       err_code;
+     nrf_ble_gq_req_t ble_req;
+ 
+-    NRF_LOG_DEBUG("Processing the request queue...");
++    // NRF_LOG_DEBUG("Processing the request queue...");
+ 
+     err_code = nrf_queue_peek(p_queue, &ble_req);
+     if (err_code == NRF_SUCCESS) // Queue is not empty
