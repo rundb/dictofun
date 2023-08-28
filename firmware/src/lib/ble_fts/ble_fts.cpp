@@ -680,7 +680,7 @@ void FtsService::process_client_request(ControlPointOpcode client_request)
 result::Result FtsService::send_files_list()
 {
     uint32_t count{0};
-    file_id_type files_list[files_list_max_count * sizeof(file_id_type)]{{0}};
+    file_id_type files_list[files_list_max_count * file_id_size]{{0}};
     const auto fs_call = _fs_if.file_list_get_function(count, files_list);
     if (result::Result::OK != fs_call)
     {

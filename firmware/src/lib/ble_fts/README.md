@@ -102,7 +102,7 @@ Data transaction is performed in the following way:
 
 #### Files' list
 
-Files' list is a list of unique-per-FS 64-bit identifiers, each of which corresponds to a file existing in the file system on the device. 
+Files' list is a list of unique-per-FS 16-byte identifiers, each of which corresponds to a file existing in the file system on the device. 
 
 `NB`: basic idea for the particular use-case is to have ID generated from the file creation date and time: YYYY-MM-DD-HH-MM-SS.
 

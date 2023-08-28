@@ -48,8 +48,6 @@ struct file_id_type
     }
 };
 
-// using file_id_type = uint8_t[file_id_size];
-
 /// @brief This structure provides a glue to the file system
 struct FileSystemInterface
 {
@@ -130,7 +128,7 @@ private:
     static constexpr uint32_t file_list_next_char_uuid{0x1008};
     static constexpr uint32_t pairing_char_uuid{0x10FE};
 
-    static constexpr uint32_t cp_char_max_len{9};
+    static constexpr uint32_t cp_char_max_len{17};
     static constexpr uint32_t file_list_char_max_len{128};
     static constexpr uint32_t file_list_next_char_max_len{file_list_char_max_len};
     static constexpr uint32_t file_info_char_max_len{32};
@@ -230,7 +228,6 @@ private:
     void on_req_file_data(uint32_t data_size, const uint8_t * file_id_data);
     void on_req_fs_status(uint32_t size);
 
-    static constexpr uint32_t file_id_size{sizeof(uint64_t)};
     file_id_type get_file_id_from_raw(const uint8_t * data) const;
 
     // API for functions that initiate transfer of FS data (executed from OS context)
