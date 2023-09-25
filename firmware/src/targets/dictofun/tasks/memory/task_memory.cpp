@@ -324,6 +324,7 @@ void process_request_from_ble(Context& context, ble::CommandToMemory command_id,
                 break;
             }
             status.data_size = data_queue_elem.size;
+            
             break;
         }
         case ble::CommandToMemory::GET_FS_STATUS:

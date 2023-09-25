@@ -556,7 +556,7 @@ void FtsService::process()
     else if (_context.pending_command != FtsService::ControlPointOpcode::IDLE &&
         is_command_a_request(_context.active_command))
     {
-        NRF_LOG_ERROR("ble::fts: command requested before previous command has been processed.")
+        NRF_LOG_ERROR("ble::fts: command requested before previous command has been processed.");
         _context.pending_command = FtsService::ControlPointOpcode::IDLE;
     }
     else
@@ -853,6 +853,14 @@ result::Result FtsService::continue_sending_file_data()
         return read_result;
     }
 
+    // FIXME: investigate why file system now hands back chunks of size 0
+    if (_transaction_ctx.size == 0) 
+    {
+        NRF_LOG_WARNING("FS issue has happened again. Stuffing the end of the file with zeros");
+        const auto diff = std::min(_transaction_ctx.file_size - _transaction_ctx.file_sent_size, static_cast<uint32_t>(TransactionContext::buffer_size));
+        memset(_transaction_ctx.buffer, 0, diff);
+        _transaction_ctx.size = diff;
+    }
     _transaction_ctx.idx = 0;
     _transaction_ctx.update_next_packet_size();
     auto push_result = push_data_packets(ControlPointOpcode::REQ_FILE_DATA);
