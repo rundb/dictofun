@@ -5,30 +5,30 @@
 
 #include "app_error.h"
 
-#include <boards.h>
-#include <nrf_gpio.h>
 #include "nrf_drv_clock.h"
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
+#include <boards.h>
+#include <nrf_gpio.h>
 
 #include "FreeRTOS.h"
+#include "queue.h"
 #include "task.h"
 #include "timers.h"
-#include "queue.h"
 
 // TODO: this dependency here is really bad
-#include "microphone_pdm.h"
 #include "codec_decimate.h"
+#include "microphone_pdm.h"
 
-#include <task_state.h>
 #include "task_audio.h"
 #include "task_audio_tester.h"
-#include "task_cli_logger.h"
-#include "task_memory.h"
 #include "task_ble.h"
-#include "task_led.h"
-#include "task_rtc.h"
 #include "task_button.h"
+#include "task_cli_logger.h"
+#include "task_led.h"
+#include "task_memory.h"
+#include "task_rtc.h"
+#include <task_state.h>
 
 #include <stdint.h>
 
@@ -121,116 +121,117 @@ int main()
 
     // Queues' initialization
     const auto cli_commands_init_result = cli_commands_queue.init();
-    if (result::Result::OK != cli_commands_init_result)
+    if(result::Result::OK != cli_commands_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
     const auto cli_status_init_result = cli_status_queue.init();
-    if (result::Result::OK != cli_status_init_result)
+    if(result::Result::OK != cli_status_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
     const auto audio_commands_init_result = audio_commands_queue.init();
-    if (result::Result::OK != audio_commands_init_result)
+    if(result::Result::OK != audio_commands_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
     const auto audio_data_init_result = audio_data_queue.init();
-    if (result::Result::OK != audio_data_init_result)
+    if(result::Result::OK != audio_data_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
     const auto audio_status_init_result = audio_status_queue.init();
-    if (result::Result::OK != audio_status_init_result)
+    if(result::Result::OK != audio_status_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
     const auto audio_tester_command_init_result = audio_tester_commands_queue.init();
-    if (result::Result::OK != audio_tester_command_init_result)
+    if(result::Result::OK != audio_tester_command_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
     const auto memory_commands_queue_init_result = memory_commands_queue.init();
-    if (result::Result::OK != memory_commands_queue_init_result)
+    if(result::Result::OK != memory_commands_queue_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
     const auto memory_status_queue_init_result = memory_status_queue.init();
-    if (result::Result::OK != memory_status_queue_init_result)
+    if(result::Result::OK != memory_status_queue_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
     const auto ble_commands_queue_init_result = ble_commands_queue.init();
-    if (result::Result::OK != ble_commands_queue_init_result)
+    if(result::Result::OK != ble_commands_queue_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
     const auto ble_requests_queue_init_result = ble_requests_queue.init();
-    if (result::Result::OK != ble_requests_queue_init_result)
+    if(result::Result::OK != ble_requests_queue_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
     const auto ble_keepalive_queue_init_result = ble_keepalive_queue.init();
-    if (result::Result::OK != ble_keepalive_queue_init_result)
+    if(result::Result::OK != ble_keepalive_queue_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
     const auto ble_to_mem_commands_queue_init_result = ble_to_mem_commands_queue.init();
-    if (result::Result::OK != ble_to_mem_commands_queue_init_result)
+    if(result::Result::OK != ble_to_mem_commands_queue_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
     const auto ble_from_mem_status_queue_init_result = ble_from_mem_status_queue.init();
-    if (result::Result::OK != ble_from_mem_status_queue_init_result)
+    if(result::Result::OK != ble_from_mem_status_queue_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
     const auto ble_from_mem_data_queue_init_result = ble_from_mem_data_queue.init();
-    if (result::Result::OK != ble_from_mem_data_queue_init_result)
+    if(result::Result::OK != ble_from_mem_data_queue_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
     const auto led_commands_queue_init_result = led_commands_queue.init();
-    if (result::Result::OK != led_commands_queue_init_result)
+    if(result::Result::OK != led_commands_queue_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
     const auto rtc_commands_queue_init_result = rtc_commands_queue.init();
-    if (result::Result::OK != rtc_commands_queue_init_result)
+    if(result::Result::OK != rtc_commands_queue_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
     const auto rtc_response_queue_init_result = rtc_response_queue.init();
-    if (result::Result::OK != rtc_response_queue_init_result)
+    if(result::Result::OK != rtc_response_queue_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
     const auto button_event_queue_init_result = button_event_queue.init();
-    if (result::Result::OK != button_event_queue_init_result)
+    if(result::Result::OK != button_event_queue_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
     // Timers' initialization
-    record_timer_handle = xTimerCreateStatic("AUDIO", 1, pdFALSE, nullptr, systemstate::record_end_callback, &record_timer_buffer);
-    if (nullptr == record_timer_handle)
+    record_timer_handle = xTimerCreateStatic(
+        "AUDIO", 1, pdFALSE, nullptr, systemstate::record_end_callback, &record_timer_buffer);
+    if(nullptr == record_timer_handle)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
@@ -241,7 +242,7 @@ int main()
     audio_context.data_queue = audio_data_queue.handle;
 
     const auto audio_task_init_result = audio_task.init(audio::task_audio, "AUDIO", &audio_context);
-    if (result::Result::OK != audio_task_init_result)
+    if(result::Result::OK != audio_task_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
@@ -249,11 +250,9 @@ int main()
     audio_tester_context.data_queue = audio_data_queue.handle;
     audio_tester_context.commands_queue = audio_tester_commands_queue.handle;
 
-    const auto audio_tester_task_init_result = audio_tester_task.init(
-        audio::tester::task_audio_tester, 
-        "AUTEST", 
-        &audio_tester_context);
-    if (result::Result::OK != audio_tester_task_init_result)
+    const auto audio_tester_task_init_result =
+        audio_tester_task.init(audio::tester::task_audio_tester, "AUTEST", &audio_tester_context);
+    if(result::Result::OK != audio_tester_task_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
@@ -262,7 +261,7 @@ int main()
     cli_context.cli_status_handle = cli_status_queue.handle;
 
     const auto log_task_init_result = log_task.init(logger::task_cli_logger, "CLI", &cli_context);
-    if (result::Result::OK != log_task_init_result)
+    if(result::Result::OK != log_task_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
@@ -281,11 +280,9 @@ int main()
     systemstate_context.led_commands_handle = led_commands_queue.handle;
     systemstate_context.button_events_handle = button_event_queue.handle;
 
-    const auto systemstate_task_init_result = systemstate_task.init(
-        systemstate::task_system_state, 
-        "STATE", 
-        &systemstate_context);
-    if (result::Result::OK != systemstate_task_init_result)
+    const auto systemstate_task_init_result =
+        systemstate_task.init(systemstate::task_system_state, "STATE", &systemstate_context);
+    if(result::Result::OK != systemstate_task_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
@@ -294,16 +291,14 @@ int main()
     memory_context.status_queue = memory_status_queue.handle;
     memory_context.command_from_ble_queue = ble_to_mem_commands_queue.handle;
     memory_context.status_to_ble_queue = ble_from_mem_status_queue.handle;
-    memory_context.data_to_ble_queue =  ble_from_mem_data_queue.handle;
+    memory_context.data_to_ble_queue = ble_from_mem_data_queue.handle;
     memory_context.audio_data_queue = audio_data_queue.handle;
     memory_context.commands_to_rtc_queue = rtc_commands_queue.handle;
     memory_context.response_from_rtc_queue = rtc_response_queue.handle;
-    const auto memory_task_init_result = memory_task.init(
-        memory::task_memory,
-        "MEM",
-        &memory_context);
+    const auto memory_task_init_result =
+        memory_task.init(memory::task_memory, "MEM", &memory_context);
 
-    if (result::Result::OK != memory_task_init_result)
+    if(result::Result::OK != memory_task_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
@@ -315,50 +310,38 @@ int main()
     ble_context.status_from_mem_queue = ble_from_mem_status_queue.handle;
     ble_context.data_from_mem_queue = ble_from_mem_data_queue.handle;
     ble_context.commands_to_rtc_queue = rtc_commands_queue.handle;
-    const auto ble_task_init_result = ble_task.init(
-        ble::task_ble,
-        "BLE",
-        &ble_context);
+    const auto ble_task_init_result = ble_task.init(ble::task_ble, "BLE", &ble_context);
 
-    if (result::Result::OK != ble_task_init_result)
+    if(result::Result::OK != ble_task_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
     led_context.commands_queue = led_commands_queue.handle;
-    const auto led_task_init_result = led_task.init(
-        led::task_led,
-        "LED",
-        &led_context);
+    const auto led_task_init_result = led_task.init(led::task_led, "LED", &led_context);
 
-    if (result::Result::OK != led_task_init_result)
+    if(result::Result::OK != led_task_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
     rtc_context.command_queue = rtc_commands_queue.handle;
     rtc_context.response_queue = rtc_response_queue.handle;
-    const auto rtc_task_init_result = rtc_task.init(
-        rtc::task_rtc,
-        "RTC",
-        &rtc_context);
+    const auto rtc_task_init_result = rtc_task.init(rtc::task_rtc, "RTC", &rtc_context);
 
-    if (result::Result::OK != rtc_task_init_result)
+    if(result::Result::OK != rtc_task_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
     button_context.events_handle = button_event_queue.handle;
-    const auto button_task_init_result = button_task.init(
-        button::task_button,
-        "BTN",
-        &button_context);
+    const auto button_task_init_result =
+        button_task.init(button::task_button, "BTN", &button_context);
 
-    if (result::Result::OK != button_task_init_result)
+    if(result::Result::OK != button_task_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
     vTaskStartScheduler();
-
 }

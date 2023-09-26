@@ -11,7 +11,7 @@ namespace audio
 {
 namespace tester
 {
-void task_audio_tester(void * context_ptr);
+void task_audio_tester(void* context_ptr);
 
 struct ControlQueueElement
 {
@@ -24,5 +24,5 @@ struct Context
     QueueHandle_t commands_queue{nullptr};
 };
 
-}
-}
+} // namespace tester
+} // namespace audio

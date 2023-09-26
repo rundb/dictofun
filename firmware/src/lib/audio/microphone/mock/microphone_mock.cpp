@@ -7,29 +7,17 @@
 namespace audio
 {
 
-void MicrophoneMock::init()
-{
+void MicrophoneMock::init() { }
 
-}
+void MicrophoneMock::start_recording() { }
 
-void MicrophoneMock::start_recording()
-{
-    
-}
-
-void MicrophoneMock::stop_recording()
-{
-
-}
+void MicrophoneMock::stop_recording() { }
 
 result::Result MicrophoneMock::get_samples(MockAudioSample& samples)
 {
     return result::Result::ERROR_NOT_IMPLEMENTED;
 }
 
-void MicrophoneMock::register_data_ready_callback(DataReadyCallback callback)
-{
+void MicrophoneMock::register_data_ready_callback(DataReadyCallback callback) { }
 
-}
-
-}
+} // namespace audio

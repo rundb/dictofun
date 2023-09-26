@@ -7,7 +7,6 @@
 
 #include <gtest/gtest.h>
 
-
 namespace
 {
 using namespace audio;
@@ -17,4 +16,4 @@ TEST(MicrophoneInstantiation, BasicCheck)
     MicrophoneMock cut;
 }
 
-}
+} // namespace

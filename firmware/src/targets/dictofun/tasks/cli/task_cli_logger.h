@@ -15,7 +15,7 @@ namespace logger
 void log_init();
 
 /// FreeRTOS task utilized for Logger and CLI
-void task_cli_logger(void * cli_context);
+void task_cli_logger(void* cli_context);
 
 struct CliContext
 {
@@ -90,4 +90,4 @@ struct CliStatusQueueElement
     CliStatus status;
 };
 
-}
+} // namespace logger

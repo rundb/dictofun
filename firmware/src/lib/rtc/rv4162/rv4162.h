@@ -15,17 +15,15 @@ class Rv4162
 {
 public:
     explicit Rv4162(i2c::I2cIf& i2c)
-    : _i2c{i2c}
-    {
-
-    }
+        : _i2c{i2c}
+    { }
     Rv4162(const Rv4162&) = delete;
     Rv4162(Rv4162&&) = delete;
-    Rv4162& operator = (const Rv4162&) = delete;
-    Rv4162& operator = (Rv4162&&) = delete;
+    Rv4162& operator=(const Rv4162&) = delete;
+    Rv4162& operator=(Rv4162&&) = delete;
     ~Rv4162() = default;
 
-    struct DateTime 
+    struct DateTime
     {
         uint8_t year;
         uint8_t month;
@@ -46,5 +44,4 @@ private:
     static constexpr uint8_t _i2c_address{0x68};
 };
 
-
-}
+} // namespace rtc

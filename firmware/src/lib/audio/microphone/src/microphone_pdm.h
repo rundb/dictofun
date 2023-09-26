@@ -24,16 +24,16 @@ struct PdmSample
 // TODO: add a check that this object exists as exactly one sample in the whole system.
 // TODO: implement the "rule of 5"
 template <size_t SampleBufferSize>
-class PdmMicrophone: public Microphone<PdmSample<SampleBufferSize>>
+class PdmMicrophone : public Microphone<PdmSample<SampleBufferSize>>
 {
 public:
     using SampleType = PdmSample<SampleBufferSize>;
     using MicrophoneType = Microphone<SampleType>;
 
     explicit PdmMicrophone(uint32_t clk_pin, uint32_t data_pin)
-    : clk_pin_(clk_pin)
-    , data_pin_(data_pin)
-    {}
+        : clk_pin_(clk_pin)
+        , data_pin_(data_pin)
+    { }
 
     void init() override;
     void start_recording() override;
@@ -43,21 +43,22 @@ public:
 
     using PdmDataReadyCallback = std::function<void()>;
     void register_data_ready_callback(PdmDataReadyCallback callback) override;
-    void pdm_event_handler(const nrfx_pdm_evt_t * const p_evt);
+    void pdm_event_handler(const nrfx_pdm_evt_t* const p_evt);
 
 private:
     uint8_t clk_pin_;
     uint8_t data_pin_;
     static constexpr size_t buffers_count{3U};
-    static constexpr size_t buffer_size{SampleBufferSize/2}; // divided by 2, as the buffer element is 2 bytes
+    static constexpr size_t buffer_size{SampleBufferSize /
+                                        2}; // divided by 2, as the buffer element is 2 bytes
     int16_t buffers_[buffers_count][buffer_size];
     size_t previous_buffer_index_{0};
     size_t current_buffer_index_{0};
-    int16_t * _released_buffer_ptr{nullptr};
+    int16_t* _released_buffer_ptr{nullptr};
     PdmDataReadyCallback data_ready_callback{nullptr};
 };
 
-}
-}
+} // namespace microphone
+} // namespace audio
 
 #include "microphone_pdm.hpp"

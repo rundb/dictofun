@@ -10,31 +10,40 @@
 namespace battery
 {
 
-class BatteryMeasurement {
+class BatteryMeasurement
+{
 public:
     explicit BatteryMeasurement(const uint8_t analog_input_id)
-    : _analog_input_id(analog_input_id)
-    , _adc_config(NRFX_SAADC_DEFAULT_CONFIG)
-    , _adc_channel_config(NRFX_SAADC_DEFAULT_CHANNEL_CONFIG_SE(_analog_input_id))
+        : _analog_input_id(analog_input_id)
+        , _adc_config(NRFX_SAADC_DEFAULT_CONFIG)
+        , _adc_channel_config(NRFX_SAADC_DEFAULT_CHANNEL_CONFIG_SE(_analog_input_id))
     {
-        if (_instance != nullptr)
+        if(_instance != nullptr)
         {
             // assert
-            while(1);
+            while(1)
+                ;
         }
         _instance = this;
     }
     void init();
-    inline bool isInitialized() { return _isInitialized; }
+    inline bool isInitialized()
+    {
+        return _isInitialized;
+    }
     void start();
     bool isBusy();
     float voltage();
     uint8_t level();
     void isr();
-    static inline BatteryMeasurement& getInstance() { return *_instance;}
+    static inline BatteryMeasurement& getInstance()
+    {
+        return *_instance;
+    }
     static constexpr float MINIMAL_OPERATIONAL_VOLTAGE{3.2};
+
 private:
-    static BatteryMeasurement * _instance;
+    static BatteryMeasurement* _instance;
     bool _isInitialized{false};
     uint8_t _analog_input_id;
     bool _isBusy{false};
@@ -46,4 +55,4 @@ private:
     float _battery_voltage{0.0};
 };
 
-}
+} // namespace battery

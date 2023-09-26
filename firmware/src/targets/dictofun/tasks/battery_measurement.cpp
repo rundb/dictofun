@@ -9,36 +9,37 @@
 namespace battery
 {
 
-static void battery_adc_event_handler(nrfx_saadc_evt_t const * p_event)
+static void battery_adc_event_handler(nrfx_saadc_evt_t const* p_event)
 {
     BatteryMeasurement::getInstance().isr();
 }
 
-BatteryMeasurement * BatteryMeasurement::_instance{nullptr};
+BatteryMeasurement* BatteryMeasurement::_instance{nullptr};
 
 void BatteryMeasurement::init()
 {
-    if (_isInitialized)
+    if(_isInitialized)
     {
         // TODO: assert
         return;
     }
     _isInitialized = true;
     auto err_code = nrfx_saadc_init(&_adc_config, battery_adc_event_handler);
-    APP_ERROR_CHECK(err_code);  
+    APP_ERROR_CHECK(err_code);
     err_code = nrfx_saadc_channel_init(_analog_input_id, &_adc_channel_config);
     APP_ERROR_CHECK(err_code);
 }
 
 void BatteryMeasurement::start()
 {
-  _samples_gathered = 0;
-  while (nrfx_saadc_is_busy());
-  auto err_code = nrfx_saadc_buffer_convert(_samples, 1);
-  APP_ERROR_CHECK(err_code);
-  err_code = nrfx_saadc_sample();
-  APP_ERROR_CHECK(err_code);
-  _isBusy = true;
+    _samples_gathered = 0;
+    while(nrfx_saadc_is_busy())
+        ;
+    auto err_code = nrfx_saadc_buffer_convert(_samples, 1);
+    APP_ERROR_CHECK(err_code);
+    err_code = nrfx_saadc_sample();
+    APP_ERROR_CHECK(err_code);
+    _isBusy = true;
 }
 
 bool BatteryMeasurement::isBusy()
@@ -48,7 +49,7 @@ bool BatteryMeasurement::isBusy()
 
 void BatteryMeasurement::isr()
 {
-    if (_samples_gathered < SAMPLES_COUNT)
+    if(_samples_gathered < SAMPLES_COUNT)
     {
         ++_samples_gathered;
         nrfx_saadc_buffer_convert(&_samples[_samples_gathered], 1);
@@ -59,7 +60,7 @@ void BatteryMeasurement::isr()
     {
         _isBusy = false;
         _battery_voltage = 0.0;
-        for (auto in: _samples)
+        for(auto in : _samples)
         {
             _battery_voltage += static_cast<float>(in);
         }
@@ -76,18 +77,17 @@ float BatteryMeasurement::voltage()
 uint8_t BatteryMeasurement::level()
 {
     const float base = 2.9;
-    if (_battery_voltage < base)
+    if(_battery_voltage < base)
     {
         return 0;
     }
     const float max_level = 4.0;
-    if (_battery_voltage > max_level)
+    if(_battery_voltage > max_level)
     {
-      return 100;
+        return 100;
     }
     float level = (_battery_voltage - base) / (max_level - base);
     return static_cast<uint8_t>(level * 100);
 }
 
-
-}
+} // namespace battery

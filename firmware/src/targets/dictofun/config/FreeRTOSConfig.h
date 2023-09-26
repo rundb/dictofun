@@ -26,7 +26,7 @@
  * 1 tab == 4 spaces!
  */
 
-
+// clang-format off
 #ifndef FREERTOS_CONFIG_H
 #define FREERTOS_CONFIG_H
 
@@ -208,3 +208,5 @@ standard names - or at least those used in the unmodified vector table. */
 #define configUSE_DISABLE_TICK_AUTO_CORRECTION_DEBUG     0
 
 #endif /* FREERTOS_CONFIG_H */
+
+// clang-format on

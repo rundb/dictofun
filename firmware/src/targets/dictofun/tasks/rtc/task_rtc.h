@@ -10,7 +10,7 @@
 
 namespace rtc
 {
-void task_rtc(void * context);
+void task_rtc(void* context);
 
 struct Context
 {
@@ -19,16 +19,16 @@ struct Context
 };
 
 /// @brief  Commands that can be sent to the RTC task.
-/// Commands can be sent from different contexts. Since this use-case suggests that 
+/// Commands can be sent from different contexts. Since this use-case suggests that
 /// get- and set- accesses are clearly separated in time, only one command and response
 /// queues are being used (so commands is a MPSC and response is SPMC, with access separation by time)
-enum class Command: uint8_t
+enum class Command : uint8_t
 {
     GET_TIME,
     SET_TIME,
 };
 
-enum class Status: uint8_t
+enum class Status : uint8_t
 {
     OK,
     ERROR,
@@ -40,7 +40,7 @@ enum class Status: uint8_t
 // In total 6 bytes
 static constexpr uint32_t date_size{6};
 
-struct CommandQueueElement 
+struct CommandQueueElement
 {
     Command command_id;
     uint8_t content[date_size];
@@ -52,4 +52,4 @@ struct ResponseQueueElement
     uint8_t content[date_size];
 };
 
-}
+} // namespace rtc

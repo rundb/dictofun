@@ -7,10 +7,10 @@
 
 #include "stdint.h"
 
-namespace time 
+namespace time
 {
 
-struct DateTime 
+struct DateTime
 {
     uint32_t year{0U};
     uint8_t month{0U};
@@ -21,4 +21,4 @@ struct DateTime
     uint8_t second{0U};
 };
 
-}
+} // namespace time

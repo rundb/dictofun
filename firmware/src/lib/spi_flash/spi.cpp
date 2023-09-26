@@ -23,8 +23,9 @@ Spi::Spi(const uint8_t instanceIdx, const uint16_t csId)
     }
     else
     {
-      // assert
-      while(1);
+        // assert
+        while(1)
+            ;
     }
     if(0U == instanceIdx)
     {
@@ -78,7 +79,8 @@ Spi::Result Spi::xfer(uint8_t* txData, uint8_t* rxData, size_t size, CompletionC
     {
         _context.isBusy = true;
         // ugly workaround for spi_transfer, which sends an extra byte if size == 1
-        const auto result = nrf_drv_spi_transfer(&_nrfSpiInstance, txData, size, rxData, (size > 1) ? size : 0 );
+        const auto result =
+            nrf_drv_spi_transfer(&_nrfSpiInstance, txData, size, rxData, (size > 1) ? size : 0);
         if(result == NRF_SUCCESS)
         {
             _context.txBuffer = txData;

@@ -11,7 +11,7 @@
 namespace button
 {
 
-void task_button(void * context);
+void task_button(void* context);
 
 struct Context
 {
@@ -35,4 +35,4 @@ struct EventQueueElement
     Event event;
 };
 
-}
+} // namespace button

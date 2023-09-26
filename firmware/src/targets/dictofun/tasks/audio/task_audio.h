@@ -4,31 +4,31 @@
  */
 #pragma once
 
-#include <stdint.h>
 #include "result.h"
+#include <stdint.h>
 
 #include "FreeRTOS.h"
-#include "queue.h"
 #include "codec.h"
+#include "queue.h"
 
 namespace audio
 {
 
-// TODO: find a more appropriate location for this configuration parameter 
+// TODO: find a more appropriate location for this configuration parameter
 constexpr size_t pdm_sample_size{256};
 constexpr size_t decimator_codec_factor{1};
 constexpr size_t adpcm_factor{4};
 constexpr uint32_t pdm_sampling_frequency{16000};
 
-using CodecDecimatorOutputType = audio::codec::Sample<pdm_sample_size/decimator_codec_factor>;
-using CodecAdpcmOutputType = audio::codec::Sample<pdm_sample_size/adpcm_factor>;
+using CodecDecimatorOutputType = audio::codec::Sample<pdm_sample_size / decimator_codec_factor>;
+using CodecAdpcmOutputType = audio::codec::Sample<pdm_sample_size / adpcm_factor>;
 
-using CodecOutputType = CodecAdpcmOutputType; 
+using CodecOutputType = CodecAdpcmOutputType;
 // using CodecOutputType = CodecDecimatorOutputType;
 
 /// @brief Function that implements audio task
 /// @param context_ptr pointer to struct Context, passed from the main.cpp
-void task_audio(void * context_ptr);
+void task_audio(void* context_ptr);
 
 enum class Command
 {
@@ -56,11 +56,11 @@ struct StatusQueueElement
 struct Context
 {
     bool is_recording_active{false};
-    
+
     QueueHandle_t commands_queue{nullptr};
     QueueHandle_t status_queue{nullptr};
 
     QueueHandle_t data_queue{nullptr};
 };
 
-}
+} // namespace audio

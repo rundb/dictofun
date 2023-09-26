@@ -6,13 +6,13 @@
 #pragma once
 
 #include "FreeRTOS.h"
-#include "queue.h"
 #include "ble_fts.h"
+#include "queue.h"
 
 namespace ble
 {
 
-void task_ble(void * context_ptr);
+void task_ble(void* context_ptr);
 
 struct Context
 {
@@ -102,4 +102,4 @@ struct FileDataFromMemoryQueueElement
     uint8_t data[element_max_size];
 };
 
-}
+} // namespace ble

@@ -7,5 +7,5 @@
 namespace helpers
 {
 /// Convert ret_code_t value to human readable string
-const char * decode_error(const int error_code);
-}
+const char* decode_error(const int error_code);
+} // namespace helpers

@@ -10,20 +10,20 @@ namespace audio
 namespace tester
 {
 
-float calculate_average(uint8_t * buffer, size_t size)
+float calculate_average(uint8_t* buffer, size_t size)
 {
     int sum{0};
-    for (size_t i = 0; i < size; ++i)
+    for(size_t i = 0; i < size; ++i)
     {
         sum += static_cast<int>(buffer[i]);
     }
     return sum / size;
 }
 
-float calculate_deviation(float average, uint8_t * buffer, size_t size)
+float calculate_deviation(float average, uint8_t* buffer, size_t size)
 {
     float deviation_accum{0.0};
-    for (size_t i = 0; i < size; ++i)
+    for(size_t i = 0; i < size; ++i)
     {
         float v = static_cast<float>(buffer[i]);
         deviation_accum += (v - average) * (v - average);
@@ -31,9 +31,9 @@ float calculate_deviation(float average, uint8_t * buffer, size_t size)
     return deviation_accum / (size - 1);
 }
 
-void task_audio_tester(void * context_ptr)
+void task_audio_tester(void* context_ptr)
 {
-    Context& context{*(reinterpret_cast<Context *>(context_ptr))};
+    Context& context{*(reinterpret_cast<Context*>(context_ptr))};
     constexpr size_t buffer_size{128}; // TODO: derive this size from the application configuration
     uint8_t buffer[buffer_size]{0};
     ControlQueueElement command;
@@ -45,32 +45,34 @@ void task_audio_tester(void * context_ptr)
     NRF_LOG_INFO("task_autest: initialized");
     while(1)
     {
-        if (is_tester_active)
+        if(is_tester_active)
         {
-            const auto data_result = xQueueReceive(context.data_queue, reinterpret_cast<void *>(buffer), 2);
-            if (pdPASS == data_result)
+            const auto data_result =
+                xQueueReceive(context.data_queue, reinterpret_cast<void*>(buffer), 2);
+            if(pdPASS == data_result)
             {
                 received_samples_count++;
                 last_sample_average = calculate_average(buffer, buffer_size);
-                last_sample_deviation = calculate_deviation(last_sample_average, buffer, buffer_size);
+                last_sample_deviation =
+                    calculate_deviation(last_sample_average, buffer, buffer_size);
             }
         }
 
-        const auto commands_result = xQueueReceive(context.commands_queue, reinterpret_cast<void *>(&command), 2);
-        if (pdPASS == commands_result)
+        const auto commands_result =
+            xQueueReceive(context.commands_queue, reinterpret_cast<void*>(&command), 2);
+        if(pdPASS == commands_result)
         {
             NRF_LOG_INFO("autest: received command %d", command.should_enable_tester);
             is_tester_active = command.should_enable_tester;
-            if (!command.should_enable_tester)
+            if(!command.should_enable_tester)
             {
-                NRF_LOG_INFO("autest: received %d samples, E=%d, sigma^2=%d", 
-                    received_samples_count, 
-                    static_cast<int>(last_sample_average),
-                    static_cast<int>(last_sample_deviation)
-                );
+                NRF_LOG_INFO("autest: received %d samples, E=%d, sigma^2=%d",
+                             received_samples_count,
+                             static_cast<int>(last_sample_average),
+                             static_cast<int>(last_sample_deviation));
             }
         }
     }
 }
-}
-}
+} // namespace tester
+} // namespace audio

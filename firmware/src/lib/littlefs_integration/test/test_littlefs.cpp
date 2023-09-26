@@ -3,13 +3,12 @@
  * Copyright (c) 2023, Roman Turkin
  */
 
-#include "spi_flash_simulation_api.h"
 #include "block_api.h"
+#include "spi_flash_simulation_api.h"
 
 #include <gtest/gtest.h>
 
 #include "lfs.h"
-
 
 namespace
 {
@@ -35,7 +34,7 @@ const struct lfs_config lfs_configuration = {
     BLOCK_SIZE,
     SECTOR_SIZE,
     4096,
-     500,
+    500,
     BLOCK_SIZE,
     LOOKAHEAD_BUFFER_SIZE,
     read_buffer,
@@ -48,13 +47,15 @@ lfs_file_t file;
 
 constexpr size_t sim_sector_size{4096};
 constexpr size_t sim_page_size{256};
-constexpr size_t sim_total_size{16*1024*1024};
+constexpr size_t sim_total_size{16 * 1024 * 1024};
 
 TEST(LittleFsTest, BasicFormat)
 {
-    memory::block_device::sim::InRamFlash inram_flash{sim_sector_size, sim_page_size, sim_total_size};
-    memory::block_device::register_flash_device(&inram_flash, sim_sector_size, sim_page_size, sim_total_size);
-    
+    memory::block_device::sim::InRamFlash inram_flash{
+        sim_sector_size, sim_page_size, sim_total_size};
+    memory::block_device::register_flash_device(
+        &inram_flash, sim_sector_size, sim_page_size, sim_total_size);
+
     int err = lfs_format(&lfs, &lfs_configuration);
     err = lfs_mount(&lfs, &lfs_configuration);
     EXPECT_EQ(err, 0);
@@ -63,14 +64,13 @@ TEST(LittleFsTest, BasicFormat)
         const auto create_result = lfs_file_open(&lfs, &file, "rec0", LFS_O_WRONLY | LFS_O_CREAT);
         EXPECT_EQ(create_result, 0);
 
-
         constexpr size_t test_data_size{16};
         uint8_t test_data[test_data_size];
-        for (int i = 0; i < test_data_size; ++i)
+        for(int i = 0; i < test_data_size; ++i)
         {
             test_data[i] = i;
         }
-        for (int i = 0; i < 20; ++i)
+        for(int i = 0; i < 20; ++i)
         {
             const auto write_result = lfs_file_write(&lfs, &file, test_data, sizeof(test_data));
             EXPECT_EQ(write_result, test_data_size);
@@ -95,9 +95,11 @@ TEST(LittleFsTest, BasicFormat)
 
 TEST(LittleFsTest, StaticWrite)
 {
-    memory::block_device::sim::InRamFlash inram_flash{sim_sector_size, sim_page_size, sim_total_size};
-    memory::block_device::register_flash_device(&inram_flash, sim_sector_size, sim_page_size, sim_total_size);
-    
+    memory::block_device::sim::InRamFlash inram_flash{
+        sim_sector_size, sim_page_size, sim_total_size};
+    memory::block_device::register_flash_device(
+        &inram_flash, sim_sector_size, sim_page_size, sim_total_size);
+
     int err = lfs_format(&lfs, &lfs_configuration);
     err = lfs_mount(&lfs, &lfs_configuration);
     EXPECT_EQ(err, 0);
@@ -111,7 +113,8 @@ TEST(LittleFsTest, StaticWrite)
         memset(&_active_file_config, 0, sizeof(_active_file_config));
         _active_file_config.buffer = _active_file_buffer;
         _active_file_config.attr_count = 0;
-        const auto create_result = lfs_file_opencfg(&lfs, &_active_file, "record00", LFS_O_WRONLY | LFS_O_CREAT, &_active_file_config);
+        const auto create_result = lfs_file_opencfg(
+            &lfs, &_active_file, "record00", LFS_O_WRONLY | LFS_O_CREAT, &_active_file_config);
         EXPECT_EQ(create_result, 0);
     }
     {
@@ -126,4 +129,4 @@ TEST(LittleFsTest, StaticWrite)
     }
 }
 
-}
+} // namespace

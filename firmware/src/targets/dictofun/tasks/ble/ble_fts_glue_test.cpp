@@ -3,10 +3,10 @@
  * Copyright (c) 2023, Roman Turkin
  */
 
-#include "ble_fts_glue.h"
-#include <cstdio>
-#include <algorithm>
 #include "ble_fts.h"
+#include "ble_fts_glue.h"
+#include <algorithm>
+#include <cstdio>
 
 using namespace ble::fts;
 
@@ -17,7 +17,7 @@ namespace test
 {
 
 constexpr size_t test_files_count{2};
-ble::fts::file_id_type test_files_ids[test_files_count] {
+ble::fts::file_id_type test_files_ids[test_files_count]{
     {1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8},
     {1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 9},
 };
@@ -30,7 +30,7 @@ constexpr uint32_t file_1_size{66000};
 constexpr uint32_t file_1_frequency{16000};
 constexpr uint32_t file_1_codec{1};
 
-constexpr uint32_t fs_total_space{4*1024*1024};
+constexpr uint32_t fs_total_space{4 * 1024 * 1024};
 
 struct TestContext
 {
@@ -40,9 +40,10 @@ struct TestContext
     uint32_t size{0};
 } _test_ctx;
 
-result::Result dictofun_test_get_file_list(uint32_t& files_count, ble::fts::file_id_type * files_list_ptr)
+result::Result dictofun_test_get_file_list(uint32_t& files_count,
+                                           ble::fts::file_id_type* files_list_ptr)
 {
-    if (nullptr == files_list_ptr)
+    if(nullptr == files_list_ptr)
     {
         return result::Result::ERROR_INVALID_PARAMETER;
     }
@@ -51,36 +52,45 @@ result::Result dictofun_test_get_file_list(uint32_t& files_count, ble::fts::file
     return result::Result::OK;
 }
 
-result::Result dictofun_test_get_file_list_next(uint32_t& added_files_count, ble::fts::file_id_type * files_list_ptr)
+result::Result dictofun_test_get_file_list_next(uint32_t& added_files_count,
+                                                ble::fts::file_id_type* files_list_ptr)
 {
     added_files_count = 0;
     return result::Result::OK;
 }
 
-result::Result dictofun_test_get_file_info(const ble::fts::file_id_type file_id, uint8_t * file_data, uint32_t& file_data_size, const uint32_t max_data_size)
+result::Result dictofun_test_get_file_info(const ble::fts::file_id_type file_id,
+                                           uint8_t* file_data,
+                                           uint32_t& file_data_size,
+                                           const uint32_t max_data_size)
 {
-    if (file_data == nullptr)
+    if(file_data == nullptr)
     {
         return result::Result::ERROR_INVALID_PARAMETER;
     }
 
     static constexpr size_t max_buffer_size{64};
     char tmp[max_buffer_size]{0};
-    if (test_files_ids[0] == file_id)
+    if(test_files_ids[0] == file_id)
     {
         // let first file have a size of 512 bytes, no codec used, frequency 16000
         // TODO: consider using string primitives from ESTL here (good chance)
         uint32_t idx{0};
-        idx += snprintf(&tmp[idx], max_buffer_size - idx - 1, "{\"s\":%lu,\"f\":%lu,\"c\":%lu}", file_0_size, file_0_frequency, file_0_codec);
+        idx += snprintf(&tmp[idx],
+                        max_buffer_size - idx - 1,
+                        "{\"s\":%lu,\"f\":%lu,\"c\":%lu}",
+                        file_0_size,
+                        file_0_frequency,
+                        file_0_codec);
 
         memcpy(file_data, tmp, std::min(max_data_size - 1, idx));
         file_data_size = idx;
     }
-    else if (test_files_ids[1] == file_id)
+    else if(test_files_ids[1] == file_id)
     {
         return result::Result::ERROR_NOT_IMPLEMENTED;
     }
-    else 
+    else
     {
         return result::Result::ERROR_GENERAL;
     }
@@ -89,7 +99,7 @@ result::Result dictofun_test_get_file_info(const ble::fts::file_id_type file_id,
 
 result::Result dictofun_test_close_file(file_id_type file_id)
 {
-    if (!_test_ctx.is_file_open) 
+    if(!_test_ctx.is_file_open)
     {
         return result::Result::ERROR_INVALID_PARAMETER;
     }
@@ -102,12 +112,12 @@ result::Result dictofun_test_close_file(file_id_type file_id)
 
 result::Result dictofun_test_open_file(file_id_type file_id, uint32_t& file_size)
 {
-    if (_test_ctx.is_file_open) 
+    if(_test_ctx.is_file_open)
     {
         return result::Result::ERROR_BUSY;
     }
 
-    if (file_id == test_files_ids[0])
+    if(file_id == test_files_ids[0])
     {
         _test_ctx.is_file_open = true;
         _test_ctx.current_file_id = file_id;
@@ -116,7 +126,7 @@ result::Result dictofun_test_open_file(file_id_type file_id, uint32_t& file_size
         file_size = file_0_size;
         return result::Result::OK;
     }
-    else if (file_id == test_files_ids[1])
+    else if(file_id == test_files_ids[1])
     {
         return result::Result::ERROR_NOT_IMPLEMENTED;
     }
@@ -126,14 +136,17 @@ result::Result dictofun_test_open_file(file_id_type file_id, uint32_t& file_size
     }
 }
 
-result::Result dictofun_test_get_data(file_id_type file_id, uint8_t * buffer, uint32_t& actual_size, uint32_t max_size)
+result::Result dictofun_test_get_data(file_id_type file_id,
+                                      uint8_t* buffer,
+                                      uint32_t& actual_size,
+                                      uint32_t max_size)
 {
-    if (!_test_ctx.is_file_open || file_id != _test_ctx.current_file_id || buffer == nullptr)
+    if(!_test_ctx.is_file_open || file_id != _test_ctx.current_file_id || buffer == nullptr)
     {
         return result::Result::ERROR_INVALID_PARAMETER;
     }
     actual_size = std::min(max_size, _test_ctx.size - _test_ctx.position);
-    for (uint32_t i = _test_ctx.position; i < _test_ctx.position + actual_size; ++i)
+    for(uint32_t i = _test_ctx.position; i < _test_ctx.position + actual_size; ++i)
     {
         buffer[i - _test_ctx.position] = static_cast<uint8_t>(i % 0xFF);
     }
@@ -148,17 +161,14 @@ result::Result dictofun_test_fs_status(FileSystemInterface::FSStatus& status)
     return result::Result::OK;
 }
 
-FileSystemInterface dictofun_test_fs_if
-{
-    dictofun_test_get_file_list,
-    dictofun_test_get_file_info,
-    dictofun_test_open_file,
-    dictofun_test_close_file,
-    dictofun_test_get_data,
-    dictofun_test_fs_status,
-    dictofun_test_get_file_list_next
-};
+FileSystemInterface dictofun_test_fs_if{dictofun_test_get_file_list,
+                                        dictofun_test_get_file_info,
+                                        dictofun_test_open_file,
+                                        dictofun_test_close_file,
+                                        dictofun_test_get_data,
+                                        dictofun_test_fs_status,
+                                        dictofun_test_get_file_list_next};
 
-}
+} // namespace test
 
-}
+} // namespace integration

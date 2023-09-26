@@ -3,12 +3,12 @@
  * Copyright (c) 2023, Roman Turkin
  */
 
-#include "task_state.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "task_state.h"
 
-#include "nrf_log.h"
 #include "nrf_gpio.h"
+#include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 
 namespace systemstate
@@ -30,7 +30,6 @@ void configure_power_latch()
     vTaskDelay(1);
     nrf_gpio_pin_clear(power_flipflop_clk);
     vTaskDelay(1);
-
 }
 
 void shutdown_ldo()
@@ -52,4 +51,4 @@ void shutdown_ldo()
     NVIC_SystemReset();
 }
 
-}
+} // namespace systemstate

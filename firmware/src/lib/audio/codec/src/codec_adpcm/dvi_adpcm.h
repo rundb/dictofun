@@ -44,32 +44,32 @@
 #include <stdint.h>
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 #ifdef __ICCARM__
-typedef __packed struct
+    typedef __packed struct
 #else
 typedef struct __attribute__((__packed__))
 #endif
-{
-	int16_t valpred;    /* Previous predicted value. */
-	uint8_t index;     /* Index into stepsize table. */
-} dvi_adpcm_state_t;
+    {
+        int16_t valpred; /* Previous predicted value. */
+        uint8_t index; /* Index into stepsize table. */
+    } dvi_adpcm_state_t;
 
-int dvi_adpcm_encode(void *in_buf, int in_size, void *out_buf, int *out_size, void *state, bool hflag);
+    int dvi_adpcm_encode(
+        void* in_buf, int in_size, void* out_buf, int* out_size, void* state, bool hflag);
 
-/**
+    /**
  * Initialize encoder state.
  *
  * @arg[in] state : State to be initialized.
  */
-void dvi_adpcm_init_state(dvi_adpcm_state_t * state);
-
+    void dvi_adpcm_init_state(dvi_adpcm_state_t* state);
 
 #ifdef __cplusplus
-} // extern "C" 
+} // extern "C"
 #endif
 
 #endif
-

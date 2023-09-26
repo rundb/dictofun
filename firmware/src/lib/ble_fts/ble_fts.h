@@ -4,10 +4,10 @@
  */
 #pragma once
 
-#include <stdint.h>
-#include <functional>
-#include "result.h"
 #include "ble_link_ctx_manager.h"
+#include "result.h"
+#include <functional>
+#include <stdint.h>
 
 namespace ble
 {
@@ -16,21 +16,21 @@ namespace fts
 
 constexpr uint32_t file_id_size{16};
 
-struct file_id_type 
+struct file_id_type
 {
     uint8_t data[file_id_size]{0};
 
-    file_id_type& operator = (const file_id_type& rhs) 
+    file_id_type& operator=(const file_id_type& rhs)
     {
         memcpy(data, rhs.data, file_id_size);
         return *this;
     }
 
-    bool operator == (const file_id_type& rhs) 
+    bool operator==(const file_id_type& rhs)
     {
-        for (auto i = 0U; i < file_id_size; ++i) 
+        for(auto i = 0U; i < file_id_size; ++i)
         {
-            if (data[i] != rhs.data[i]) 
+            if(data[i] != rhs.data[i])
             {
                 return false;
             }
@@ -38,11 +38,12 @@ struct file_id_type
         return true;
     }
 
-    bool operator != (const file_id_type& rhs) {
+    bool operator!=(const file_id_type& rhs)
+    {
         return !(*this == rhs);
     }
 
-    void reset() 
+    void reset()
     {
         memset(data, 0, file_id_size);
     }
@@ -52,14 +53,17 @@ struct file_id_type
 struct FileSystemInterface
 {
     // First parameter in this call corresponds to the total amount of files in the filesystem
-    using file_list_get_function_type = std::function<result::Result (uint32_t&, file_id_type *)>;
+    using file_list_get_function_type = std::function<result::Result(uint32_t&, file_id_type*)>;
     // First parameter in this call, unlike above, shows, how many files have been placed to the file_id_type* array
-    using file_list_get_next_function_type = std::function<result::Result (uint32_t&, file_id_type *)>;
+    using file_list_get_next_function_type =
+        std::function<result::Result(uint32_t&, file_id_type*)>;
     // file data is a minimal json string describing the contents of a particular file
-    using file_info_get_function_type = std::function<result::Result (file_id_type, uint8_t *, uint32_t&, uint32_t)>;
-    using file_open_function_type = std::function<result::Result (file_id_type, uint32_t&)>;
-    using file_close_function_type = std::function<result::Result (file_id_type)>;
-    using file_data_get_function_type = std::function<result::Result (file_id_type, uint8_t *, uint32_t&, uint32_t)>;
+    using file_info_get_function_type =
+        std::function<result::Result(file_id_type, uint8_t*, uint32_t&, uint32_t)>;
+    using file_open_function_type = std::function<result::Result(file_id_type, uint32_t&)>;
+    using file_close_function_type = std::function<result::Result(file_id_type)>;
+    using file_data_get_function_type =
+        std::function<result::Result(file_id_type, uint8_t*, uint32_t&, uint32_t)>;
 
     struct FSStatus
     {
@@ -67,7 +71,7 @@ struct FileSystemInterface
         uint32_t occupied_space{0};
         uint32_t files_count{0};
     } __attribute__((packed));
-    using fs_status_function_type = std::function<result::Result (FSStatus&)>;
+    using fs_status_function_type = std::function<result::Result(FSStatus&)>;
 
     file_list_get_function_type file_list_get_function;
     file_info_get_function_type file_info_get_function;
@@ -91,31 +95,59 @@ public:
     ~FtsService() = default;
 
     result::Result init();
-    constexpr uint32_t get_service_uuid() { return service_uuid;}
-    uint8_t get_service_uuid_type() { return _context.uuid_type; }
-    static FtsService& instance() { return *_instance;}
-    static void on_ble_evt(ble_evt_t const * p_ble_evt, void * p_context);
+    constexpr uint32_t get_service_uuid()
+    {
+        return service_uuid;
+    }
+    uint8_t get_service_uuid_type()
+    {
+        return _context.uuid_type;
+    }
+    static FtsService& instance()
+    {
+        return *_instance;
+    }
+    static void on_ble_evt(ble_evt_t const* p_ble_evt, void* p_context);
 
-    void set_fs_interface(FileSystemInterface& fs_if) 
-    { 
-        // TODO: possibly need to a) check that operations of the given IF are closed and 
+    void set_fs_interface(FileSystemInterface& fs_if)
+    {
+        // TODO: possibly need to a) check that operations of the given IF are closed and
         // b) restrict opportunity of interface change (f.e. only at the start of operation)
         _fs_if = fs_if;
     }
 
     void process();
-    bool is_file_transmission_running() { return _context.active_command != FtsService::ControlPointOpcode::IDLE; }
-    static constexpr uint32_t get_file_list_char_size() { return file_list_char_max_len; }
+    bool is_file_transmission_running()
+    {
+        return _context.active_command != FtsService::ControlPointOpcode::IDLE;
+    }
+    static constexpr uint32_t get_file_list_char_size()
+    {
+        return file_list_char_max_len;
+    }
+
 private:
-    static FtsService * _instance;
+    static FtsService* _instance;
     FileSystemInterface& _fs_if;
 
     static constexpr uint32_t _uuid_size{16};
     // a045a112-b822-4820-8782-bd8faf68807b
-    static constexpr uint8_t _service_uuid_base[_uuid_size] {
-        0x7b, 0x80, 0x68, 0xaf, 0x8f, 0xbd, 0x82, 0x87,
-        0x20, 0x48, 0x22, 0xb8, 0x12, 0xa1, 0x45, 0xa0
-    };
+    static constexpr uint8_t _service_uuid_base[_uuid_size]{0x7b,
+                                                            0x80,
+                                                            0x68,
+                                                            0xaf,
+                                                            0x8f,
+                                                            0xbd,
+                                                            0x82,
+                                                            0x87,
+                                                            0x20,
+                                                            0x48,
+                                                            0x22,
+                                                            0xb8,
+                                                            0x12,
+                                                            0xa1,
+                                                            0x45,
+                                                            0xa0};
 
     static constexpr uint32_t service_uuid{0x1001};
     static constexpr uint32_t service_uuid_type{BLE_UUID_TYPE_VENDOR_BEGIN};
@@ -138,7 +170,7 @@ private:
     static constexpr uint32_t pairing_char_max_len{1};
 
     // TODO: separate BLE commands from internal states
-    enum class ControlPointOpcode: uint8_t
+    enum class ControlPointOpcode : uint8_t
     {
         REQ_FILES_LIST = 1,
         REQ_FILE_INFO = 2,
@@ -147,7 +179,7 @@ private:
         REQ_FILES_LIST_NEXT = 5,
 
         GENERAL_STATUS = 240,
-        
+
         PUSH_DATA_PACKETS = 250,
         FINALIZE_TRANSACTION = 251,
         IDLE = 254,
@@ -183,13 +215,13 @@ private:
         ble_gatts_char_handles_t pairer;
 
         uint16_t conn_handle;
-        bool is_notification_enabled; 
+        bool is_notification_enabled;
 
-        blcm_link_ctx_storage_t * const p_link_ctx_storage;
+        blcm_link_ctx_storage_t* const p_link_ctx_storage;
 
         ControlPointOpcode pending_command{ControlPointOpcode::IDLE};
         ControlPointOpcode active_command{ControlPointOpcode::IDLE};
-        ClientContext * client_context;
+        ClientContext* client_context;
 
         bool is_connection_params_request_needed{false};
         uint32_t current_timestamp{0};
@@ -210,25 +242,24 @@ private:
         WRITE,
         READ_NOTIFY,
     };
-    result::Result add_characteristic(
-        uint8_t type, 
-        uint32_t uuid, 
-        uint32_t max_len, 
-        ble_gatts_char_handles_t * handle, 
-        CharacteristicInUseType char_type,
-        bool should_be_secured = false);
+    result::Result add_characteristic(uint8_t type,
+                                      uint32_t uuid,
+                                      uint32_t max_len,
+                                      ble_gatts_char_handles_t* handle,
+                                      CharacteristicInUseType char_type,
+                                      bool should_be_secured = false);
 
-    void on_write(ble_evt_t const * p_ble_evt, ClientContext& client_context);
-    void on_connect(ble_evt_t const * p_ble_evt, ClientContext& client_context);
-    void on_disconnect(ble_evt_t const * p_ble_evt, ClientContext& client_context);
-    void on_control_point_write(uint32_t len, const uint8_t * data);
+    void on_write(ble_evt_t const* p_ble_evt, ClientContext& client_context);
+    void on_connect(ble_evt_t const* p_ble_evt, ClientContext& client_context);
+    void on_disconnect(ble_evt_t const* p_ble_evt, ClientContext& client_context);
+    void on_control_point_write(uint32_t len, const uint8_t* data);
 
     void on_req_files_list(uint32_t size);
-    void on_req_file_info(uint32_t data_size, const uint8_t * file_id_data);
-    void on_req_file_data(uint32_t data_size, const uint8_t * file_id_data);
+    void on_req_file_info(uint32_t data_size, const uint8_t* file_id_data);
+    void on_req_file_data(uint32_t data_size, const uint8_t* file_id_data);
     void on_req_fs_status(uint32_t size);
 
-    file_id_type get_file_id_from_raw(const uint8_t * data) const;
+    file_id_type get_file_id_from_raw(const uint8_t* data) const;
 
     // API for functions that initiate transfer of FS data (executed from OS context)
     result::Result send_files_list();
@@ -238,7 +269,7 @@ private:
     result::Result continue_sending_file_data();
     result::Result send_fs_status();
 
-    enum GeneralStatus: uint8_t
+    enum GeneralStatus : uint8_t
     {
         OK = 1,
         FILE_NOT_FOUND = 2,
@@ -251,20 +282,22 @@ private:
 
     void process_client_request(ControlPointOpcode client_request);
 
-    struct TransactionContext {
+    struct TransactionContext
+    {
         static constexpr size_t buffer_size{256};
         static constexpr uint16_t packet_size_value{200};
         uint32_t idx{0};
         uint32_t size{0};
         uint8_t buffer[buffer_size];
-        uint16_t packet_size{packet_size_value}; // it's a constant, but for the API of Nordic SDK it has to be a var.
+        uint16_t packet_size{
+            packet_size_value}; // it's a constant, but for the API of Nordic SDK it has to be a var.
         file_id_type file_id{0};
         uint32_t file_size{0};
         uint32_t file_sent_size{0};
         uint32_t files_count_left{0};
-        void update_next_packet_size() 
+        void update_next_packet_size()
         {
-            const auto leftover_size{size-idx};
+            const auto leftover_size{size - idx};
             packet_size = (leftover_size > packet_size_value) ? packet_size_value : leftover_size;
         }
     } _transaction_ctx;
@@ -280,5 +313,5 @@ public:
     static Context _context;
 };
 
-}
-}
+} // namespace fts
+} // namespace ble

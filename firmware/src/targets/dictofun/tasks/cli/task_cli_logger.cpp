@@ -6,8 +6,8 @@
 #include "task_cli_logger.h"
 
 #include "FreeRTOS.h"
-#include "task.h"
 #include "boards.h"
+#include "task.h"
 
 #include <nrf_log.h>
 #include <nrf_log_ctrl.h>
@@ -23,7 +23,8 @@ namespace logger
 static RecordLaunchCommand _record_launch_command;
 void record_launch_callback(int duration, bool should_record_be_stored)
 {
-    if (_record_launch_command.is_active) return;
+    if(_record_launch_command.is_active)
+        return;
     _record_launch_command.duration = duration;
     _record_launch_command.should_be_stored = should_record_be_stored;
     _record_launch_command.is_active = true;
@@ -32,7 +33,8 @@ void record_launch_callback(int duration, bool should_record_be_stored)
 static MemoryTestCommand _memory_test_command;
 void memory_test_callback(uint32_t test_id)
 {
-    if (_memory_test_command.is_active) return;
+    if(_memory_test_command.is_active)
+        return;
     _memory_test_command.test_id = test_id;
     _memory_test_command.is_active = true;
 }
@@ -40,7 +42,8 @@ void memory_test_callback(uint32_t test_id)
 static BleOperationCommand _ble_operation_command;
 void ble_operation_callback(uint32_t command_id)
 {
-    if (_ble_operation_command.is_active) return;
+    if(_ble_operation_command.is_active)
+        return;
     _ble_operation_command.command_id = command_id;
     _ble_operation_command.is_active = true;
 }
@@ -48,7 +51,8 @@ void ble_operation_callback(uint32_t command_id)
 static SystemCommand _system_command;
 void system_operation_callback(uint32_t command_id)
 {
-    if (_system_command.is_active) return;
+    if(_system_command.is_active)
+        return;
     _system_command.command_id = command_id;
     _system_command.is_active = true;
 }
@@ -56,7 +60,8 @@ void system_operation_callback(uint32_t command_id)
 static OpmodeConfigCommand _opmode_config_command;
 void opmode_config_callback(uint32_t mode_id)
 {
-    if (_opmode_config_command.is_active) return;
+    if(_opmode_config_command.is_active)
+        return;
     _opmode_config_command.is_active = true;
     _opmode_config_command.mode_id = mode_id;
 }
@@ -64,7 +69,8 @@ void opmode_config_callback(uint32_t mode_id)
 static LedControlCommand _led_control_command;
 void led_control_callback(uint32_t color_id, uint32_t mode_id)
 {
-    if (_led_control_command.is_active) return;
+    if(_led_control_command.is_active)
+        return;
     _led_control_command.is_active = true;
     _led_control_command.color_id = color_id;
     _led_control_command.mode_id = mode_id;
@@ -82,34 +88,31 @@ void log_init()
     cli_init();
 }
 
-void task_cli_logger(void * cli_context)
+void task_cli_logger(void* cli_context)
 {
     NRF_LOG_INFO("%s", version::BUILD_SUMMARY_STRING);
-    CliContext& context = *(reinterpret_cast<CliContext *>(cli_context));
+    CliContext& context = *(reinterpret_cast<CliContext*>(cli_context));
     register_record_launch_callback(record_launch_callback);
     register_memory_test_callback(memory_test_callback);
     register_ble_control_callback(ble_operation_callback);
     register_system_control_callback(system_operation_callback);
     register_opmode_config_callback(opmode_config_callback);
     register_led_control_callback(led_control_callback);
-    while (1)
+    while(1)
     {
         NRF_LOG_PROCESS();
         vTaskDelay(5);
         cli_process();
-        if (_record_launch_command.is_active)
+        if(_record_launch_command.is_active)
         {
             _record_launch_command.is_active = false;
 
             CliCommandQueueElement cmd{
-                CliCommand::RECORD, 
-                {
-                    static_cast<uint32_t>(_record_launch_command.duration),
-                    static_cast<uint32_t>(_record_launch_command.should_be_stored)
-                }
-            };
+                CliCommand::RECORD,
+                {static_cast<uint32_t>(_record_launch_command.duration),
+                 static_cast<uint32_t>(_record_launch_command.should_be_stored)}};
             const auto send_result = xQueueSend(context.cli_commands_handle, &cmd, 0U);
-            if (pdPASS != send_result)
+            if(pdPASS != send_result)
             {
                 NRF_LOG_WARNING("cli: failed to queue record operation");
             }
@@ -119,18 +122,12 @@ void task_cli_logger(void * cli_context)
             }
         }
 
-        if (_memory_test_command.is_active)
+        if(_memory_test_command.is_active)
         {
             _memory_test_command.is_active = false;
-            CliCommandQueueElement cmd{
-                CliCommand::MEMORY_TEST, 
-                { 
-                    _memory_test_command.test_id,
-                    0 
-                }
-            };
+            CliCommandQueueElement cmd{CliCommand::MEMORY_TEST, {_memory_test_command.test_id, 0}};
             const auto send_result = xQueueSend(context.cli_commands_handle, &cmd, 0U);
-            if (pdPASS != send_result)
+            if(pdPASS != send_result)
             {
                 NRF_LOG_WARNING("cli: failed to launch memory test");
             }
@@ -140,18 +137,13 @@ void task_cli_logger(void * cli_context)
             }
         }
 
-        if (_ble_operation_command.is_active)
+        if(_ble_operation_command.is_active)
         {
             _ble_operation_command.is_active = false;
-            CliCommandQueueElement cmd{
-                CliCommand::BLE_COMMAND, 
-                { 
-                    _ble_operation_command.command_id, 
-                    0 
-                }
-            };
+            CliCommandQueueElement cmd{CliCommand::BLE_COMMAND,
+                                       {_ble_operation_command.command_id, 0}};
             const auto send_result = xQueueSend(context.cli_commands_handle, &cmd, 0U);
-            if (pdPASS != send_result)
+            if(pdPASS != send_result)
             {
                 NRF_LOG_WARNING("cli: failed to launch BLE command");
             }
@@ -160,18 +152,12 @@ void task_cli_logger(void * cli_context)
                 NRF_LOG_INFO("cli: BLE command has been queued");
             }
         }
-        if (_system_command.is_active)
+        if(_system_command.is_active)
         {
             _system_command.is_active = false;
-            CliCommandQueueElement cmd{
-                CliCommand::SYSTEM, 
-                {
-                    _system_command.command_id, 
-                    0 
-                }
-            };
+            CliCommandQueueElement cmd{CliCommand::SYSTEM, {_system_command.command_id, 0}};
             const auto send_result = xQueueSend(context.cli_commands_handle, &cmd, 0U);
-            if (pdPASS != send_result)
+            if(pdPASS != send_result)
             {
                 NRF_LOG_WARNING("cli: failed to launch system command");
             }
@@ -180,18 +166,12 @@ void task_cli_logger(void * cli_context)
                 NRF_LOG_INFO("cli: system command has been queued");
             }
         }
-        if (_opmode_config_command.is_active)
+        if(_opmode_config_command.is_active)
         {
             _opmode_config_command.is_active = false;
-            CliCommandQueueElement cmd{
-                CliCommand::OPMODE, 
-                { 
-                    _opmode_config_command.mode_id, 
-                    0 
-                }
-            };
+            CliCommandQueueElement cmd{CliCommand::OPMODE, {_opmode_config_command.mode_id, 0}};
             const auto send_result = xQueueSend(context.cli_commands_handle, &cmd, 0U);
-            if (pdPASS != send_result)
+            if(pdPASS != send_result)
             {
                 NRF_LOG_WARNING("cli: failed to launch opmode command");
             }
@@ -200,18 +180,13 @@ void task_cli_logger(void * cli_context)
                 NRF_LOG_INFO("cli: opmode config command has been queued");
             }
         }
-        if (_led_control_command.is_active)
+        if(_led_control_command.is_active)
         {
             _led_control_command.is_active = false;
             CliCommandQueueElement cmd{
-                CliCommand::LED, 
-                { 
-                    _led_control_command.color_id, 
-                    _led_control_command.mode_id 
-                }
-            };
+                CliCommand::LED, {_led_control_command.color_id, _led_control_command.mode_id}};
             const auto send_result = xQueueSend(context.cli_commands_handle, &cmd, 0U);
-            if (pdPASS != send_result)
+            if(pdPASS != send_result)
             {
                 NRF_LOG_WARNING("cli: failed to launch led command");
             }
@@ -223,4 +198,4 @@ void task_cli_logger(void * cli_context)
     }
 }
 
-}
+} // namespace logger

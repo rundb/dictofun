@@ -59,3 +59,11 @@ nrfjprog --reset --program ./sdk/nRF5_SDK_17.1.0_ddde560/components/softdevice/s
 ```
 
 Both commands should be executed from folder `firmware` in the project structure.
+
+## Clang-format
+
+This command is used to format code recursively. 
+
+```
+find ./ -iname "*h" -o -iname "*.cpp" | xargs clang-format -i
+```

@@ -5,18 +5,18 @@
 #pragma once
 
 #include "spi.h"
-#include <stdint.h>
 #include "spi_flash_if.h"
 #include <functional>
+#include <stdint.h>
 
 namespace flash
 {
 
-class SpiFlash: public memory::SpiNorFlashIf
+class SpiFlash : public memory::SpiNorFlashIf
 {
 public:
     using DelayFunction = std::function<void(uint32_t)>;
-    using TickFunction= std::function<uint32_t(void)>;
+    using TickFunction = std::function<uint32_t(void)>;
     using Result = memory::SpiNorFlashIf::Result;
     explicit SpiFlash(spi::Spi& flashSpi, DelayFunction delay_function, TickFunction tick_function);
 
@@ -37,7 +37,8 @@ public:
 
     // Interface implementation
     SpiNorFlashIf::Result read(uint32_t address, uint8_t* data, uint32_t size) override;
-    SpiNorFlashIf::Result program(uint32_t address, const uint8_t * const data, uint32_t size) override;
+    SpiNorFlashIf::Result
+    program(uint32_t address, const uint8_t* const data, uint32_t size) override;
     SpiNorFlashIf::Result erase(uint32_t address, uint32_t size) override;
 
     // These 2 calls are asynchronous
@@ -48,12 +49,16 @@ public:
 
     uint8_t getSR1();
 
-    static inline SpiFlash& getInstance() { return *_instance; }
+    static inline SpiFlash& getInstance()
+    {
+        return *_instance;
+    }
+
 private:
     spi::Spi& _spi;
     DelayFunction _delay;
     TickFunction _get_ticks;
-    static SpiFlash * _instance;
+    static SpiFlash* _instance;
     static const size_t MAX_TRANSACTION_SIZE = 265;
     uint8_t _txBuffer[MAX_TRANSACTION_SIZE];
     uint8_t _rxBuffer[MAX_TRANSACTION_SIZE];
@@ -76,7 +81,7 @@ private:
     {
         Operation operation;
         uint32_t address;
-        uint8_t * data;
+        uint8_t* data;
         size_t size;
     };
 

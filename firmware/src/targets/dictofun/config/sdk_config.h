@@ -1,3 +1,4 @@
+// clang-format off
 #ifndef SDK_CONFIG_H
 #define SDK_CONFIG_H
 #ifdef USE_APP_CONFIG
@@ -12220,4 +12221,4 @@
 #define CONFIG_AUDIO_ENABLED 1
 
 #endif //SDK_CONFIG_H
-
+// clang-format on

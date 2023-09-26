@@ -19,10 +19,10 @@ struct Sample
     uint8_t data[BufferSize];
 };
 
-/// @brief This class represents an interface of a codec used in the system. 
+/// @brief This class represents an interface of a codec used in the system.
 /// @tparam CodedType type of the data to be encoded
 /// @tparam RawType type of the data that leaves the encoder
-template<typename RawType, typename CodedType>
+template <typename RawType, typename CodedType>
 class Codec
 {
 public:
@@ -34,5 +34,5 @@ public:
     virtual void start() = 0;
 };
 
-}
-}
+} // namespace codec
+} // namespace audio

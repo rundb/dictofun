@@ -8,7 +8,6 @@
 #include "queue.h"
 #include "task.h"
 
-
 namespace led
 {
 // This task is responsible for the whole LED management.
@@ -34,7 +33,7 @@ enum class Color
     YELLOW = 4,
     BRIGHT_BLUE = 5,
     WHITE = 6,
-    COUNT 
+    COUNT
 };
 
 constexpr Color user_color{Color::GREEN};
@@ -50,7 +49,6 @@ struct Context
     QueueHandle_t commands_queue{nullptr};
 };
 
+void task_led(void* context_ptr);
 
-void task_led(void * context_ptr);
-
-}
+} // namespace led
