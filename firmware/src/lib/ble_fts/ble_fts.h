@@ -131,23 +131,13 @@ private:
     FileSystemInterface& _fs_if;
 
     static constexpr uint32_t _uuid_size{16};
+    // clang-format off
     // a045a112-b822-4820-8782-bd8faf68807b
-    static constexpr uint8_t _service_uuid_base[_uuid_size]{0x7b,
-                                                            0x80,
-                                                            0x68,
-                                                            0xaf,
-                                                            0x8f,
-                                                            0xbd,
-                                                            0x82,
-                                                            0x87,
-                                                            0x20,
-                                                            0x48,
-                                                            0x22,
-                                                            0xb8,
-                                                            0x12,
-                                                            0xa1,
-                                                            0x45,
-                                                            0xa0};
+    static constexpr uint8_t _service_uuid_base[_uuid_size]{
+        0x7b, 0x80, 0x68, 0xaf, 0x8f, 0xbd, 0x82, 0x87,
+        0x20, 0x48, 0x22, 0xb8, 0x12, 0xa1, 0x45, 0xa0
+    };
+    // clang-format on
 
     static constexpr uint32_t service_uuid{0x1001};
     static constexpr uint32_t service_uuid_type{BLE_UUID_TYPE_VENDOR_BEGIN};

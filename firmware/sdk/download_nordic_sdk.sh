@@ -12,7 +12,7 @@ rm $FILE_NAME
 # Step 2: apply patches, if any
 
 patch "./nRF5_SDK_17.1.0_ddde560/components/softdevice/common/nrf_sdh_freertos.c" < "sdh_stack_size_increase.patch"
-patch -l "./nRF5_SDK_17.1.0_ddde560/components/softdevice/common/nrf_sdh_freertos.c" < "nrf_sdh_pause_resume_c.patch"
+patch "./nRF5_SDK_17.1.0_ddde560/components/softdevice/common/nrf_sdh_freertos.c" < "nrf_sdh_pause_resume_c.patch"
 patch "./nRF5_SDK_17.1.0_ddde560/components/softdevice/common/nrf_sdh_freertos.h" < "nrf_sdh_pause_resume_h.patch"
 patch "./nRF5_SDK_17.1.0_ddde560/components/ble/ble_services/ble_cts_c/ble_cts_c.c" < "nrf_cts_c_reduce_log.patch"
 patch "./nRF5_SDK_17.1.0_ddde560/components/ble/nrf_ble_gq/nrf_ble_gq.c" < "nrf_gq_reduce_logs.patch"
