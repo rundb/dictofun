@@ -16,6 +16,7 @@
 #include "task_cli_logger.h"
 #include "task_led.h"
 #include "task_memory.h"
+#include "task_battery.h"
 
 #include "nvconfig.h"
 
@@ -30,6 +31,7 @@ namespace systemstate
 logger::CliCommandQueueElement cli_command_buffer;
 ble::RequestQueueElement ble_requests_buffer;
 button::EventQueueElement button_event_buffer;
+battery::MeasurementsQueueElement battery_measurement_buffer;
 
 application::NvConfig _nvconfig{vTaskDelay};
 application::NvConfig::Configuration _configuration;
@@ -37,6 +39,7 @@ application::NvConfig::Configuration _configuration;
 constexpr TickType_t cli_command_wait_ticks_type{10};
 constexpr TickType_t ble_request_wait_ticks_type{1};
 constexpr TickType_t button_event_wait_ticks_type{1};
+constexpr TickType_t battery_request_wait_ticks_type{0};
 
 Context* context{nullptr};
 
@@ -139,6 +142,16 @@ void task_system_state(void* context_ptr)
                 }
             }
         }
+        const auto battery_measurement_receive_status = 
+            xQueueReceive(
+                context->battery_measurements_handle, 
+                reinterpret_cast<void *>(&battery_measurement_buffer), 
+                battery_request_wait_ticks_type);
+        if (pdPASS == battery_measurement_receive_status)
+        {
+            // TODO: make decisions based on battery level, and provide the level to the BLE task
+        }
+
         if(!is_operation_mode_defined && xTaskGetTickCount() > nvconfig_definition_timestamp)
         {
             is_operation_mode_defined = true;
