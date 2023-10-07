@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ARG HOST_ARCHITECTURE
 
 RUN echo "deb http://archive.debian.org/debian stretch main contrib non-free" > /etc/apt/sources.list
-RUN apt update && apt install -f --no-install-recommends -y  wget bzip2 unzip make gcc g++ git libc6-arm64-cross python3
+RUN apt update && apt install -f --no-install-recommends -y  wget bzip2 unzip make gcc g++ git libc6-arm64-cross python3 patch 
 
 ARG GCC_VERSION="gcc-arm-none-eabi-10.3-2021.10"
 ARG GCC_PATH="${GCC_VERSION}"
@@ -44,4 +44,4 @@ ARG SDK_FOLDER_NAME="nrf5_sdk_17.1.0_ddde560"
 ARG SDK_ZIP_FILE_NAME="${SDK_FOLDER_NAME}.zip"
 
 RUN mkdir -p /sdk && cd /sdk && wget https://nsscprodmedia.blob.core.windows.net/prod/software-and-other-downloads/sdks/nrf5/binaries/${SDK_ZIP_FILE_NAME} --no-check-certificate && \
-  unzip ${SDK_ZIP_FILE_NAME} -d ./ && rm ${SDK_ZIP_FILE_NAME}
+  unzip ${SDK_ZIP_FILE_NAME} -d ./ && rm ${SDK_ZIP_FILE_NAME} 
