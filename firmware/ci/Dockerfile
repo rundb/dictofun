@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ARG HOST_ARCHITECTURE
 
 RUN echo "deb http://archive.debian.org/debian stretch main contrib non-free" > /etc/apt/sources.list
-RUN apt update && apt install -f --no-install-recommends -y  wget bzip2 unzip make gcc g++ git libc6-arm64-cross
+RUN apt update && apt install -f --no-install-recommends -y  wget bzip2 unzip make gcc g++ git libc6-arm64-cross python3
 
 ARG GCC_VERSION="gcc-arm-none-eabi-10.3-2021.10"
 ARG GCC_PATH="${GCC_VERSION}"
