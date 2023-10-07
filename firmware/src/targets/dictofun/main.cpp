@@ -22,6 +22,7 @@
 
 #include "task_audio.h"
 #include "task_audio_tester.h"
+#include "task_battery.h"
 #include "task_ble.h"
 #include "task_button.h"
 #include "task_cli_logger.h"
@@ -29,7 +30,6 @@
 #include "task_memory.h"
 #include "task_rtc.h"
 #include "task_state.h"
-#include "task_battery.h"
 
 #include <stdint.h>
 
@@ -233,7 +233,7 @@ int main()
     }
 
     const auto battery_measurements_queue_init_result = battery_measurements_queue.init();
-    if (result::Result::OK != battery_measurements_queue_init_result) 
+    if(result::Result::OK != battery_measurements_queue_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
@@ -355,9 +355,10 @@ int main()
     }
 
     battery_context.measurements_handle = battery_measurements_queue.handle;
-    const auto battery_task_init_result = battery_task.init(battery::task_battery, "BAT", &battery_context);
+    const auto battery_task_init_result =
+        battery_task.init(battery::task_battery, "BAT", &battery_context);
 
-    if (result::Result::OK != battery_task_init_result)
+    if(result::Result::OK != battery_task_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }

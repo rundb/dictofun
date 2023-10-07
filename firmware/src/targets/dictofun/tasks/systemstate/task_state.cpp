@@ -11,12 +11,12 @@
 
 #include "task_audio.h"
 #include "task_audio_tester.h"
+#include "task_battery.h"
 #include "task_ble.h"
 #include "task_button.h"
 #include "task_cli_logger.h"
 #include "task_led.h"
 #include "task_memory.h"
-#include "task_battery.h"
 
 #include "nvconfig.h"
 
@@ -142,12 +142,11 @@ void task_system_state(void* context_ptr)
                 }
             }
         }
-        const auto battery_measurement_receive_status = 
-            xQueueReceive(
-                context->battery_measurements_handle, 
-                reinterpret_cast<void *>(&battery_measurement_buffer), 
-                battery_request_wait_ticks_type);
-        if (pdPASS == battery_measurement_receive_status)
+        const auto battery_measurement_receive_status =
+            xQueueReceive(context->battery_measurements_handle,
+                          reinterpret_cast<void*>(&battery_measurement_buffer),
+                          battery_request_wait_ticks_type);
+        if(pdPASS == battery_measurement_receive_status)
         {
             // TODO: make decisions based on battery level, and provide the level to the BLE task
         }

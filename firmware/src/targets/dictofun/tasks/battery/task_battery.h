@@ -5,25 +5,24 @@
 
 #pragma once
 
-#include "result.h"
 #include "FreeRTOS.h"
 #include "queue.h"
+#include "result.h"
 
 namespace battery
 {
-
 
 /// @brief Function that implements battery task
 /// @param context_ptr pointer to struct Context, passed from the main.cpp
 void task_battery(void* context_ptr);
 
-struct MeasurementsQueueElement 
+struct MeasurementsQueueElement
 {
     float battery_voltage_level;
     uint8_t battery_percentage;
 };
 
-struct Context 
+struct Context
 {
     QueueHandle_t measurements_handle;
 };

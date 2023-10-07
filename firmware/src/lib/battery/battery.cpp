@@ -4,21 +4,16 @@
  */
 #include "battery.h"
 
-// TODO: remove
-
-
-namespace battery 
+namespace battery
 {
 
-BatteryMeasurement::BatteryMeasurement(
-    adc::AdcIf& adc,
-    const adc::AdcIf::AnalogInputId battery_pin_id, 
-    const float multiplex_factor)
-: _adc(adc)
-, _battery_pin_id(battery_pin_id)
-, _multiplex_factor(multiplex_factor)
-{   
-}
+BatteryMeasurement::BatteryMeasurement(adc::AdcIf& adc,
+                                       const adc::AdcIf::AnalogInputId battery_pin_id,
+                                       const float multiplex_factor)
+    : _adc(adc)
+    , _battery_pin_id(battery_pin_id)
+    , _multiplex_factor(multiplex_factor)
+{ }
 
 result::Result BatteryMeasurement::init()
 {
@@ -28,9 +23,9 @@ result::Result BatteryMeasurement::init()
 BatteryMeasurement::BatteryVoltage BatteryMeasurement::get_battery_voltage()
 {
     adc::AdcIf::Measurement measurement{0.0};
-    
+
     const auto measurement_result = _adc.get_measurement(_battery_pin_id, measurement);
-    if (result::Result::OK != measurement_result)
+    if(result::Result::OK != measurement_result)
     {
         return 0.0;
     }
@@ -49,7 +44,7 @@ BatteryMeasurement::BatteryLevel BatteryMeasurement::get_battery_level()
 BatteryMeasurement::BatteryVoltage BatteryMeasurement::get_average_voltage()
 {
     float accumulator{0};
-    for (auto& m: _battery_level_buffers)
+    for(auto& m : _battery_level_buffers)
     {
         accumulator += m;
     }
@@ -59,9 +54,9 @@ BatteryMeasurement::BatteryVoltage BatteryMeasurement::get_average_voltage()
 uint8_t BatteryMeasurement::convert_battery_voltage_to_level(float voltage)
 {
     uint32_t idx{0};
-    for (auto i = 0; i < REFERENCE_VOLTAGES_COUNT; ++i)
+    for(auto i = 0; i < REFERENCE_VOLTAGES_COUNT; ++i)
     {
-        if (voltage <  REFERENCE_VOLTAGES[i])
+        if(voltage < REFERENCE_VOLTAGES[i])
         {
             break;
         }
@@ -70,4 +65,4 @@ uint8_t BatteryMeasurement::convert_battery_voltage_to_level(float voltage)
     return MAX_BATTERY_LEVEL / REFERENCE_VOLTAGES_COUNT * idx;
 }
 
-}
+} // namespace battery

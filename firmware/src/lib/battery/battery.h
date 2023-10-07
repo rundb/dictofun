@@ -8,7 +8,6 @@
 #include "adc_if.h"
 #include "result.h"
 
-
 namespace battery
 {
 
@@ -21,15 +20,15 @@ public:
     using BatteryVoltage = float;
     using BatteryLevel = uint8_t;
 
-    explicit BatteryMeasurement(
-        adc::AdcIf& adc,
-        const adc::AdcIf::PinId battery_pin_id, 
-        const float multiplex_factor);
+    explicit BatteryMeasurement(adc::AdcIf& adc,
+                                const adc::AdcIf::PinId battery_pin_id,
+                                const float multiplex_factor);
 
     result::Result init();
 
     BatteryLevel get_battery_level();
     BatteryVoltage get_average_voltage();
+
 private:
     adc::AdcIf& _adc;
     const adc::AdcIf::PinId _battery_pin_id;
@@ -43,10 +42,13 @@ private:
     uint8_t convert_battery_voltage_to_level(float voltage);
 
     static constexpr uint32_t REFERENCE_VOLTAGES_COUNT{4};
-    const float REFERENCE_VOLTAGES[REFERENCE_VOLTAGES_COUNT] {
-        3.3, 3.4, 3.6, 3.8,
+    const float REFERENCE_VOLTAGES[REFERENCE_VOLTAGES_COUNT]{
+        3.3,
+        3.4,
+        3.6,
+        3.8,
     };
-    
+
     static constexpr uint32_t MAX_BATTERY_LEVEL{100};
 };
-}
+} // namespace battery
