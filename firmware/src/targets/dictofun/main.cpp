@@ -22,13 +22,14 @@
 
 #include "task_audio.h"
 #include "task_audio_tester.h"
+#include "task_battery.h"
 #include "task_ble.h"
 #include "task_button.h"
 #include "task_cli_logger.h"
 #include "task_led.h"
 #include "task_memory.h"
 #include "task_rtc.h"
-#include <task_state.h>
+#include "task_state.h"
 
 #include <stdint.h>
 
@@ -46,6 +47,7 @@ application::TaskDescriptor<1250, 2> ble_task;
 application::TaskDescriptor<96,   1>  led_task;
 application::TaskDescriptor<128,  2>  rtc_task;
 application::TaskDescriptor<96,   3>  button_task;
+application::TaskDescriptor<256,  2>  battery_task;
 
 // ============================= Queues =====================================
 
@@ -74,6 +76,7 @@ application::QueueDescriptor<rtc::CommandQueueElement, 1>            rtc_command
 application::QueueDescriptor<rtc::ResponseQueueElement, 1>           rtc_response_queue;
 
 application::QueueDescriptor<button::EventQueueElement, 1>           button_event_queue;
+application::QueueDescriptor<battery::MeasurementsQueueElement, 1>   battery_measurements_queue;
 
 // ============================= Timers =====================================
 
@@ -90,6 +93,7 @@ ble::Context            ble_context;
 led::Context            led_context;
 rtc::Context            rtc_context;
 button::Context         button_context;
+battery::Context        battery_context;
 
 // clang-format on
 
@@ -228,6 +232,12 @@ int main()
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
+    const auto battery_measurements_queue_init_result = battery_measurements_queue.init();
+    if(result::Result::OK != battery_measurements_queue_init_result)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
     // Timers' initialization
     record_timer_handle = xTimerCreateStatic(
         "AUDIO", 1, pdFALSE, nullptr, systemstate::record_end_callback, &record_timer_buffer);
@@ -279,6 +289,7 @@ int main()
     systemstate_context.ble_keepalive_handle = ble_keepalive_queue.handle;
     systemstate_context.led_commands_handle = led_commands_queue.handle;
     systemstate_context.button_events_handle = button_event_queue.handle;
+    systemstate_context.battery_measurements_handle = battery_measurements_queue.handle;
 
     const auto systemstate_task_init_result =
         systemstate_task.init(systemstate::task_system_state, "STATE", &systemstate_context);
@@ -339,6 +350,15 @@ int main()
         button_task.init(button::task_button, "BTN", &button_context);
 
     if(result::Result::OK != button_task_init_result)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
+    battery_context.measurements_handle = battery_measurements_queue.handle;
+    const auto battery_task_init_result =
+        battery_task.init(battery::task_battery, "BAT", &battery_context);
+
+    if(result::Result::OK != battery_task_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
