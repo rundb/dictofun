@@ -3,17 +3,15 @@ run-name: run dictofun target build
 on: [push]
 jobs:
   checkout-the-repo:
-    runs-on: [ ubuntu-latest ]
+    runs-on: [ self-hosted, linux ]
     steps:
       - uses: actions/checkout@v2
-        # with:
-        #   path: target
       - run: git submodule update --init --recursive
-      - run: echo "$(pwd)" && cd firmware/ci && docker build -t dictofun_builder --build-arg HOST_ARCHITECTURE="x86" .
+      - run: echo "$(pwd)" && cd firmware/ci && docker build -t dictofun_builder --build-arg HOST_ARCHITECTURE="arm" .
 
   run-cmake-target-build:
     needs: checkout-the-repo
-    runs-on: [self-hosted, linux]
+    runs-on: [ self-hosted, linux ]
     steps:
       - name: Build application
         run: cd firmware && docker run -v $(pwd):/code  dictofun_builder /bin/bash -c "mkdir -p /code/build && cd /code/build && rm -rf ./* && ../ci/build_dictofun.sh"
