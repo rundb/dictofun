@@ -65,6 +65,7 @@ application::QueueDescriptor<memory::StatusQueueElement, 1>          memory_stat
 application::QueueDescriptor<ble::CommandQueueElement, 2>            ble_commands_queue;
 application::QueueDescriptor<ble::RequestQueueElement, 1>            ble_requests_queue;
 application::QueueDescriptor<ble::KeepaliveQueueElement, 1>          ble_keepalive_queue;
+application::QueueDescriptor<ble::BatteryDataElement, 1>             ble_batt_info_queue;
 
 application::QueueDescriptor<ble::CommandToMemoryQueueElement, 1>    ble_to_mem_commands_queue;
 application::QueueDescriptor<ble::StatusFromMemoryQueueElement, 1>   ble_from_mem_status_queue;
@@ -190,6 +191,12 @@ int main()
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
+    const auto ble_batt_info_queue_init_result = ble_batt_info_queue.init();
+    if(result::Result::OK != ble_batt_info_queue_init_result)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
     const auto ble_to_mem_commands_queue_init_result = ble_to_mem_commands_queue.init();
     if(result::Result::OK != ble_to_mem_commands_queue_init_result)
     {
@@ -290,6 +297,7 @@ int main()
     systemstate_context.led_commands_handle = led_commands_queue.handle;
     systemstate_context.button_events_handle = button_event_queue.handle;
     systemstate_context.battery_measurements_handle = battery_measurements_queue.handle;
+    systemstate_context.battery_level_to_ble_handle = ble_batt_info_queue.handle;
 
     const auto systemstate_task_init_result =
         systemstate_task.init(systemstate::task_system_state, "STATE", &systemstate_context);
@@ -321,6 +329,7 @@ int main()
     ble_context.status_from_mem_queue = ble_from_mem_status_queue.handle;
     ble_context.data_from_mem_queue = ble_from_mem_data_queue.handle;
     ble_context.commands_to_rtc_queue = rtc_commands_queue.handle;
+    ble_context.battery_to_ble_queue = ble_batt_info_queue.handle;
     const auto ble_task_init_result = ble_task.init(ble::task_ble, "BLE", &ble_context);
 
     if(result::Result::OK != ble_task_init_result)

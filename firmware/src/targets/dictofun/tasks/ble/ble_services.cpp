@@ -4,6 +4,7 @@
  */
 
 #include "ble_services.h"
+#include "ble_bas.h"
 #include "ble_cts_c.h"
 #include "ble_db_discovery.h"
 #include "ble_fts.h"
@@ -24,6 +25,7 @@ NRF_BLE_GQ_DEF(m_ble_gatt_queue, /**< BLE GATT Queue instance. */
                NRF_BLE_GQ_QUEUE_SIZE);
 
 BLE_CTS_C_DEF(m_cts_c);
+BLE_BAS_DEF(m_bas);
 
 ble_uuid_t adv_uuids[] = {
     {LBS_UUID_SERVICE, m_lbs.uuid_type},
@@ -36,14 +38,22 @@ ble_uuid_t adv_uuids[] = {
 
 volatile bool _is_current_time_update_pending{false};
 time::DateTime _current_time;
+uint8_t _batt_level{100};
 
 constexpr size_t uuids_count{sizeof(adv_uuids) / sizeof(adv_uuids[0])};
 
 static void db_discovery_init();
+static void battery_level_update();
 
 static void nrf_qwr_error_handler(uint32_t nrf_error)
 {
     NRF_LOG_ERROR("ble: QWR error %d", nrf_error);
+}
+
+void services::set_bas_battery_level(const uint8_t batt_level)
+{
+    _batt_level = batt_level;
+    battery_level_update();
 }
 
 static void current_time_set(ble_cts_c_evt_t* p_evt)
@@ -150,6 +160,7 @@ result::Result init_services(ble_lbs_led_write_handler_t led_write_handler)
     }
 
     ble_cts_c_init_t cts_init = {0};
+
     // Initialize CTS.
     cts_init.evt_handler = on_cts_c_evt;
     cts_init.error_handler = current_time_error_handler;
@@ -158,6 +169,27 @@ result::Result init_services(ble_lbs_led_write_handler_t led_write_handler)
     if(NRF_SUCCESS != cts_init_err_code)
     {
         NRF_LOG_ERROR("CTS: initialization has failed (err code: %d)", cts_init_err_code);
+        return result::Result::ERROR_GENERAL;
+    }
+
+    // Initialize Battery Service.
+    ble_bas_init_t bas_init;
+    memset(&bas_init, 0, sizeof(bas_init));
+
+    bas_init.evt_handler = NULL;
+    bas_init.support_notification = true;
+    bas_init.p_report_ref = NULL;
+    bas_init.initial_batt_level = _batt_level;
+
+    // Here the sec level for the Battery Service can be changed/increased.
+    bas_init.bl_rd_sec = SEC_OPEN;
+    bas_init.bl_cccd_wr_sec = SEC_OPEN;
+    bas_init.bl_report_rd_sec = SEC_OPEN;
+
+    const auto bas_init_err_code = ble_bas_init(&m_bas, &bas_init);
+    if(bas_init_err_code != NRF_SUCCESS)
+    {
+        NRF_LOG_ERROR("BAS: initialization has failed (err code: %d)", bas_init_err_code);
         return result::Result::ERROR_GENERAL;
     }
 
@@ -180,6 +212,17 @@ void db_discovery_init()
 
     ret_code_t err_code = ble_db_discovery_init(&db_init);
     APP_ERROR_CHECK(err_code);
+}
+
+void battery_level_update()
+{
+    const auto err_code = ble_bas_battery_level_update(&m_bas, _batt_level, BLE_CONN_HANDLE_ALL);
+    if((err_code != NRF_SUCCESS) && (err_code != NRF_ERROR_INVALID_STATE) &&
+       (err_code != NRF_ERROR_RESOURCES) && (err_code != NRF_ERROR_BUSY) &&
+       (err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING))
+    {
+        NRF_LOG_ERROR("BAS: failed to update batt level (code %d)", err_code);
+    }
 }
 
 void services::start_db_discovery(uint16_t conn_handle)
