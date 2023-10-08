@@ -19,6 +19,7 @@ namespace ble
 BleSystem ble_system;
 
 ble::CommandQueueElement command_buffer;
+ble::BatteryDataElement batt_level_buffer;
 constexpr TickType_t command_wait_slow_ticks{5U};
 constexpr TickType_t command_wait_fast_ticks{1U};
 
@@ -173,6 +174,14 @@ void task_ble(void* context_ptr)
                     return;
                 }
             }
+        }
+
+        const auto batt_level_receive_status = xQueueReceive(
+            context.battery_to_ble_queue, reinterpret_cast<void*>(&batt_level_buffer), 0);
+        if(pdPASS == batt_level_receive_status)
+        {
+            ble_system.set_battery_level(batt_level_buffer.batt_level);
+            // TODO: utilize battery voltage too (to gather statistics on battery live across all the devices)
         }
     }
 }

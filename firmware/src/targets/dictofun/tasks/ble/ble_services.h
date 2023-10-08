@@ -41,5 +41,7 @@ void request_current_time();
 bool is_current_time_update_pending();
 result::Result get_current_time_update(time::DateTime& datetime);
 
+void set_bas_battery_level(uint8_t batt_level);
+
 } // namespace services
 } // namespace ble

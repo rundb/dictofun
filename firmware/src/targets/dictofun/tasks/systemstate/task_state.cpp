@@ -148,7 +148,18 @@ void task_system_state(void* context_ptr)
                           battery_request_wait_ticks_type);
         if(pdPASS == battery_measurement_receive_status)
         {
-            // TODO: make decisions based on battery level, and provide the level to the BLE task
+            // TODO: make decisions based on battery level
+            ble::BatteryDataElement battery_level_msg{
+                battery_measurement_buffer.battery_percentage,
+                battery_measurement_buffer.battery_voltage_level};
+            const auto batt_info_send_result =
+                xQueueSend(context->battery_level_to_ble_handle,
+                           reinterpret_cast<void*>(&battery_level_msg),
+                           0);
+            if(pdPASS != batt_info_send_result)
+            {
+                NRF_LOG_ERROR("state: failed to send batt level to ble");
+            }
         }
 
         if(!is_operation_mode_defined && xTaskGetTickCount() > nvconfig_definition_timestamp)

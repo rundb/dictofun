@@ -603,4 +603,9 @@ result::Result BleSystem::get_current_cts_time(time::DateTime& datetime)
     return services::get_current_time_update(datetime);
 }
 
+void BleSystem::set_battery_level(const uint8_t batt_level)
+{
+    services::set_bas_battery_level(batt_level);
+}
+
 } // namespace ble
