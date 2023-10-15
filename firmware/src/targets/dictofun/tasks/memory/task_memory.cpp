@@ -406,6 +406,7 @@ void process_request_from_state(Context& context, const Command command_id)
     }
     case Command::CLOSE_WRITTEN_FILE: {
         NRF_LOG_INFO("mem: closing file");
+        memory::TimeProfile tp("close_record");
         const auto close_result = memory::filesystem::close_file(lfs, active_record_name);
         if(close_result != result::Result::OK)
         {

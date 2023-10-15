@@ -30,5 +30,5 @@ target_link_libraries(task_system_state PUBLIC
     task_battery_interface
     ble_fts
     littlefs
-    noninitmem
+    noinitmem
 )

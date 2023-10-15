@@ -27,8 +27,8 @@ void NoInitMemory::load()
     }
     else 
     {
-        NRF_LOG_INFO("noinit mem: ok, boot counter = %d", nim._boot_count);
-        nim._boot_count++;
+        NRF_LOG_INFO("noinit mem: ok, boot = %d, reset = %d", nim.boot_count, nim.reset_count);
+        nim.boot_count++;
         store();
     }
 }
@@ -37,8 +37,9 @@ void NoInitMemory::reset()
 {
     NRF_LOG_INFO("noinit mem: resetting")
     _magic = VALID_MAGIC;
-    _reset_count = 0;
-    _boot_count = 0;
+    reset_count = 0;
+    reset_reason = ResetReason::UNKNOWN;
+    boot_count = 0;
     _crc = get_noinit_memory_crc();
 }
 

@@ -89,7 +89,9 @@ SpiFlash::Result SpiFlash::read(uint32_t address, uint8_t* data, uint32_t size)
     if(0 == timeout)
     {
         // TODO: define appropriate actions for this case
+        // Apparently it's a critical error. Context is unknown at this point...
         NRF_LOG_ERROR("read: timeout error");
+        return Result::ERROR_TIMEOUT;
     }
 
     _last_transaction_tick = _get_ticks();

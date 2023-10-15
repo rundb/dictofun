@@ -46,8 +46,11 @@ constexpr TickType_t battery_print_period{10000};
 
 Context* context{nullptr};
 
+void analyze_reset_reason(Context& context);
 void process_button_event(button::Event event, Context& context);
 void print_battery_voltage(float voltage);
+
+void switch_to_ble_mode(Context& context);
 
 void task_system_state(void* context_ptr)
 {
@@ -55,7 +58,7 @@ void task_system_state(void* context_ptr)
     NRF_LOG_DEBUG("task state: initialized");
     context = reinterpret_cast<Context*>(context_ptr);
 
-    noinit::NoInitMemory::load();
+    analyze_reset_reason(*context);
     
     // Process NV configuration. If it doesn't exist - memory operation should be scheduled.
     const auto nvconfig_load_result = _nvconfig.load_early(_configuration);
@@ -235,7 +238,7 @@ result::Result request_record_closure(const Context& context)
         return result::Result::ERROR_GENERAL;
     }
     memory::StatusQueueElement response;
-    static constexpr uint32_t file_closure_max_wait_time{1000};
+    static constexpr uint32_t file_closure_max_wait_time{10000};
     const auto file_closure_status_result = xQueueReceive(context.memory_status_handle,
                                                           reinterpret_cast<void*>(&response),
                                                           file_closure_max_wait_time);
@@ -333,30 +336,12 @@ void process_button_event(button::Event event, Context& context)
             if(decltype(closure_result)::OK != closure_result)
             {
                 NRF_LOG_ERROR("state: failed to close record upon button release");
-                return;
+
             }
             context.is_record_active = false;
             NRF_LOG_INFO("state: stopped and saved record");
 
-            // Change memory owner
-            memory::CommandQueueElement command_to_memory{memory::Command::SELECT_OWNER_BLE,
-                                                          {0, 0}};
-            const auto owner_switch_result = xQueueSend(
-                context.memory_commands_handle, reinterpret_cast<void*>(&command_to_memory), 0);
-            if(pdPASS != owner_switch_result)
-            {
-                NRF_LOG_ERROR("state: failed to request owner switch to BLE.");
-            }
-
-            led::CommandQueueElement led_command{led::Color::DARK_BLUE, led::State::SLOW_GLOW};
-            xQueueSend(context.led_commands_handle, reinterpret_cast<void*>(&led_command), 0);
-
-            // Enable BLE subsystem, if it's not enabled yet
-            const auto ble_enable_result = enable_ble_subsystem(context);
-            if(decltype(ble_enable_result)::OK != ble_enable_result)
-            {
-                NRF_LOG_ERROR("state: failed to enable BLE subsystem");
-            }
+            switch_to_ble_mode(context);
         }
         break;
     }
@@ -511,8 +496,8 @@ void process_timeouts(Context& context)
     static constexpr uint32_t after_record_timeout{15000};
     static constexpr uint32_t ble_keepalive_timeout{10000};
     static constexpr uint32_t ble_after_disconnect_timeout{5000};
-    // We should unconditionally shutdown after 10 minutes of operation
-    static constexpr uint32_t max_operation_duration{10 * 60 * 1000};
+    // We should unconditionally shutdown after 5 minutes of operation
+    static constexpr uint32_t max_operation_duration{5 * 60 * 1000};
 
     // First update all relevant timeouts
     if(context.is_record_active)
@@ -606,6 +591,51 @@ void print_battery_voltage(const float voltage)
         const auto whole_part = voltage_x_100 / 100;
         const auto fractional_part = voltage_x_100 % 100;
         NRF_LOG_INFO("state::batt:%d.%dV", whole_part, fractional_part);
+    }
+}
+
+void switch_to_ble_mode(Context& context)
+{
+    // Change memory owner
+    memory::CommandQueueElement command_to_memory{memory::Command::SELECT_OWNER_BLE,
+                                                    {0, 0}};
+    const auto owner_switch_result = xQueueSend(
+        context.memory_commands_handle, reinterpret_cast<void*>(&command_to_memory), 0);
+    if(pdPASS != owner_switch_result)
+    {
+        NRF_LOG_ERROR("state: failed to request owner switch to BLE.");
+    }
+
+    led::CommandQueueElement led_command{led::Color::DARK_BLUE, led::State::SLOW_GLOW};
+    xQueueSend(context.led_commands_handle, reinterpret_cast<void*>(&led_command), 0);
+
+    // Enable BLE subsystem, if it's not enabled yet
+    const auto ble_enable_result = enable_ble_subsystem(context);
+    if(decltype(ble_enable_result)::OK != ble_enable_result)
+    {
+        NRF_LOG_ERROR("state: failed to enable BLE subsystem");
+    }
+}
+
+void analyze_reset_reason(Context& context)
+{
+    static constexpr uint32_t max_reset_count_before_destructive_reset{10};
+    noinit::NoInitMemory::load();
+    auto& nim = noinit::NoInitMemory::instance();
+
+    if (nim.reset_count > max_reset_count_before_destructive_reset)
+    {
+        // TODO: enforce a file system format and a drop to the initial state
+        NRF_LOG_ERROR("state: boot loop detected, a destructive format is required");
+    }
+    if (nim.reset_reason == noinit::ResetReason::FILE_SYSTEM_ERROR_DURING_RECORD)
+    {
+        NRF_LOG_WARNING("state: FS error during record has been detected");
+    }
+    else if (nim.reset_reason == noinit::ResetReason::FILE_SYSTEM_ERROR_DURING_BLE)
+    {
+        NRF_LOG_WARNING("state: FS error during BLE has been detected. Enabling BLE immediately");
+        switch_to_ble_mode(context);
     }
 }
 
