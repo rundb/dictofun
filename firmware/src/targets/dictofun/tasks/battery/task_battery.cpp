@@ -41,8 +41,6 @@ void task_battery(void* context_ptr)
 
     context = reinterpret_cast<Context*>(context_ptr);
 
-    uint32_t iterations_counter{0};
-    constexpr uint32_t voltage_printout_period{20};
     const auto nrf_init_result = adc.init();
     if(result::Result::OK != nrf_init_result)
     {
@@ -53,9 +51,9 @@ void task_battery(void* context_ptr)
     {
         NRF_LOG_ERROR("battery: failed to initialize");
     }
+
     while(1)
     {
-        vTaskDelay(1000);
         const auto battery_level = battery.get_battery_level();
         const auto voltage = battery.get_average_voltage();
 
@@ -68,6 +66,7 @@ void task_battery(void* context_ptr)
         {
             // NRF_LOG_ERROR("failed to send battery measurement");
         }
+        vTaskDelay(100);
     }
 }
 

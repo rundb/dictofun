@@ -45,6 +45,7 @@ struct Context
     bool _should_record_be_stored{false};
     bool _is_ble_system_active{false};
     bool _is_shutdown_demanded{false};
+    bool _is_battery_low{false};
 
     struct Timestamps
     {

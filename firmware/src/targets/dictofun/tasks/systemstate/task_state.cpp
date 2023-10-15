@@ -94,7 +94,7 @@ void task_system_state(void* context_ptr)
             context->button_events_handle, &button_event_buffer, button_event_wait_ticks_type);
         if(pdPASS == button_event_receive_status)
         {
-            if (!context->_is_shutdown_demanded)
+            if (!context->_is_shutdown_demanded && !context->_is_battery_low)
             {
                 process_button_event(button_event_buffer.event, *context);
             }
@@ -160,6 +160,33 @@ void task_system_state(void* context_ptr)
             }
             // print battery voltage every 10 seconds.
             print_battery_voltage(battery_measurement_buffer.battery_voltage_level);
+            if (battery_measurement_buffer.battery_voltage_level< 3.1)
+            {
+                NRF_LOG_ERROR("Battery is low. No operations permitted.")
+                context->_is_battery_low = true;
+                led::CommandQueueElement led_command{led::Color::GREEN, led::State::FAST_GLOW};
+                xQueueSend(context->led_commands_handle, reinterpret_cast<void*>(&led_command), 0);
+
+                if (context->is_record_active)
+                {
+                    NRF_LOG_ERROR("Closing the record due to battery level");
+                    const auto record_stop_result = request_record_stop(*context);
+                    if(decltype(record_stop_result)::OK != record_stop_result)
+                    {
+                        NRF_LOG_ERROR("state: failed to stop record (battery low)");
+                    }
+                    else 
+                    {
+                        const auto closure_result = request_record_closure(*context);
+                        if(decltype(closure_result)::OK != closure_result)
+                        {
+                            NRF_LOG_ERROR("state: failed to close record upon button release");
+
+                        }
+                    }
+                    context->is_record_active = false;
+                }
+            }
         }
 
         if(!is_operation_mode_defined && xTaskGetTickCount() > nvconfig_definition_timestamp)
