@@ -41,9 +41,12 @@ constexpr TickType_t ble_request_wait_ticks_type{1};
 constexpr TickType_t button_event_wait_ticks_type{1};
 constexpr TickType_t battery_request_wait_ticks_type{0};
 
+constexpr TickType_t battery_print_period{10000};
+
 Context* context{nullptr};
 
 void process_button_event(button::Event event, Context& context);
+void print_battery_voltage(float voltage);
 
 void task_system_state(void* context_ptr)
 {
@@ -160,6 +163,8 @@ void task_system_state(void* context_ptr)
             {
                 NRF_LOG_ERROR("state: failed to send batt level to ble");
             }
+            // print battery voltage every 10 seconds.
+            print_battery_voltage(battery_measurement_buffer.battery_voltage_level);
         }
 
         if(!is_operation_mode_defined && xTaskGetTickCount() > nvconfig_definition_timestamp)
@@ -582,6 +587,21 @@ void process_timeouts(Context& context)
     if(tick > max_operation_duration)
     {
         shutdown_ldo();
+    }
+}
+
+void print_battery_voltage(const float voltage)
+{
+    static TickType_t last_printout_tick{0};
+    const auto tick = xTaskGetTickCount();
+    if (tick - last_printout_tick > battery_print_period)
+    {
+        last_printout_tick = tick;
+        const int voltage_x_100 = static_cast<int>(voltage * 100.0);
+        // workaround here, as NRF_LOG is not capable of printing floats
+        const auto whole_part = voltage_x_100 / 100;
+        const auto fractional_part = voltage_x_100 % 100;
+        NRF_LOG_INFO("state::batt:%d.%dV", whole_part, fractional_part);
     }
 }
 
