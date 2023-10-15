@@ -53,7 +53,7 @@ void scan_slaves()
 
 void task_rtc(void* context_ptr)
 {
-    NRF_LOG_INFO("task rtc: initialized");
+    NRF_LOG_DEBUG("task rtc: initialized");
     Context& context = *(reinterpret_cast<Context*>(context_ptr));
 
     const auto i2c_init_result = rtc_i2c.init();

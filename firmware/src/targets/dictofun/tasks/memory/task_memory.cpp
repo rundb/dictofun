@@ -108,7 +108,7 @@ void process_request_from_state(Context& context, Command command_id);
 
 void task_memory(void* context_ptr)
 {
-    NRF_LOG_INFO("task memory: initialized");
+    NRF_LOG_DEBUG("task memory: initialized");
     Context& context = *(reinterpret_cast<Context*>(context_ptr));
     CommandQueueElement command;
     ble::CommandToMemoryQueueElement command_from_ble;

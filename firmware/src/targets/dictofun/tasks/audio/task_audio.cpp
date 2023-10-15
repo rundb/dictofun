@@ -45,7 +45,7 @@ void microphone::isr_pdm_event_handler(const nrfx_pdm_evt_t* const p_evt)
 
 void task_audio(void* context_ptr)
 {
-    NRF_LOG_INFO("task audio: initialized");
+    NRF_LOG_DEBUG("task audio: initialized");
     Context& context = *(reinterpret_cast<Context*>(context_ptr));
     audio_processor.init();
     while(1)

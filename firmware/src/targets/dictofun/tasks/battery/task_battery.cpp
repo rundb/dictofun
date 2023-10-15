@@ -35,7 +35,7 @@ static BatteryMeasurementObjects _battery_measurement_objects{battery_pin_id,
 
 void task_battery(void* context_ptr)
 {
-    NRF_LOG_INFO("task batt: initialized")
+    NRF_LOG_DEBUG("task batt: initialized")
     auto& adc{_battery_measurement_objects.nrf_adc};
     auto& battery{_battery_measurement_objects.battery_measurement};
 
@@ -55,7 +55,7 @@ void task_battery(void* context_ptr)
     }
     while(1)
     {
-        vTaskDelay(100);
+        vTaskDelay(1000);
         const auto battery_level = battery.get_battery_level();
         const auto voltage = battery.get_average_voltage();
 
@@ -66,7 +66,7 @@ void task_battery(void* context_ptr)
         const auto send_result = xQueueSend(context->measurements_handle, &measurement, 0);
         if(pdTRUE != send_result)
         {
-            NRF_LOG_ERROR("failed to send battery measurement");
+            // NRF_LOG_ERROR("failed to send battery measurement");
         }
     }
 }

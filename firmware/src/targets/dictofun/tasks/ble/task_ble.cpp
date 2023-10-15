@@ -55,7 +55,7 @@ void task_ble(void* context_ptr)
         vTaskSuspend(NULL);
     }
 
-    NRF_LOG_INFO("task ble: initialized");
+    NRF_LOG_DEBUG("task ble: initialized");
 
     while(1)
     {

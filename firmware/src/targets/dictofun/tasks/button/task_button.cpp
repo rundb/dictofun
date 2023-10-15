@@ -26,7 +26,7 @@ void task_button(void* context_ptr)
 {
     nrf_gpio_cfg_input(BUTTON_PIN, NRF_GPIO_PIN_PULLDOWN);
 
-    NRF_LOG_INFO("task button: initialized");
+    NRF_LOG_DEBUG("task button: initialized");
     Context& context = *(reinterpret_cast<Context*>(context_ptr));
 
     while(1)
