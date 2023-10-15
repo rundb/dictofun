@@ -94,7 +94,10 @@ void task_system_state(void* context_ptr)
             context->button_events_handle, &button_event_buffer, button_event_wait_ticks_type);
         if(pdPASS == button_event_receive_status)
         {
-            process_button_event(button_event_buffer.event, *context);
+            if (!context->_is_shutdown_demanded)
+            {
+                process_button_event(button_event_buffer.event, *context);
+            }
         }
 
         const auto cli_queue_receive_status =
@@ -133,25 +136,7 @@ void task_system_state(void* context_ptr)
             }
             }
         }
-        const auto ble_request_receive_status =
-            xQueueReceive(context->ble_requests_handle,
-                          reinterpret_cast<void*>(&ble_requests_buffer),
-                          ble_request_wait_ticks_type);
-        if(pdPASS == ble_request_receive_status)
-        {
-            if(ble_requests_buffer.request == ble::Request::LED)
-            {
-                led::CommandQueueElement cmd{led::user_color,
-                                             (ble_requests_buffer.args[0] == 0) ? led::State::OFF
-                                                                                : led::State::ON};
-                const auto led_command_send_status =
-                    xQueueSend(context->led_commands_handle, reinterpret_cast<void*>(&cmd), 0);
-                if(pdPASS != led_command_send_status)
-                {
-                    NRF_LOG_ERROR("state: failed to send led enable request");
-                }
-            }
-        }
+
         const auto battery_measurement_receive_status =
             xQueueReceive(context->battery_measurements_handle,
                           reinterpret_cast<void*>(&battery_measurement_buffer),
@@ -162,13 +147,16 @@ void task_system_state(void* context_ptr)
             ble::BatteryDataElement battery_level_msg{
                 battery_measurement_buffer.battery_percentage,
                 battery_measurement_buffer.battery_voltage_level};
-            const auto batt_info_send_result =
-                xQueueSend(context->battery_level_to_ble_handle,
-                           reinterpret_cast<void*>(&battery_level_msg),
-                           0);
-            if(pdPASS != batt_info_send_result)
+            if (context->_is_ble_system_active)
             {
-                NRF_LOG_ERROR("state: failed to send batt level to ble");
+                const auto batt_info_send_result =
+                    xQueueSend(context->battery_level_to_ble_handle,
+                            reinterpret_cast<void*>(&battery_level_msg),
+                            0);
+                if(pdPASS != batt_info_send_result)
+                {
+                    NRF_LOG_WARNING("state: failed to send batt level to ble");
+                }
             }
             // print battery voltage every 10 seconds.
             print_battery_voltage(battery_measurement_buffer.battery_voltage_level);
@@ -180,7 +168,59 @@ void task_system_state(void* context_ptr)
             load_nvconfig(*context);
         }
 
-        process_timeouts(*context);
+        const auto is_timeout_expired = process_timeouts(*context);
+        if (is_timeout_expired && !context->_is_shutdown_demanded)
+        {
+            context->_is_shutdown_demanded = true;
+            context->timestamps.shutdown_procedure_start_timestamp = xTaskGetTickCount();
+            NRF_LOG_INFO("ready for shutdown. Checking memory");
+            // At this point request a memory check from the task_memory
+            memory::CommandQueueElement cmd{memory::Command::PERFORM_MEMORY_CHECK, {0, 0}};
+            const auto memcheck_res =
+                xQueueSend(context->memory_commands_handle, reinterpret_cast<void*>(&cmd), 0);
+            if (pdPASS != memcheck_res)
+            {
+                // Failed to send the memcheck command => shut the system down.
+                shutdown_ldo();
+            }
+            led::CommandQueueElement led_command{led::Color::PURPLE, led::State::SLOW_GLOW};
+            xQueueSend(context->led_commands_handle, reinterpret_cast<void*>(&led_command), 0);
+
+            static constexpr uint32_t MEMCHECK_INITIAL_RESPONSE_TIMEOUT{15000};
+            static constexpr uint32_t MEMCHECK_FORMAT_TIMEOUT{45000};
+            memory::StatusQueueElement response;
+            xQueueReset(context->memory_status_handle);
+            const auto memcheck_status = xQueueReceive(context->memory_status_handle, &response, MEMCHECK_INITIAL_RESPONSE_TIMEOUT);
+            NRF_LOG_INFO("memcheck completed.");
+            if (pdPASS != memcheck_status || response.status == memory::Status::FORMAT_REQUIRED)
+            {
+                cmd.command_id = memory::Command::FORMAT_FS;
+                const auto format_res =
+                    xQueueSend(context->memory_commands_handle, reinterpret_cast<void*>(&cmd), 0);
+                if (pdPASS != format_res)
+                {
+                    // Failed to send the memcheck command => shut the system down.
+                    shutdown_ldo();
+                }
+
+                led_command.state = led::State::FAST_GLOW;
+                xQueueSend(context->led_commands_handle, reinterpret_cast<void*>(&led_command), 0);
+
+                const auto format_status = xQueueReceive(context->memory_status_handle, &response, MEMCHECK_FORMAT_TIMEOUT);
+                if (pdPASS != format_status)
+                {
+                    NRF_LOG_ERROR("FS format has failed");
+                }
+                shutdown_ldo();
+            }
+            else 
+            {
+                // a small delay to flush the logs
+                vTaskDelay(100);
+                shutdown_ldo();
+            }
+
+        }
     }
 }
 
@@ -330,6 +370,7 @@ void process_button_event(button::Event event, Context& context)
             if(decltype(record_stop_result)::OK != record_stop_result)
             {
                 NRF_LOG_ERROR("state: failed to stop record upon button release");
+                context.is_record_active = false;
                 return;
             }
             const auto closure_result = request_record_closure(context);
@@ -484,12 +525,13 @@ result::Result launch_record_timer(const TickType_t record_duration, Context& co
     return result::Result::OK;
 }
 
-void process_timeouts(Context& context)
+// returns true, if any of the timeouts has expired.
+bool process_timeouts(Context& context)
 {
     const auto operation_mode = get_operation_mode();
     if(operation_mode == decltype(operation_mode)::DEVELOPMENT)
     {
-        return;
+        return false;
     }
 
     static constexpr uint32_t norecord_launch_timeout{15000};
@@ -536,20 +578,22 @@ void process_timeouts(Context& context)
         // Record has never been launched.
         if(tick > norecord_launch_timeout)
         {
-            shutdown_ldo();
+            // shutdown_ldo();
+            return true;
         }
-        return;
+        return false;
     }
     if(context.is_record_active)
     {
-        return;
+        return false;
     }
     // At this point recording is over.
     const auto time_since_record_end = tick - context.timestamps.last_record_end_timestamp;
     if(!context.timestamps.has_ble_timestamp_been_updated() &&
        time_since_record_end > after_record_timeout)
     {
-        shutdown_ldo();
+        // shutdown_ldo();
+        return true;
     }
 
     if(context.timestamps.has_ble_timestamp_been_updated())
@@ -560,7 +604,8 @@ void process_timeouts(Context& context)
                 tick - context.timestamps.ble_disconnect_event_timestamp;
             if(time_since_disconnect > ble_after_disconnect_timeout)
             {
-                shutdown_ldo();
+                // shutdown_ldo();
+                return true;
             }
         }
         else
@@ -569,14 +614,17 @@ void process_timeouts(Context& context)
                 tick - context.timestamps.last_ble_activity_timestamp;
             if(time_since_last_keepalive > ble_keepalive_timeout)
             {
-                shutdown_ldo();
+                // shutdown_ldo();
+                return true;
             }
         }
     }
     if(tick > max_operation_duration)
     {
-        shutdown_ldo();
+        // shutdown_ldo();
+        return true;
     }
+    return false;
 }
 
 void print_battery_voltage(const float voltage)

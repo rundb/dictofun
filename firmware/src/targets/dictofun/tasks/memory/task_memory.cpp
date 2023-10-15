@@ -488,6 +488,60 @@ void process_request_from_state(Context& context, const Command command_id)
         NRF_LOG_ERROR("mem: lfs unmount is not implemented");
         break;
     }
+    case Command::PERFORM_MEMORY_CHECK: {
+        static constexpr uint32_t max_files_count{30};
+        const auto fs_stat_result =
+            memory::filesystem::get_fs_stat(lfs, data_queue_elem.data, lfs_configuration);
+        if(result::Result::OK != fs_stat_result)
+        {
+            NRF_LOG_ERROR("mem: failed to fetch fs stat");
+            StatusQueueElement response{Command::PERFORM_MEMORY_CHECK, Status::ERROR_GENERAL};
+            xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
+        }
+        ble::fts::FileSystemInterface::FSStatus fsStatus;
+        memcpy(&fsStatus, &data_queue_elem.data, sizeof(fsStatus));
+        NRF_LOG_INFO("FS stats: %d/%d(%d)", fsStatus.occupied_space, fsStatus.free_space, fsStatus.files_count);
+        StatusQueueElement response{Command::PERFORM_MEMORY_CHECK, Status::OK};
+        if ((fsStatus.occupied_space > (flash_total_size/2)) || (fsStatus.files_count > max_files_count))
+        {
+            response.status = Status::FORMAT_REQUIRED;
+        }
+        xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
+        break;
+    }
+    case Command::FORMAT_FS:
+    {
+        // erase the flash chip
+        NRF_LOG_INFO("task memory: launching chip erase. Memory task shall not accept commands during the execution of this command.");
+        const auto start_tick = xTaskGetTickCount();
+        flash.eraseChip();
+        static constexpr uint32_t max_chip_erase_duration{44000};
+        while(flash.isBusy() && (xTaskGetTickCount() - start_tick) < max_chip_erase_duration)
+        {
+            vTaskDelay(200);
+        }
+        const auto end_tick = xTaskGetTickCount();
+        StatusQueueElement response{Command::FORMAT_FS, Status::OK};
+        if((end_tick - start_tick) > max_chip_erase_duration)
+        {
+            NRF_LOG_WARNING("task memory: chip erase timed out");
+            response.status = Status::ERROR_BUSY;
+        }
+        else
+        {
+            NRF_LOG_INFO("task memory: chip erase took %d ms", end_tick - start_tick);
+        }
+        const auto init_result = memory::filesystem::init_littlefs(lfs, lfs_configuration);
+        if(result::Result::OK != init_result)
+        {
+            NRF_LOG_ERROR("mem: failed to mount littlefs");
+            response.status = Status::ERROR_GENERAL;
+        }
+        
+
+        xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
+        break;
+    }
     }
 }
 
