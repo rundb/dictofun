@@ -22,6 +22,8 @@
 #include "task_ble.h"
 #include "task_rtc.h"
 
+#include "time_profiler.h"
+
 #include "lfs.h"
 
 namespace memory
@@ -215,6 +217,7 @@ void process_request_from_ble(Context& context,
     {
     case ble::CommandToMemory::GET_FILES_LIST: {
         uint32_t total_files_list_data_size{0};
+        memory::TimeProfile tp("get_files_list");
         const auto ls_result =
             memory::filesystem::get_files_list(lfs,
                                                total_files_list_data_size,
@@ -230,7 +233,7 @@ void process_request_from_ble(Context& context,
             std::min(total_files_list_data_size,
                      static_cast<uint32_t>(ble::FileDataFromMemoryQueueElement::element_max_size));
         status.data_size = total_files_list_data_size;
-
+        NRF_LOG_INFO("get_files_list: %d files", total_files_list_data_size / file_name_size_bytes);
         break;
     }
 
@@ -246,12 +249,12 @@ void process_request_from_ble(Context& context,
             status.status = ble::StatusFromMemory::ERROR_OTHER;
             status.data_size = 0;
         }
-
         break;
     }
     case ble::CommandToMemory::GET_FILE_INFO: {
         char target_file_name[max_file_name_size] = {0};
         convert_file_id_to_string(file_id, target_file_name);
+        
         const auto file_info_result = memory::filesystem::get_file_info(
             lfs,
             target_file_name,
@@ -279,6 +282,7 @@ void process_request_from_ble(Context& context,
             status.data_size = 0;
             break;
         }
+        memory::TimeProfile tp("ble::file_open");
         char target_file_name[max_file_name_size] = {0};
         convert_file_id_to_string(file_id, target_file_name);
         const auto file_open_result =
@@ -290,6 +294,7 @@ void process_request_from_ble(Context& context,
         }
         _file_operation_context.is_file_open = true;
         _file_operation_context.file_id = file_id;
+
         break;
     }
     case ble::CommandToMemory::CLOSE_FILE: {
@@ -300,6 +305,7 @@ void process_request_from_ble(Context& context,
         }
         char target_file_name[max_file_name_size] = {0};
         convert_file_id_to_string(file_id, target_file_name);
+        
         const auto file_close_result = memory::filesystem::close_file(lfs, target_file_name);
         if(result::Result::OK != file_close_result)
         {
@@ -380,20 +386,22 @@ void process_request_from_state(Context& context, const Command command_id)
     }
     case Command::CREATE_RECORD: {
         memory::generate_next_file_name(active_record_name, context);
-
-        const auto create_result = memory::filesystem::create_file(lfs, active_record_name);
-        if(result::Result::OK != create_result)
         {
-            NRF_LOG_ERROR("lfs: failed to create a new rec");
-            StatusQueueElement response{Command::CREATE_RECORD, Status::ERROR_GENERAL};
+            memory::TimeProfile tp("create_record");
+            const auto create_result = memory::filesystem::create_file(lfs, active_record_name);
+            if(result::Result::OK != create_result)
+            {
+                NRF_LOG_ERROR("lfs: failed to create a new rec");
+                StatusQueueElement response{Command::CREATE_RECORD, Status::ERROR_GENERAL};
+                xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
+                return;
+            }
+            NRF_LOG_DEBUG("created record [%s]", active_record_name);
+            _file_operation_context.is_file_open = true;
+            StatusQueueElement response{Command::CREATE_RECORD, Status::OK};
             xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
-            return;
+            written_record_size = 0;
         }
-        NRF_LOG_DEBUG("created record [%s]", active_record_name);
-        _file_operation_context.is_file_open = true;
-        StatusQueueElement response{Command::CREATE_RECORD, Status::OK};
-        xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
-        written_record_size = 0;
         break;
     }
     case Command::CLOSE_WRITTEN_FILE: {
