@@ -48,7 +48,7 @@ void process_button_event(button::Event event, Context& context);
 void task_system_state(void* context_ptr)
 {
     configure_power_latch();
-    NRF_LOG_INFO("task state: initialized");
+    NRF_LOG_DEBUG("task state: initialized");
     context = reinterpret_cast<Context*>(context_ptr);
     // Process NV configuration. If it doesn't exist - memory operation should be scheduled.
     const auto nvconfig_load_result = _nvconfig.load_early(_configuration);

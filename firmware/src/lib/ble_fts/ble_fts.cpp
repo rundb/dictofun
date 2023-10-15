@@ -465,16 +465,16 @@ void FtsService::on_ble_evt(ble_evt_t const* p_ble_evt, void* p_context)
         break;
     }
     case BLE_GAP_EVT_CONN_PARAM_UPDATE: {
-        NRF_LOG_DEBUG("ble::fts::evt_conn_param_upd. id=%d, len=%d",
-                      p_ble_evt->header.evt_id,
-                      p_ble_evt->header.evt_len);
+        // NRF_LOG_DEBUG("ble::fts::evt_conn_param_upd. id=%d, len=%d",
+        //               p_ble_evt->header.evt_id,
+        //               p_ble_evt->header.evt_len);
         const auto& conn_param_upd_evt = p_ble_evt->evt.gap_evt.params.conn_param_update;
 
-        NRF_LOG_DEBUG("conn param event: min=%d, max=%d, lat=%d, timeout=%d",
-                      conn_param_upd_evt.conn_params.min_conn_interval,
-                      conn_param_upd_evt.conn_params.max_conn_interval,
-                      conn_param_upd_evt.conn_params.slave_latency,
-                      conn_param_upd_evt.conn_params.conn_sup_timeout);
+        // NRF_LOG_DEBUG("conn param event: min=%d, max=%d, lat=%d, timeout=%d",
+        //               conn_param_upd_evt.conn_params.min_conn_interval,
+        //               conn_param_upd_evt.conn_params.max_conn_interval,
+        //               conn_param_upd_evt.conn_params.slave_latency,
+        //               conn_param_upd_evt.conn_params.conn_sup_timeout);
         FtsService::_context.is_connection_params_request_needed = true;
         break;
     }

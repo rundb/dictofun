@@ -42,7 +42,7 @@ void task_audio_tester(void* context_ptr)
     float last_sample_average{0.0};
     float last_sample_deviation{0.0};
     bool is_tester_active{false};
-    NRF_LOG_INFO("task_autest: initialized");
+    NRF_LOG_DEBUG("task_autest: initialized");
     while(1)
     {
         if(is_tester_active)
