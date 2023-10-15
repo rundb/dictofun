@@ -330,7 +330,7 @@ result::Result get_fs_stat(lfs_t& lfs, uint8_t* buffer, const lfs_config& config
         return result::Result::ERROR_GENERAL;
     }
     fs_stat.occupied_space = lfs_fs_size_result * config.block_size;
-    fs_stat.free_space = config.block_size * config.block_count;
+    fs_stat.free_space = config.block_size * config.block_count - fs_stat.occupied_space;
 
     // Count files, algorithm taken from get_files_list
     lfs_info info;

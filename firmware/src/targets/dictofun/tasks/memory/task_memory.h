@@ -35,6 +35,8 @@ enum class Command
     SELECT_OWNER_AUDIO,
     CREATE_RECORD,
     CLOSE_WRITTEN_FILE,
+    PERFORM_MEMORY_CHECK,
+    FORMAT_FS,
 };
 
 enum class Status
@@ -42,6 +44,7 @@ enum class Status
     OK,
     ERROR_BUSY,
     ERROR_GENERAL,
+    FORMAT_REQUIRED,
 };
 
 struct CommandQueueElement
