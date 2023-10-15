@@ -24,6 +24,7 @@
 #include <queue.h>
 #include <task.h>
 #include <timers.h>
+#include "noinit_mem.h"
 
 namespace systemstate
 {
@@ -53,6 +54,9 @@ void task_system_state(void* context_ptr)
     configure_power_latch();
     NRF_LOG_DEBUG("task state: initialized");
     context = reinterpret_cast<Context*>(context_ptr);
+
+    noinit::NoInitMemory::load();
+    
     // Process NV configuration. If it doesn't exist - memory operation should be scheduled.
     const auto nvconfig_load_result = _nvconfig.load_early(_configuration);
     bool is_operation_mode_defined{true};
