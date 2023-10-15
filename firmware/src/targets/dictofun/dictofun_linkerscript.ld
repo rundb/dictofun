@@ -6,7 +6,8 @@ GROUP(-lgcc -lc -lnosys)
 MEMORY
 {
   FLASH (rx) : ORIGIN = 0x26000, LENGTH = 0x52000 /* leaving space for bootloader */
-  RAM (rwx) :  ORIGIN = 0x20002C70, LENGTH = 0xD390
+  RAM (rwx) :  ORIGIN = 0x20002C70, LENGTH = 0xD380
+  NOINIT(rwx) : ORIGIN = 0x2000FFF0, LENGTH = 0x10
 }
 
 SECTIONS
@@ -43,7 +44,13 @@ SECTIONS
     KEEP(*(.fs_data))
     PROVIDE(__stop_fs_data = .);
   } > RAM
-
+  /* Define a new section for uninitialized RAM */
+  __uninitialized_ram_start__ = .;
+  .noinit (NOLOAD) :
+  {
+      *(.noinit)
+  } > NOINIT
+  __uninitialized_ram_end__ = .;
 } INSERT AFTER .data;
 
 SECTIONS
