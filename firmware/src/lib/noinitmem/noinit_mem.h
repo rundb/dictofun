@@ -13,8 +13,8 @@ namespace noinit
 enum ResetReason: std::uint32_t 
 {
     UNKNOWN,
-    FILE_SYSTEM_ISSUE = 0x8E5A301FUL,
-    ISSUE_2 = 0x4B2F1D9CUL,
+    FILE_SYSTEM_ERROR_DURING_RECORD = 0x8E5A301FUL,
+    FILE_SYSTEM_ERROR_DURING_BLE = 0x4B2F1D9CUL,
     ISSUE_3 = 0xA7C681F5UL,
     ISSUE_4 = 0x13D9BDA8UL,
 };
@@ -30,15 +30,12 @@ struct NoInitMemory
 
     static NoInitMemory& instance();
 
-    // ResetReason getResetReason();
-    // void setResetReason(ResetReason reset_reason);
-
     uint32_t _magic;
-    // ResetReason _reset_reason;
-    uint32_t _reset_count;
+    ResetReason reset_reason;
+    uint32_t reset_count;
 
     // This is an initial implementation variable, counting the amount of times system has booted in the current power cycle.
-    uint32_t _boot_count;
+    uint32_t boot_count;
 
     uint32_t _crc;
 private:

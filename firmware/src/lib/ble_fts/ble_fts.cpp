@@ -10,6 +10,8 @@
 #include "nrf_log.h"
 #include "nrf_sdh_ble.h"
 
+#include "noinit_mem.h"
+
 namespace ble
 {
 namespace fts
@@ -34,56 +36,17 @@ blcm_link_ctx_storage_t FtsService::_link_ctx_storage = {.p_ctx_data_pool = _ctx
                                                          .link_ctx_size =
                                                              sizeof(_ctx_data_pool) / _max_clients};
 
+// clang-format off
 FtsService::Context FtsService::_context{0,
                                          0,
-                                         {
-                                             0,
-                                             0,
-                                             0,
-                                             0,
-                                         },
-                                         {
-                                             0,
-                                             0,
-                                             0,
-                                             0,
-                                         },
-                                         {
-                                             0,
-                                             0,
-                                             0,
-                                             0,
-                                         },
-                                         {
-                                             0,
-                                             0,
-                                             0,
-                                             0,
-                                         },
-                                         {
-                                             0,
-                                             0,
-                                             0,
-                                             0,
-                                         },
-                                         {
-                                             0,
-                                             0,
-                                             0,
-                                             0,
-                                         },
-                                         {
-                                             0,
-                                             0,
-                                             0,
-                                             0,
-                                         },
-                                         {
-                                             0,
-                                             0,
-                                             0,
-                                             0,
-                                         },
+                                         {0, 0, 0, 0,},
+                                         {0, 0, 0, 0,},
+                                         {0, 0, 0, 0,},
+                                         {0, 0, 0, 0,},
+                                         {0, 0, 0, 0,},
+                                         {0, 0, 0, 0,},
+                                         {0, 0, 0, 0,},
+                                         {0, 0, 0, 0,},
                                          0,
                                          false,
                                          &_link_ctx_storage};
@@ -93,6 +56,8 @@ nrf_sdh_ble_evt_observer_t observer = {
     .handler = FtsService::on_ble_evt,
     .p_context = reinterpret_cast<void*>(&FtsService::_context),
 };
+
+// clang-format on
 
 FtsService* FtsService::_instance{nullptr};
 
@@ -881,11 +846,24 @@ result::Result FtsService::continue_sending_file_data()
     // FIXME: investigate why file system now hands back chunks of size 0
     if(_transaction_ctx.size == 0)
     {
+        // we allow this issue to only happen several times, after which a reset should be issued.
+        static uint32_t fs_issue_max_counter{5};
         NRF_LOG_WARNING("FS issue has happened again. Stuffing the end of the file with zeros");
         const auto diff = std::min(_transaction_ctx.file_size - _transaction_ctx.file_sent_size,
                                    static_cast<uint32_t>(TransactionContext::buffer_size));
         memset(_transaction_ctx.buffer, 0, diff);
         _transaction_ctx.size = diff;
+
+        --fs_issue_max_counter;
+        if (fs_issue_max_counter == 0)
+        {
+            // TODO: move this dependency to app-specific noinit module somewhere else.
+            using namespace noinit;
+            auto& nim = NoInitMemory::instance();
+            nim.reset_reason = ResetReason::FILE_SYSTEM_ERROR_DURING_BLE;
+            nim.reset_count++;
+            NoInitMemory::store();
+        }
     }
     _transaction_ctx.idx = 0;
     _transaction_ctx.update_next_packet_size();

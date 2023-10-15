@@ -7,7 +7,7 @@ MEMORY
 {
   FLASH (rx) : ORIGIN = 0x26000, LENGTH = 0x52000 /* leaving space for bootloader */
   RAM (rwx) :  ORIGIN = 0x20002C70, LENGTH = 0xD380
-  NOINIT(rwx) : ORIGIN = 0x2000FFF0, LENGTH = 0x10
+  NOINIT(rwx) : ORIGIN = 0x2000FFE0, LENGTH = 0x20
 }
 
 SECTIONS
