@@ -162,7 +162,8 @@ void task_system_state(void* context_ptr)
             print_battery_voltage(battery_measurement_buffer.battery_voltage_level);
             if (battery_measurement_buffer.battery_voltage_level< 3.1)
             {
-                NRF_LOG_ERROR("Battery is low. No operations permitted.")
+                const int v_x_10 = static_cast<int>(10.0 * battery_measurement_buffer.battery_voltage_level);
+                NRF_LOG_ERROR("Battery is low (%d.%dv). No operations permitted.", v_x_10 / 10, v_x_10%10);
                 context->_is_battery_low = true;
                 led::CommandQueueElement led_command{led::Color::GREEN, led::State::FAST_GLOW};
                 xQueueSend(context->led_commands_handle, reinterpret_cast<void*>(&led_command), 0);

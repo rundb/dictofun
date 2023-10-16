@@ -45,12 +45,12 @@ private:
     const float REFERENCE_VOLTAGES[REFERENCE_VOLTAGES_COUNT]{
         3.1,
         3.2,
+        3.25,
         3.3,
+        3.35,
         3.4,
         3.45,
         3.5,
-        3.55,
-        3.6,
     };
 
     static constexpr uint32_t MAX_BATTERY_LEVEL{100};
