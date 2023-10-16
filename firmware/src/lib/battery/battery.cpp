@@ -17,6 +17,10 @@ BatteryMeasurement::BatteryMeasurement(adc::AdcIf& adc,
 
 result::Result BatteryMeasurement::init()
 {
+    for (auto i = 0; i < AVERAGING_SAMPLING_COUNT; ++i)
+    {
+        [[maybe_unused]] auto level = get_battery_level();
+    }
     return result::Result::OK;
 }
 

@@ -41,12 +41,16 @@ private:
 
     uint8_t convert_battery_voltage_to_level(float voltage);
 
-    static constexpr uint32_t REFERENCE_VOLTAGES_COUNT{4};
+    static constexpr uint32_t REFERENCE_VOLTAGES_COUNT{8};
     const float REFERENCE_VOLTAGES[REFERENCE_VOLTAGES_COUNT]{
+        3.1,
+        3.2,
+        3.25,
         3.3,
+        3.35,
         3.4,
-        3.6,
-        3.8,
+        3.45,
+        3.5,
     };
 
     static constexpr uint32_t MAX_BATTERY_LEVEL{100};
