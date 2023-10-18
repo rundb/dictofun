@@ -9,7 +9,6 @@
 #include "ble_db_discovery.h"
 #include "ble_fts.h"
 #include "ble_fts_glue.h"
-#include "ble_lbs.h"
 #include "nrf_ble_gq.h"
 #include "nrf_log.h"
 #include "time.h"
@@ -17,7 +16,6 @@
 namespace ble
 {
 
-BLE_LBS_DEF(m_lbs);
 NRF_BLE_QWR_DEF(m_qwr);
 BLE_DB_DISCOVERY_DEF(m_ble_db_discovery); /**< DB discovery module instance. */
 NRF_BLE_GQ_DEF(m_ble_gatt_queue, /**< BLE GATT Queue instance. */
@@ -28,12 +26,11 @@ BLE_CTS_C_DEF(m_cts_c);
 BLE_BAS_DEF(m_bas);
 
 ble_uuid_t adv_uuids[] = {
-    {LBS_UUID_SERVICE, m_lbs.uuid_type},
-    {BLE_UUID_CURRENT_TIME_SERVICE, BLE_UUID_TYPE_BLE},
     {
         0,
         BLE_UUID_TYPE_VENDOR_BEGIN,
     },
+    {BLE_UUID_CURRENT_TIME_SERVICE, BLE_UUID_TYPE_BLE},
 };
 
 volatile bool _is_current_time_update_pending{false};
@@ -130,7 +127,7 @@ static void current_time_error_handler(uint32_t nrf_error)
 
 ble::fts::FtsService fts_service{integration::test::dictofun_test_fs_if};
 
-result::Result init_services(ble_lbs_led_write_handler_t led_write_handler)
+result::Result init_services()
 {
     db_discovery_init();
 
@@ -139,15 +136,6 @@ result::Result init_services(ble_lbs_led_write_handler_t led_write_handler)
     qwr_init.error_handler = nrf_qwr_error_handler;
     const auto qwr_init_result = nrf_ble_qwr_init(&m_qwr, &qwr_init);
     if(NRF_SUCCESS != qwr_init_result)
-    {
-        return result::Result::ERROR_GENERAL;
-    }
-
-    // Initialize Led Button Service
-    ble_lbs_init_t init{};
-    init.led_write_handler = led_write_handler;
-    const auto lbs_init_result = ble_lbs_init(&m_lbs, &init);
-    if(NRF_SUCCESS != lbs_init_result)
     {
         return result::Result::ERROR_GENERAL;
     }
@@ -289,10 +277,9 @@ size_t get_services_uuids(ble_uuid_t* service_uuids, const size_t max_uuids)
         NRF_LOG_ERROR("ble: not enough space for adv uuids");
         return 0;
     }
-    adv_uuids[0].type = m_lbs.uuid_type;
 
-    adv_uuids[1].uuid = fts_service.get_service_uuid();
-    adv_uuids[1].type = fts_service.get_service_uuid_type();
+    adv_uuids[0].uuid = fts_service.get_service_uuid();
+    adv_uuids[0].type = fts_service.get_service_uuid_type();
 
     memcpy(service_uuids, adv_uuids, sizeof(adv_uuids));
     return uuids_count;

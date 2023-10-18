@@ -67,7 +67,7 @@ constexpr uint32_t MAX_CONN_PARAMS_UPDATE_COUNT{3};
 
 BleSystem* BleSystem::_instance{nullptr};
 
-result::Result BleSystem::configure(ble_lbs_led_write_handler_t led_write_handler)
+result::Result BleSystem::configure()
 {
     const auto sdh_init_result = init_sdh();
     if(result::Result::OK != sdh_init_result)
@@ -97,7 +97,7 @@ result::Result BleSystem::configure(ble_lbs_led_write_handler_t led_write_handle
         return gatt_init_result;
     }
 
-    const auto services_init_result = init_services(led_write_handler);
+    const auto services_init_result = init_services();
     if(result::Result::OK != services_init_result)
     {
         NRF_LOG_ERROR("ble: services init failed");
