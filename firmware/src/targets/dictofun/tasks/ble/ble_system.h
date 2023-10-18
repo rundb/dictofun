@@ -8,7 +8,6 @@
 #include "FreeRTOS.h"
 #include "ble.h"
 #include "ble_fts.h"
-#include "ble_lbs.h"
 #include "nrf_sdh.h"
 #include "peer_manager.h"
 #include "queue.h"
@@ -34,7 +33,7 @@ public:
 
     ~BleSystem() = default;
 
-    result::Result configure(ble_lbs_led_write_handler_t led_write_handler);
+    result::Result configure();
 
     result::Result start();
     result::Result stop();

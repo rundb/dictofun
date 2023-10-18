@@ -29,13 +29,6 @@ struct
     uint8_t led_state;
 } led_state_request;
 
-void task_level_led_write_handler(uint16_t conn_handle, ble_lbs_t* p_lbs, uint8_t led_state)
-{
-    NRF_LOG_INFO("ble: received led write request");
-    led_state_request.is_active = true;
-    led_state_request.led_state = led_state;
-}
-
 /// @brief This task is responsible for all functionalities related to BLE operation.
 void task_ble(void* context_ptr)
 {
@@ -47,7 +40,7 @@ void task_ble(void* context_ptr)
     //    after the config is loaded. I have chosen the first option, as it introduces less dependencies between tasks.
     static constexpr uint32_t ble_subsystem_startup_delay{100};
     vTaskDelay(ble_subsystem_startup_delay);
-    const auto configure_result = ble_system.configure(task_level_led_write_handler);
+    const auto configure_result = ble_system.configure();
     if(result::Result::OK != configure_result)
     {
         NRF_LOG_ERROR("task ble: init has failed");

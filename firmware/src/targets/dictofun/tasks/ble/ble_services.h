@@ -8,7 +8,6 @@
 #include "FreeRTOS.h"
 #include "ble_advertising.h"
 #include "ble_fts.h"
-#include "ble_lbs.h"
 #include "nrf_ble_qwr.h"
 #include "queue.h"
 #include "result.h"
@@ -20,7 +19,7 @@
 namespace ble
 {
 
-result::Result init_services(ble_lbs_led_write_handler_t led_write_handler);
+result::Result init_services();
 
 nrf_ble_qwr_t* get_qwr_handle();
 
