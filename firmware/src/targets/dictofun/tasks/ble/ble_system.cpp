@@ -464,7 +464,7 @@ result::Result BleSystem::init_advertising()
 
     memset(&init, 0, sizeof(init));
 
-    static constexpr size_t MAX_UUIDS_COUNT{3U};
+    static constexpr size_t MAX_UUIDS_COUNT{2U};
     ble_uuid_t adv_uuids[MAX_UUIDS_COUNT]{0};
 
     [[maybe_unused]] const auto uuids_count = get_services_uuids(adv_uuids, MAX_UUIDS_COUNT);
