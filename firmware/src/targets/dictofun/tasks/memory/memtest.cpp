@@ -194,6 +194,47 @@ void launch_test_3(myfs_t& myfs, const myfs_config& myfs_configuration)
             return;
         }
     }
+
+    // ============= Step 2: create a test record, open file and write it
+    NRF_LOG_INFO("mem: creating first file");
+    ::filesystem::myfs_file_t test_file;
+    uint8_t test_file_id[8]{0, 0, 23, 11, 1, 21, 30, 12};
+    const auto create_result = myfs_file_open(&myfs, myfs_configuration, test_file, test_file_id, ::filesystem::MYFS_CREATE_FLAG | ::filesystem::MYFS_WRONLY_FLAG);
+    if (create_result < 0)
+    {
+        NRF_LOG_ERROR("mem: failed to open file for write");
+        return;
+    }
+    // memset(&memtest_file_config, 0, sizeof(memtest_file_config));
+    // memtest_file_config.buffer = memtest_buffer;
+    // memtest_file_config.attr_count = 0;
+    // const auto create_result = lfs_file_opencfg(
+    //     &lfs, &memtest_file, "record00", LFS_O_CREAT | LFS_O_WRONLY, &memtest_file_config);
+    // if(create_result != 0)
+    // {
+    //     NRF_LOG_ERROR("lfs: failed to create a file (err=%d)", create_result);
+    // }
+
+    // constexpr size_t test_data_size{512};
+    // uint8_t test_data[test_data_size];
+    // for(size_t i = 0; i < test_data_size; ++i)
+    // {
+    //     test_data[i] = i & 0xFF;
+    // }
+    // NRF_LOG_INFO("mem: writing data to opened file");
+    // // Enforce overflow of a single sector size to provoke an erase operation
+    // size_t written_data_size{0};
+    // const auto write_start_tick{xTaskGetTickCount()};
+    // for(int i = 0; i < 4; ++i)
+    // {
+    //     const auto write_result = lfs_file_write(&lfs, &memtest_file, test_data, sizeof(test_data));
+    //     written_data_size += sizeof(test_data);
+    //     if(write_result != sizeof(test_data))
+    //     {
+    //         NRF_LOG_ERROR("lfs: failed to write into a file (%d)", write_result);
+    //         return;
+    //     }
+    // }
 }
 
 // void launch_test_3(lfs_t& lfs, const lfs_config& lfs_configuration)

@@ -4,6 +4,11 @@
 
 #include "nrf_log.h"
 
+#include <cstdio>
+
+#include "FreeRTOS.h"
+#include "task.h"
+
 namespace filesystem
 {
 
@@ -128,6 +133,7 @@ int myfs_mount(myfs_t *myfs, const myfs_config *config)
                 // case of the very first existing file
                 myfs->files_count = 0;
                 myfs->next_file_start_address = first_file_start_location;
+                myfs->next_file_descriptor_address = single_file_descriptor_size_bytes;
                 NRF_LOG_INFO("mount: no files found, setting count to %d and start to %d", myfs->files_count, myfs->next_file_start_address);
                 return 0;
             }
@@ -148,4 +154,76 @@ int myfs_mount(myfs_t *myfs, const myfs_config *config)
 
     return -1;
 }
+
+void print_buffer(uint8_t * buf, uint32_t size)
+{
+    NRF_LOG_INFO("memory dump (%d bytes)", size);
+    
+    static constexpr uint32_t single_print_size{16};
+    char str[9 + single_print_size * 3 + 2]{0};
+    for (auto i = 0; i < size; i += single_print_size)
+    {
+        snprintf(str, sizeof(str), "%08x: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
+            i,
+            buf[i+0], buf[i+1], buf[i+2], buf[i+3], buf[i+4], buf[i+5], buf[i+6], buf[i+7],
+            buf[i+8], buf[i+9], buf[i+10], buf[i+11], buf[i+12], buf[i+13], buf[i+14], buf[i+15]
+        );
+        NRF_LOG_INFO("%s", str);
+        vTaskDelay(50);
+    }
+}
+
+int myfs_file_open(myfs_t *myfs, const myfs_config& config, myfs_file_t& file, uint8_t * file_id, uint8_t flags)
+{
+    if (nullptr == myfs || nullptr == file_id)
+    {
+        NRF_LOG_ERROR("myfs open: bad input");
+        return -1;
+    }
+    if (myfs->is_file_open)
+    {
+        NRF_LOG_ERROR("myfs open: file is open already");
+        return -1;
+    }
+
+    if ((flags & MYFS_CREATE_FLAG) > 0)
+    {
+        // at this point all checks have passed
+        // 1. prepare a descriptor
+        myfs_file_descriptor d;
+        d.magic = file_magic_value;
+        d.start_address = myfs->next_file_start_address;
+        memcpy(d.file_id, file_id, myfs_file_descriptor::file_id_size);
+        d.file_size = empty_word_value;
+        memset(d.reserved, 0xFF, sizeof(d.reserved));
+        
+        // 2. flash needed part of the descriptor into the table
+        const auto new_file_descriptor_address = myfs->next_file_descriptor_address;
+        const auto descriptor_page_start = (new_file_descriptor_address / page_size) * page_size;
+        const auto descriptor_page_offset = new_file_descriptor_address - descriptor_page_start;
+        NRF_LOG_INFO("descriptor start 0x%x, offset 0x%x", descriptor_page_start, descriptor_page_offset);
+        const auto read_result = config.read(
+            &config, 
+            descriptor_page_start / config.block_size,
+            descriptor_page_start % config.block_size,
+            config.read_buffer,
+            page_size
+        );
+        if (read_result != 0)
+        {
+            NRF_LOG_ERROR("myfs: read op failed");
+            return -1;
+        }
+        print_buffer((uint8_t *)config.read_buffer, page_size);
+        memcpy(config.read_buffer + descriptor_page_offset, &d, sizeof(d));
+        print_buffer((uint8_t *)config.read_buffer, page_size);
+
+    }
+
+
+    // 3. fill in required data into the file object
+
+    return -1;
+}
+
 }
