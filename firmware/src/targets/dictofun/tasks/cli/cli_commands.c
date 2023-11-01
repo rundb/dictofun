@@ -154,13 +154,20 @@ void register_memory_test_callback(memory_test_callback callback)
 /// Test 3: test file system: create a file, write data into it, close it, open it for read back and validate the content. 
 static void cmd_test_memory(nrf_cli_t const * p_cli, const size_t argc, char ** argv)
 {
-    if (2 != argc)
+    if (2 != argc && 4 != argc)
     {
-        nrf_cli_fprintf(p_cli, NRF_CLI_ERROR, "Wrong command syntax\n");
+        nrf_cli_fprintf(p_cli, NRF_CLI_ERROR, "Wrong command syntax (argc == %d)\n", argc);
         return;
     }
     const int test_id = atoi(argv[1]);
-    if (test_id < 1 || test_id > 4)
+    int range_start = 0;
+    int range_end = 0;
+    if (argc == 4)
+    {
+        range_start = atoi(argv[2]);
+        range_end = atoi(argv[3]);
+    }
+    if (test_id < 1 || test_id > 5)
     {
         nrf_cli_fprintf(p_cli, NRF_CLI_ERROR, "Wrong test ID\n", argc);
         return;
@@ -169,7 +176,7 @@ static void cmd_test_memory(nrf_cli_t const * p_cli, const size_t argc, char ** 
 
     if (_memory_test_callback != NULL)
     {
-        _memory_test_callback(test_id);
+        _memory_test_callback(test_id, range_start, range_end);
         nrf_cli_fprintf(p_cli, NRF_CLI_NORMAL, "Memory test #%d is launched\n", test_id);
     }
     else

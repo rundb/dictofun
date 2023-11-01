@@ -353,4 +353,29 @@ void launch_test_4(lfs_t& lfs)
     }
 }
 
+void launch_test_5(flash::SpiFlash& flash,const uint32_t range_start, const uint32_t range_end)
+{
+    NRF_LOG_INFO("memory dump (0x%x:0x%x)", range_start, range_end);
+    
+    if (range_start > range_end)
+    {
+        NRF_LOG_WARNING("memory dump: incorrect address range");
+        return;
+    }
+    static constexpr uint32_t single_read_size{16};
+    uint8_t buf[single_read_size]{0};
+    char str[9 + single_read_size * 3 + 2] {0};
+    for (auto i = range_start; i < range_end; i += single_read_size)
+    {
+        flash.read(i, buf, single_read_size);
+        snprintf(str, sizeof(str), "%08x: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
+            i,
+            buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7],
+            buf[8], buf[9], buf[10], buf[11], buf[12], buf[13], buf[14], buf[15]
+        );
+        NRF_LOG_INFO("%s", str);
+        vTaskDelay(50);
+    }
+}
+
 } // namespace memory

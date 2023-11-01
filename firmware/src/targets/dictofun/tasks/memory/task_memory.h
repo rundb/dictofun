@@ -19,6 +19,7 @@ void launch_test_1(flash::SpiFlash& flash);
 void launch_test_2(flash::SpiFlash& flash);
 void launch_test_3(lfs_t& lfs, const lfs_config& lfs_configuration);
 void launch_test_4(lfs_t& lfs);
+void launch_test_5(flash::SpiFlash& flash, const uint32_t range_start, const uint32_t range_end);
 
 struct Context;
 void generate_next_file_name(char* name, const Context& context);
@@ -37,6 +38,8 @@ enum class Command
     CLOSE_WRITTEN_FILE,
     PERFORM_MEMORY_CHECK,
     FORMAT_FS,
+
+    LAUNCH_TEST_5, // memory range print
 };
 
 enum class Status
@@ -51,7 +54,7 @@ struct CommandQueueElement
 {
     Command command_id;
     static constexpr size_t max_arguments{2};
-    uint32_t args[max_arguments];
+    uint32_t args[max_arguments]{0};
 };
 
 struct StatusQueueElement

@@ -114,7 +114,7 @@ void task_system_state(void* context_ptr)
                 break;
             }
             case logger::CliCommand::MEMORY_TEST: {
-                launch_cli_command_memory_test(*context, cli_command_buffer.args[0]);
+                launch_cli_command_memory_test(*context, cli_command_buffer.args[0], cli_command_buffer.args[1], cli_command_buffer.args[2]);
                 break;
             }
             case logger::CliCommand::BLE_COMMAND: {

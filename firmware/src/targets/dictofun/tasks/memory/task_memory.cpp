@@ -106,7 +106,7 @@ static bool is_ble_access_allowed();
 void process_request_from_ble(Context& context,
                               ble::CommandToMemory command_id,
                               ble::fts::file_id_type file_id);
-void process_request_from_state(Context& context, Command command_id);
+void process_request_from_state(Context& context, Command command_id, uint32_t arg0 = 0, uint32_t arg1 = 0);
 
 void task_memory(void* context_ptr)
 {
@@ -139,7 +139,7 @@ void task_memory(void* context_ptr)
             _file_operation_context.is_file_open ? cmd_wait_fast_ticks : cmd_wait_idle_ticks);
         if(pdPASS == cmd_queue_receive_status)
         {
-            process_request_from_state(context, command.command_id);
+            process_request_from_state(context, command.command_id, command.args[0], command.args[1]);
         }
         if(_memory_owner == MemoryOwner::BLE)
         {
@@ -372,7 +372,7 @@ void process_request_from_ble(Context& context,
     }
 }
 
-void process_request_from_state(Context& context, const Command command_id)
+void process_request_from_state(Context& context, const Command command_id, uint32_t arg0, uint32_t arg1)
 {
     switch(command_id)
     {
@@ -482,6 +482,10 @@ void process_request_from_state(Context& context, const Command command_id)
     }
     case Command::LAUNCH_TEST_4: {
         launch_test_4(lfs);
+        break;
+    }
+    case Command::LAUNCH_TEST_5: {
+        launch_test_5(flash, arg0, arg1);
         break;
     }
     case Command::UNMOUNT_LFS: {

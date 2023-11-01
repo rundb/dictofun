@@ -79,7 +79,7 @@ void record_end_callback(TimerHandle_t timer);
 void launch_cli_command_record(Context& context,
                                const uint32_t duration,
                                bool should_store_the_record);
-void launch_cli_command_memory_test(Context& context, const uint32_t test_id);
+void launch_cli_command_memory_test(Context& context, const uint32_t test_id, const uint32_t range_start, const uint32_t range_end);
 void launch_cli_command_ble_operation(Context& context, const uint32_t command_id);
 void launch_cli_command_system(Context& context, const uint32_t command_id);
 void launch_cli_command_opmode(Context& context,

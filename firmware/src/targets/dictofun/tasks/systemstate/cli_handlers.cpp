@@ -64,14 +64,18 @@ void launch_cli_command_record(Context& context,
     }
 }
 
-void launch_cli_command_memory_test(Context& context, const uint32_t test_id)
+void launch_cli_command_memory_test(Context& context, const uint32_t test_id, const uint32_t range_start, const uint32_t range_end)
 {
     NRF_LOG_INFO("task state: launching memory test %d", test_id);
-    const memory::Command command_id = (test_id == 4)   ? memory::Command::LAUNCH_TEST_4
+    const memory::Command command_id = (test_id == 5)   ? memory::Command::LAUNCH_TEST_5
+                                       : (test_id == 4)   ? memory::Command::LAUNCH_TEST_4
                                        : (test_id == 3) ? memory::Command::LAUNCH_TEST_3
                                        : (test_id == 2) ? memory::Command::LAUNCH_TEST_2
                                                         : memory::Command::LAUNCH_TEST_1;
-    memory::CommandQueueElement cmd{command_id, {0, 0}};
+    
+    const uint32_t arg0 = (test_id == 5) ? range_start : 0;
+    const uint32_t arg1 = (test_id == 5) ? range_end : 0;
+    memory::CommandQueueElement cmd{command_id, {arg0, arg1}};
     const auto memtest_status =
         xQueueSend(context.memory_commands_handle, reinterpret_cast<void*>(&cmd), 0);
     if(memtest_status != pdPASS)
