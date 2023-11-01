@@ -170,143 +170,169 @@ void launch_test_2(flash::SpiFlash& flash)
     NRF_LOG_INFO("read3 took %d ms", read_3_end_tick - read_3_start_tick);
 }
 
-void launch_test_3(lfs_t& lfs, const lfs_config& lfs_configuration)
+void launch_test_3(myfs_t& myfs, myfs_config& myfs_configuration)
 {
     const auto test_start_tick{xTaskGetTickCount()};
-    NRF_LOG_INFO("mem: launching simple LFS operation test");
+    NRF_LOG_INFO("mem: launching simple MyFS operation test");
     // ============ Step 1: initialize the FS (and format it, if necessary)
-    auto err = lfs_mount(&lfs, &lfs_configuration);
+    vTaskDelay(20);
+    auto err = myfs_mount(&myfs, &myfs_configuration);
     if(err != 0)
     {
-        NRF_LOG_INFO("mem: formatting FS");
-        err = lfs_format(&lfs, &lfs_configuration);
+        vTaskDelay(20);
+        NRF_LOG_INFO("mem: formatting MyFS");
+        err = myfs_format(&myfs, &myfs_configuration);
         if(err != 0)
         {
-            NRF_LOG_ERROR("mem: failed to format LFS (%d)", err);
+            NRF_LOG_ERROR("mem: failed to format MyFS (%d)", err);
             return;
         }
-        err = lfs_mount(&lfs, &lfs_configuration);
+        err = myfs_mount(&myfs, &myfs_configuration);
         if(err != 0)
         {
-            NRF_LOG_ERROR("mem: failed to mount LFS after formatting");
+            NRF_LOG_ERROR("mem: failed to mount MyFS after formatting");
             return;
         }
     }
-    // ============ Step 2: create a file and write content into it
-    NRF_LOG_INFO("mem: creating first file");
-    memset(&memtest_file_config, 0, sizeof(memtest_file_config));
-    memtest_file_config.buffer = memtest_buffer;
-    memtest_file_config.attr_count = 0;
-    const auto create_result = lfs_file_opencfg(
-        &lfs, &memtest_file, "record00", LFS_O_CREAT | LFS_O_WRONLY, &memtest_file_config);
-    if(create_result != 0)
-    {
-        NRF_LOG_ERROR("lfs: failed to create a file (err=%d)", create_result);
-    }
-
-    constexpr size_t test_data_size{512};
-    uint8_t test_data[test_data_size];
-    for(size_t i = 0; i < test_data_size; ++i)
-    {
-        test_data[i] = i & 0xFF;
-    }
-    NRF_LOG_INFO("mem: writing data to opened file");
-    // Enforce overflow of a single sector size to provoke an erase operation
-    size_t written_data_size{0};
-    const auto write_start_tick{xTaskGetTickCount()};
-    for(int i = 0; i < 4; ++i)
-    {
-        const auto write_result = lfs_file_write(&lfs, &memtest_file, test_data, sizeof(test_data));
-        written_data_size += sizeof(test_data);
-        if(write_result != sizeof(test_data))
-        {
-            NRF_LOG_ERROR("lfs: failed to write into a file (%d)", write_result);
-            return;
-        }
-    }
-    const auto write_end_tick{xTaskGetTickCount()};
-
-    // ============ Step 3: close the file
-    NRF_LOG_INFO("mem: closing file");
-    const auto close_result_0 = lfs_file_close(&lfs, &memtest_file);
-    if(close_result_0 != 0)
-    {
-        NRF_LOG_ERROR("lfs: failed to close file after writing");
-        return;
-    }
-    memset(test_data, 0, test_data_size);
-
-    NRF_LOG_INFO("mem: creating second file");
-    memset(&memtest_file_config, 0, sizeof(memtest_file_config));
-    memtest_file_config.buffer = memtest_buffer;
-    memtest_file_config.attr_count = 0;
-    const auto create_2_result = lfs_file_opencfg(
-        &lfs, &memtest_file, "record01", LFS_O_CREAT | LFS_O_WRONLY, &memtest_file_config);
-    if(create_2_result != 0)
-    {
-        NRF_LOG_ERROR("lfs: failed to create a file (err=%d)", create_2_result);
-    }
-
-    NRF_LOG_INFO("mem: writing data to opened file");
-    // Enforce overflow of a single sector size to provoke an erase operation
-
-    for(int i = 0; i < 10; ++i)
-    {
-        const auto write_result = lfs_file_write(&lfs, &memtest_file, test_data, sizeof(test_data));
-        written_data_size += sizeof(test_data);
-        if(write_result != sizeof(test_data))
-        {
-            NRF_LOG_ERROR("lfs: failed to write into a file (%d)", write_result);
-            return;
-        }
-    }
-
-    const auto close_result_1 = lfs_file_close(&lfs, &memtest_file);
-    if(close_result_1 != 0)
-    {
-        NRF_LOG_ERROR("lfs: failed to close file after writing");
-        return;
-    }
-
-    // ============ Step 4: open the file for read
-    NRF_LOG_INFO("mem: opening file for read");
-    lfs_file_t file;
-    const auto open_to_read_result = lfs_file_open(&lfs, &file, "record00", LFS_O_RDONLY);
-    if(open_to_read_result != 0)
-    {
-        NRF_LOG_ERROR("lfs: failed to open file for reading");
-        return;
-    }
-    const auto read_result = lfs_file_read(&lfs, &file, test_data, sizeof(test_data));
-    if(read_result != sizeof(test_data))
-    {
-        NRF_LOG_ERROR("lfs: failed to read file content");
-        return;
-    }
-
-    // ============ Step 5: close the file
-    NRF_LOG_INFO("mem: closing file");
-    const auto close_result_2 = lfs_file_close(&lfs, &file);
-    if(close_result_2 != 0)
-    {
-        NRF_LOG_ERROR("lfs: failed to close file after opening");
-        return;
-    }
-
-    // ============ Step 6: validate a portion of the file
-    if(test_data[1] != 1 || test_data[9] != 9 || test_data[15] != 15)
-    {
-        NRF_LOG_ERROR("lfs: failed to validate file content");
-        return;
-    }
-    lfs_unmount(&lfs);
-    const auto test_end_tick{xTaskGetTickCount()};
-    NRF_LOG_INFO("LFS test took %d ms", (test_end_tick - test_start_tick));
-    NRF_LOG_INFO("LFS write throughput: %d ms, %d bytes, %d bytes/ms",
-                 (write_end_tick - write_start_tick + 1),
-                 written_data_size,
-                 written_data_size / (write_end_tick - write_start_tick + 1));
 }
+
+// void launch_test_3(lfs_t& lfs, const lfs_config& lfs_configuration)
+// {
+//     const auto test_start_tick{xTaskGetTickCount()};
+//     NRF_LOG_INFO("mem: launching simple LFS operation test");
+//     // ============ Step 1: initialize the FS (and format it, if necessary)
+//     auto err = lfs_mount(&lfs, &lfs_configuration);
+//     if(err != 0)
+//     {
+//         NRF_LOG_INFO("mem: formatting FS");
+//         err = lfs_format(&lfs, &lfs_configuration);
+//         if(err != 0)
+//         {
+//             NRF_LOG_ERROR("mem: failed to format LFS (%d)", err);
+//             return;
+//         }
+//         err = lfs_mount(&lfs, &lfs_configuration);
+//         if(err != 0)
+//         {
+//             NRF_LOG_ERROR("mem: failed to mount LFS after formatting");
+//             return;
+//         }
+//     }
+//     // ============ Step 2: create a file and write content into it
+//     NRF_LOG_INFO("mem: creating first file");
+//     memset(&memtest_file_config, 0, sizeof(memtest_file_config));
+//     memtest_file_config.buffer = memtest_buffer;
+//     memtest_file_config.attr_count = 0;
+//     const auto create_result = lfs_file_opencfg(
+//         &lfs, &memtest_file, "record00", LFS_O_CREAT | LFS_O_WRONLY, &memtest_file_config);
+//     if(create_result != 0)
+//     {
+//         NRF_LOG_ERROR("lfs: failed to create a file (err=%d)", create_result);
+//     }
+
+//     constexpr size_t test_data_size{512};
+//     uint8_t test_data[test_data_size];
+//     for(size_t i = 0; i < test_data_size; ++i)
+//     {
+//         test_data[i] = i & 0xFF;
+//     }
+//     NRF_LOG_INFO("mem: writing data to opened file");
+//     // Enforce overflow of a single sector size to provoke an erase operation
+//     size_t written_data_size{0};
+//     const auto write_start_tick{xTaskGetTickCount()};
+//     for(int i = 0; i < 4; ++i)
+//     {
+//         const auto write_result = lfs_file_write(&lfs, &memtest_file, test_data, sizeof(test_data));
+//         written_data_size += sizeof(test_data);
+//         if(write_result != sizeof(test_data))
+//         {
+//             NRF_LOG_ERROR("lfs: failed to write into a file (%d)", write_result);
+//             return;
+//         }
+//     }
+//     const auto write_end_tick{xTaskGetTickCount()};
+
+//     // ============ Step 3: close the file
+//     NRF_LOG_INFO("mem: closing file");
+//     const auto close_result_0 = lfs_file_close(&lfs, &memtest_file);
+//     if(close_result_0 != 0)
+//     {
+//         NRF_LOG_ERROR("lfs: failed to close file after writing");
+//         return;
+//     }
+//     memset(test_data, 0, test_data_size);
+
+//     NRF_LOG_INFO("mem: creating second file");
+//     memset(&memtest_file_config, 0, sizeof(memtest_file_config));
+//     memtest_file_config.buffer = memtest_buffer;
+//     memtest_file_config.attr_count = 0;
+//     const auto create_2_result = lfs_file_opencfg(
+//         &lfs, &memtest_file, "record01", LFS_O_CREAT | LFS_O_WRONLY, &memtest_file_config);
+//     if(create_2_result != 0)
+//     {
+//         NRF_LOG_ERROR("lfs: failed to create a file (err=%d)", create_2_result);
+//     }
+
+//     NRF_LOG_INFO("mem: writing data to opened file");
+//     // Enforce overflow of a single sector size to provoke an erase operation
+
+//     for(int i = 0; i < 10; ++i)
+//     {
+//         const auto write_result = lfs_file_write(&lfs, &memtest_file, test_data, sizeof(test_data));
+//         written_data_size += sizeof(test_data);
+//         if(write_result != sizeof(test_data))
+//         {
+//             NRF_LOG_ERROR("lfs: failed to write into a file (%d)", write_result);
+//             return;
+//         }
+//     }
+
+//     const auto close_result_1 = lfs_file_close(&lfs, &memtest_file);
+//     if(close_result_1 != 0)
+//     {
+//         NRF_LOG_ERROR("lfs: failed to close file after writing");
+//         return;
+//     }
+
+//     // ============ Step 4: open the file for read
+//     NRF_LOG_INFO("mem: opening file for read");
+//     lfs_file_t file;
+//     const auto open_to_read_result = lfs_file_open(&lfs, &file, "record00", LFS_O_RDONLY);
+//     if(open_to_read_result != 0)
+//     {
+//         NRF_LOG_ERROR("lfs: failed to open file for reading");
+//         return;
+//     }
+//     const auto read_result = lfs_file_read(&lfs, &file, test_data, sizeof(test_data));
+//     if(read_result != sizeof(test_data))
+//     {
+//         NRF_LOG_ERROR("lfs: failed to read file content");
+//         return;
+//     }
+
+//     // ============ Step 5: close the file
+//     NRF_LOG_INFO("mem: closing file");
+//     const auto close_result_2 = lfs_file_close(&lfs, &file);
+//     if(close_result_2 != 0)
+//     {
+//         NRF_LOG_ERROR("lfs: failed to close file after opening");
+//         return;
+//     }
+
+//     // ============ Step 6: validate a portion of the file
+//     if(test_data[1] != 1 || test_data[9] != 9 || test_data[15] != 15)
+//     {
+//         NRF_LOG_ERROR("lfs: failed to validate file content");
+//         return;
+//     }
+//     lfs_unmount(&lfs);
+//     const auto test_end_tick{xTaskGetTickCount()};
+//     NRF_LOG_INFO("LFS test took %d ms", (test_end_tick - test_start_tick));
+//     NRF_LOG_INFO("LFS write throughput: %d ms, %d bytes, %d bytes/ms",
+//                  (write_end_tick - write_start_tick + 1),
+//                  written_data_size,
+//                  written_data_size / (write_end_tick - write_start_tick + 1));
+// }
 
 void launch_test_4(lfs_t& lfs)
 {

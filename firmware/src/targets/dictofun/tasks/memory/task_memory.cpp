@@ -25,6 +25,8 @@
 #include "time_profiler.h"
 
 #include "lfs.h"
+#include "myfs.h"
+#include "block_api_myfs.h"
 
 namespace memory
 {
@@ -49,6 +51,9 @@ constexpr size_t LOOKAHEAD_BUFFER_SIZE{64};
 uint8_t prog_buffer[CACHE_SIZE];
 uint8_t read_buffer[CACHE_SIZE];
 uint8_t lookahead_buffer[CACHE_SIZE];
+uint8_t myfs_prog_buffer[CACHE_SIZE];
+uint8_t myfs_read_buffer[CACHE_SIZE];
+uint8_t myfs_lookahead_buffer[CACHE_SIZE];
 
 enum class MemoryOwner
 {
@@ -58,6 +63,7 @@ enum class MemoryOwner
 static MemoryOwner _memory_owner{MemoryOwner::AUDIO};
 
 lfs_t lfs;
+::filesystem::myfs_t myfs;
 
 const struct lfs_config lfs_configuration = {
     .read = memory::block_device::read,
@@ -76,6 +82,25 @@ const struct lfs_config lfs_configuration = {
     .read_buffer = read_buffer,
     .prog_buffer = prog_buffer,
     .lookahead_buffer = lookahead_buffer,
+};
+
+struct ::filesystem::myfs_config myfs_configuration = {
+    .read = memory::block_device::myfs_read,
+    .prog = memory::block_device::myfs_program,
+    .erase = memory::block_device::myfs_erase,
+    .sync = memory::block_device::myfs_sync,
+
+    // block device configuration
+    .read_size = 16,
+    .prog_size = flash_page_size,
+    .block_size = flash_sector_size,
+    .block_count = flash_sectors_count,
+    .block_cycles = 500,
+    .cache_size = CACHE_SIZE,
+    .lookahead_size = LOOKAHEAD_BUFFER_SIZE,
+    .read_buffer = myfs_read_buffer,
+    .prog_buffer = myfs_prog_buffer,
+    .lookahead_buffer = myfs_lookahead_buffer,
 };
 
 constexpr uint32_t cmd_wait_idle_ticks{5};
@@ -124,8 +149,11 @@ void task_memory(void* context_ptr)
 
     memory::block_device::register_flash_device(
         &flash, flash_sector_size, flash_page_size, flash_total_size);
+    memory::block_device::myfs_register_flash_device(
+        &flash, flash_sector_size, flash_page_size, flash_total_size);
 
-    const auto init_result = memory::filesystem::init_littlefs(lfs, lfs_configuration);
+    // const auto init_result = memory::filesystem::init_littlefs(lfs, lfs_configuration);
+    const auto init_result = result::Result::ERROR_GENERAL;
     if(result::Result::OK != init_result)
     {
         NRF_LOG_ERROR("mem: failed to mount littlefs");
@@ -477,7 +505,7 @@ void process_request_from_state(Context& context, const Command command_id, uint
         break;
     }
     case Command::LAUNCH_TEST_3: {
-        launch_test_3(lfs, lfs_configuration);
+        launch_test_3(myfs, myfs_configuration);
         break;
     }
     case Command::LAUNCH_TEST_4: {

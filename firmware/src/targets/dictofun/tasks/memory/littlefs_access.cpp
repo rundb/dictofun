@@ -31,19 +31,21 @@ result::Result init_littlefs(lfs_t& lfs, const lfs_config& config)
     auto err = lfs_mount(&lfs, &config);
     if(err != 0)
     {
-        NRF_LOG_WARNING("mem: formatting FS");
-        err = lfs_format(&lfs, &config);
-        if(err != 0)
-        {
-            NRF_LOG_ERROR("mem: failed to format LFS (%d)", err);
-            return result::Result::ERROR_GENERAL;
-        }
-        err = lfs_mount(&lfs, &config);
-        if(err != 0)
-        {
-            NRF_LOG_ERROR("mem: failed to mount LFS after formatting");
-            return result::Result::ERROR_GENERAL;
-        }
+        // NRF_LOG_WARNING("mem: formatting FS");
+        // err = lfs_format(&lfs, &config);
+        // if(err != 0)
+        // {
+        //     NRF_LOG_ERROR("mem: failed to format LFS (%d)", err);
+        //     return result::Result::ERROR_GENERAL;
+        // }
+        // err = lfs_mount(&lfs, &config);
+        // if(err != 0)
+        // {
+        //     NRF_LOG_ERROR("mem: failed to mount LFS after formatting");
+        //     return result::Result::ERROR_GENERAL;
+        // }
+        NRF_LOG_ERROR("lfs format failed and won't proceed, as MyFS is in development");
+        return result::Result::ERROR_NOT_IMPLEMENTED;
     }
 
     const auto dir_open_result = lfs_dir_open(&lfs, &_active_dir, ".");

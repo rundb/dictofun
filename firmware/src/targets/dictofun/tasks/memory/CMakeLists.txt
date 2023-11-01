@@ -24,6 +24,7 @@ target_link_libraries(task_memory PUBLIC
     nrf5_freertos_portable_memmang_1
     littlefs
     littlefs_integration
+    myfs
 )
 
 add_library(task_memory_interface INTERFACE)

@@ -12,6 +12,7 @@ target_link_libraries(task_system_state PRIVATE
     nrf5_fstorage
     nrf5_fstorage_sd
     nrf5_crc32
+    myfs
 )
 
 target_link_libraries(task_system_state PUBLIC 
