@@ -19,7 +19,7 @@ extern "C"
     typedef void (*record_launch_callback)(int, bool);
     void register_record_launch_callback(record_launch_callback callback);
 
-    typedef void (*memory_test_callback)(uint32_t);
+    typedef void (*memory_test_callback)(uint32_t, uint32_t, uint32_t);
     void register_memory_test_callback(memory_test_callback callback);
 
     typedef void (*ble_control_callback)(uint32_t);

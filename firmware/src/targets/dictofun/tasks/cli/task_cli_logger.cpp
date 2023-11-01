@@ -31,11 +31,13 @@ void record_launch_callback(int duration, bool should_record_be_stored)
 }
 
 static MemoryTestCommand _memory_test_command;
-void memory_test_callback(uint32_t test_id)
+void memory_test_callback(uint32_t test_id, uint32_t range_start, uint32_t range_end)
 {
     if(_memory_test_command.is_active)
         return;
     _memory_test_command.test_id = test_id;
+    _memory_test_command.range_start = range_start;
+    _memory_test_command.range_end = range_end;
     _memory_test_command.is_active = true;
 }
 
@@ -125,7 +127,13 @@ void task_cli_logger(void* cli_context)
         if(_memory_test_command.is_active)
         {
             _memory_test_command.is_active = false;
-            CliCommandQueueElement cmd{CliCommand::MEMORY_TEST, {_memory_test_command.test_id, 0}};
+            CliCommandQueueElement cmd{CliCommand::MEMORY_TEST, 
+                {
+                    _memory_test_command.test_id, 
+                    _memory_test_command.range_start,
+                    _memory_test_command.range_end,
+                }
+            };
             const auto send_result = xQueueSend(context.cli_commands_handle, &cmd, 0U);
             if(pdPASS != send_result)
             {

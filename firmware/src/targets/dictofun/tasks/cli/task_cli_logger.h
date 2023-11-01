@@ -34,6 +34,8 @@ struct MemoryTestCommand
 {
     bool is_active{false};
     uint32_t test_id{0};
+    uint32_t range_start{0};
+    uint32_t range_end{0};
 };
 
 struct BleOperationCommand
@@ -79,9 +81,9 @@ enum class CliStatus
 
 struct CliCommandQueueElement
 {
-    static constexpr size_t max_arguments{2U};
-    CliCommand command_id;
-    uint32_t args[max_arguments];
+    static constexpr size_t max_arguments{3U};
+    CliCommand command_id{0};
+    uint32_t args[max_arguments]{0};
 };
 
 struct CliStatusQueueElement
