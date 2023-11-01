@@ -3,8 +3,13 @@ add_library(myfs STATIC
     block_api_myfs.cpp
 )
 
-target_include_directories(myfs PUBLIC ./)
+target_include_directories(myfs PUBLIC ./
+)
 
 target_link_libraries(myfs PUBLIC
     spi_flash_interface
+)
+
+target_link_libraries(myfs PRIVATE
+    nrf5_log
 )

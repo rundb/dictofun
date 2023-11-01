@@ -16,12 +16,31 @@ struct myfs_t
 {
     bool is_mounted{false};
     uint32_t files_count{0};
+    uint32_t next_file_start_address{0};
+    uint32_t fs_start_address{0};
+};
+
+/// Bytes 0..3: magic, corresponding to a created file
+/// Bytes 4..7: start address
+/// Bytes 8..15: file identifier/name (0 is a valid value, shall be converted to text `00`)
+/// Bytes 16..19: file size (also it's a marker that file has been closed after the write)
+/// Bytes 20..23: reserved for CRC
+struct __attribute__((__packed__)) myfs_file_descriptor 
+{
+    static constexpr uint32_t file_id_size{8};
+    uint32_t magic;
+    uint32_t start_address;
+    uint8_t file_id[file_id_size];
+    uint32_t file_size;
+    uint8_t reserved[12];
 };
 
 static constexpr uint32_t global_magic_value{0x2A7B3D1FUL};
 static constexpr uint32_t file_magic_value{0xE9C864A7};
+static constexpr uint32_t empty_word_value{0xFFFFFFFFUL};
 static constexpr uint32_t single_file_descriptor_size_bytes{32};
 static constexpr uint32_t myfs_format_marker_size{single_file_descriptor_size_bytes};
+static constexpr uint32_t first_file_start_location{4096};
 
 struct myfs_config {
     void *context;
@@ -49,7 +68,7 @@ struct myfs_config {
     myfs_size_t metadata_max;
 };
 
-int myfs_format(myfs_t *myfs, myfs_config *config);
+int myfs_format(myfs_t *myfs, const myfs_config *config);
 int myfs_mount(myfs_t *lfs, const myfs_config *config);
 // int lfs_unmount(lfs_t *lfs);
 // lfs_ssize_t lfs_file_read(lfs_t *lfs, lfs_file_t *file, void *buffer, lfs_size_t size);

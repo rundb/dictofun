@@ -170,7 +170,7 @@ void launch_test_2(flash::SpiFlash& flash)
     NRF_LOG_INFO("read3 took %d ms", read_3_end_tick - read_3_start_tick);
 }
 
-void launch_test_3(myfs_t& myfs, myfs_config& myfs_configuration)
+void launch_test_3(myfs_t& myfs, const myfs_config& myfs_configuration)
 {
     const auto test_start_tick{xTaskGetTickCount()};
     NRF_LOG_INFO("mem: launching simple MyFS operation test");
