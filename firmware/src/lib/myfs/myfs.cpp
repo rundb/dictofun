@@ -252,36 +252,26 @@ int myfs_file_open(myfs_t *myfs, const myfs_config& config, myfs_file_t& file, u
         memset(d.reserved, 0xFF, sizeof(d.reserved));
         
         // 2. flash needed part of the descriptor into the table
-        // const auto new_file_descriptor_address = myfs->next_file_descriptor_address;
-        // const auto descriptor_page_start = (new_file_descriptor_address / page_size) * page_size;
-        // const auto descriptor_page_offset = new_file_descriptor_address - descriptor_page_start;
-        // NRF_LOG_INFO("descriptor start 0x%x, offset 0x%x", descriptor_page_start, descriptor_page_offset);
-        // const auto read_result = config.read(
-        //     &config, 
-        //     descriptor_page_start / config.block_size,
-        //     descriptor_page_start % config.block_size,
-        //     config.read_buffer,
-        //     page_size
-        // );
-        // if (read_result != 0)
-        // {
-        //     NRF_LOG_ERROR("myfs: read op failed");
-        //     return -1;
-        // }
-        // print_buffer((uint8_t *)config.read_buffer, page_size);
-        // memcpy(config.read_buffer + descriptor_page_offset, &d, sizeof(d));
-        // print_buffer((uint8_t *)config.read_buffer, page_size);
         const auto descr_prog_result = write_myfs_descriptor(d, myfs->next_file_descriptor_address, config);
         if (0 != descr_prog_result)
         {
             NRF_LOG_ERROR("myfs: descr prog failed");
             return descr_prog_result;
         }
+
+        // 3. fill in required data into the file object
+        file.flags = flags;
+        file.is_open = true;
+        file.is_write = true;
+        memcpy(file.id, file_id, d.file_id_size);
+        return 0;
     }
 
+    return -1;
+}
 
-    // 3. fill in required data into the file object
-
+int myfs_file_close(myfs_t *myfs, const myfs_config& config, myfs_file_t& file)
+{
     return -1;
 }
 

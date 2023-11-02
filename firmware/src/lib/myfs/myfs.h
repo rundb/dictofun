@@ -89,6 +89,7 @@ int myfs_format(myfs_t *myfs, const myfs_config *config);
 int myfs_mount(myfs_t *myfs, const myfs_config *config);
 
 int myfs_file_open(myfs_t *myfs, const myfs_config& config, myfs_file_t& file, uint8_t * file_id, uint8_t flags);
+int myfs_file_close(myfs_t *myfs, const myfs_config& config, myfs_file_t& file);
 // int lfs_unmount(lfs_t *lfs);
 // lfs_ssize_t lfs_file_read(lfs_t *lfs, lfs_file_t *file, void *buffer, lfs_size_t size);
 // lfs_dir_read
