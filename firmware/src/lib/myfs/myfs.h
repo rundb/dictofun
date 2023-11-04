@@ -55,9 +55,10 @@ struct myfs_file_t
 {
     static constexpr uint8_t id_size{myfs_file_descriptor::file_id_size};
     uint8_t flags;
-    uint8_t id[id_size];
+uint8_t id[id_size];
     uint32_t size;
     uint32_t read_pos;
+    uint32_t start_address;
     bool is_open{false};
     bool is_write{false};
 };
@@ -98,7 +99,7 @@ int myfs_mount(myfs_t *myfs, const myfs_config *config);
 int myfs_file_open(myfs_t *myfs, const myfs_config& config, myfs_file_t& file, uint8_t * file_id, uint8_t flags);
 int myfs_file_close(myfs_t *myfs, const myfs_config& config, myfs_file_t& file);
 int myfs_file_write(myfs_t *myfs, const myfs_config& config, myfs_file_t& file, void *buffer, myfs_size_t size);
-int myfs_file_read(myfs_t *myfs, const myfs_config& config, myfs_file_t& file, void *buffer, myfs_size_t size);
+int myfs_file_read(myfs_t *myfs, const myfs_config& config, myfs_file_t& file, void *buffer, myfs_size_t max_size, myfs_size_t& read_size);
 // int lfs_unmount(lfs_t *lfs);
 // lfs_ssize_t lfs_file_read(lfs_t *lfs, lfs_file_t *file, void *buffer, lfs_size_t size);
 // lfs_dir_read

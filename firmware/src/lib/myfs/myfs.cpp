@@ -5,6 +5,7 @@
 #include "nrf_log.h"
 
 #include <cstdio>
+#include <algorithm>
 
 #include "FreeRTOS.h"
 #include "task.h"
@@ -225,11 +226,13 @@ int myfs_file_open(myfs_t *myfs, const myfs_config& config, myfs_file_t& file, u
                 file.is_write = false;
                 file.size = d.file_size;
                 file.read_pos = 0;
+                file.start_address = d.start_address;
                 myfs->is_file_open = true;
                 myfs->buffer_pointer = reinterpret_cast<uint8_t *>(config.prog_buffer);
                 myfs->buffer_size = config.prog_size;
                 myfs->buffer_position = 0;
                 is_file_found = true;
+                NRF_LOG_INFO("myfs open, size %d, addr 0x%x", file.size, current_descriptor_address);
             }
             else
             {
@@ -370,14 +373,31 @@ int myfs_file_write(myfs_t *myfs, const myfs_config& config, myfs_file_t& file, 
     return 0;
 }
 
-int myfs_file_read(myfs_t *myfs, const myfs_config& config, myfs_file_t& file, void *buffer, myfs_size_t size)
+int myfs_file_read(myfs_t *myfs, const myfs_config& config, myfs_file_t& file, void *buffer, myfs_size_t max_size, myfs_size_t& read_size)
 {
     if (nullptr == myfs || nullptr == buffer || !file.is_open || file.is_write)
     {
         return -1;
     }
+    const auto leftover_size = file.size - file.read_pos;
+    if (leftover_size == 0)
+    {
+        read_size = 0;
+        return 0;
+    }
+    read_size = std::min(max_size, leftover_size);
+
+    const auto read_address = file.start_address + file.read_pos;
+    const auto block = read_address / config.block_size;
+    const auto off = read_address % config.block_size;
+    const auto read_res = config.read(&config, block, off, buffer, read_size);
+    if (read_res != 0)
+    {
+        return -1;
+    }
+    file.read_pos += read_size;
     
-    return -1;
+    return 0;
 }
 
 

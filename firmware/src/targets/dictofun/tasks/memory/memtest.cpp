@@ -252,12 +252,26 @@ void launch_test_3(myfs_t& myfs, const myfs_config& myfs_configuration)
         return;
     }
 
+    test_file_id[0]--;
     const auto open_result_1 = myfs_file_open(&myfs, myfs_configuration, test_file, test_file_id, ::filesystem::MYFS_READ_FLAG);
     if (open_result_1 != 0)
     {
         NRF_LOG_ERROR("mem: failed to open file 1 for read (err %d)", open_result_1);
         return;
     }
+    memset(tmp_data, 0, sizeof(tmp_data));
+
+    uint32_t actually_read_size;
+    do 
+    {
+        const auto read_result = myfs_file_read(&myfs, myfs_configuration, test_file, tmp_data, sizeof(tmp_data), actually_read_size);
+        if (0 != read_result)
+        {
+            NRF_LOG_ERROR("memtest: data read failed");
+            return;
+        }
+        NRF_LOG_INFO("memtest: read %d bytes", actually_read_size);
+    } while (actually_read_size != 0);
 
     const auto close_res_3 = myfs_file_close(&myfs, myfs_configuration, test_file);
     if (close_res_3 != 0)
