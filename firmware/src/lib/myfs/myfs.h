@@ -13,6 +13,13 @@ using myfs_size_t = uint32_t;
 // - only one file can be open at a time
 namespace filesystem
 {
+static constexpr uint32_t global_magic_value{0x2A7B3D1FUL};
+static constexpr uint32_t file_magic_value{0xE9C864A7};
+static constexpr uint32_t empty_word_value{0xFFFFFFFFUL};
+static constexpr uint32_t single_file_descriptor_size_bytes{32};
+static constexpr uint32_t myfs_format_marker_size{single_file_descriptor_size_bytes};
+static constexpr uint32_t first_file_start_location{4096};
+static constexpr uint32_t page_size{256};
 
 struct myfs_t
 {
@@ -22,6 +29,9 @@ struct myfs_t
     uint32_t fs_start_address{0};
     bool is_file_open{false};
     uint32_t next_file_descriptor_address{0};
+    uint8_t * write_buffer_pointer{nullptr};
+    uint32_t write_buffer_size{page_size};
+    uint32_t write_buffer_position{0};
 };
 
 /// Bytes 0..3: magic, corresponding to a created file
@@ -49,13 +59,6 @@ struct myfs_file_t
     bool is_write{false};
 };
 
-static constexpr uint32_t global_magic_value{0x2A7B3D1FUL};
-static constexpr uint32_t file_magic_value{0xE9C864A7};
-static constexpr uint32_t empty_word_value{0xFFFFFFFFUL};
-static constexpr uint32_t single_file_descriptor_size_bytes{32};
-static constexpr uint32_t myfs_format_marker_size{single_file_descriptor_size_bytes};
-static constexpr uint32_t first_file_start_location{4096};
-static constexpr uint32_t page_size{256};
 
 static constexpr uint8_t MYFS_CREATE_FLAG{1<<0};
 static constexpr uint8_t MYFS_WRONLY_FLAG{1<<1};
@@ -91,6 +94,7 @@ int myfs_mount(myfs_t *myfs, const myfs_config *config);
 
 int myfs_file_open(myfs_t *myfs, const myfs_config& config, myfs_file_t& file, uint8_t * file_id, uint8_t flags);
 int myfs_file_close(myfs_t *myfs, const myfs_config& config, myfs_file_t& file);
+int myfs_file_write(myfs_t *myfs, const myfs_config& config, myfs_file_t& file, void *buffer, myfs_size_t size);
 // int lfs_unmount(lfs_t *lfs);
 // lfs_ssize_t lfs_file_read(lfs_t *lfs, lfs_file_t *file, void *buffer, lfs_size_t size);
 // lfs_dir_read
@@ -98,6 +102,6 @@ int myfs_file_close(myfs_t *myfs, const myfs_config& config, myfs_file_t& file);
 // lfs_file_opencfg
 // lfs_file_read
 // lfs_file_close
-// lfs_file_write
+// lfs_file_write(lfs_t *lfs, lfs_file_t& file, void *buffer, lfs_size_t size);
 
 }

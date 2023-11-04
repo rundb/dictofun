@@ -207,6 +207,21 @@ void launch_test_3(myfs_t& myfs, const myfs_config& myfs_configuration)
         return;
     }
 
+    uint8_t tmp_data[32];
+    for (uint8_t i = 0; i < sizeof(tmp_data); ++i)
+    {
+        tmp_data[i] = i;
+    }
+
+    for (auto i = 0; i < 420; i += sizeof(tmp_data))
+    {
+        const auto write_res = myfs_file_write(&myfs, myfs_configuration, test_file, tmp_data, sizeof(tmp_data));
+        if (write_res < 0)
+        {
+            NRF_LOG_ERROR("memtest: write has failed (pos %d)", i);
+        }
+    }
+
     const auto close_result = myfs_file_close(&myfs, myfs_configuration, test_file);
     if (close_result != 0)
     {
