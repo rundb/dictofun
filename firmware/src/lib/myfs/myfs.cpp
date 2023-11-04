@@ -22,6 +22,7 @@ namespace filesystem
 // ==================== Private functions =================
 int write_myfs_descriptor(myfs_file_descriptor d, const uint32_t descriptor_address, const myfs_config& c);
 int read_myfs_descriptor(myfs_file_descriptor& d, const uint32_t descriptor_address, const myfs_config& c);
+void print_flash_memory_area(const myfs_config& c, uint32_t start_address, uint32_t size);
 
 /// @brief erase the flash memory that belongs to the FS instance and introduce a FS marker at the first word.
 /// @return 0, if operation was successful, error code otherwise (TODO: change to optional/result type)
@@ -92,42 +93,34 @@ int myfs_mount(myfs_t *myfs, const myfs_config *config)
     }
 
     bool is_list_end_found{false};
-    uint32_t current_buffer_read_address{myfs->fs_start_address};
     // offset is relative to the start of the read buffer
-    uint32_t current_description_offset{single_file_descriptor_size_bytes};
+    uint32_t current_descriptor_address{myfs->fs_start_address + single_file_descriptor_size_bytes};
     myfs_file_descriptor prev_d;
     bool is_first_descriptor_processed{false};
     while (!is_list_end_found)
     {
         myfs_file_descriptor d;
-        if (current_description_offset >= local_buffer_size)
+
+        const auto read_res =read_myfs_descriptor(d, current_descriptor_address, *config);
+        if (0 != read_res)
         {
-            current_buffer_read_address += local_buffer_size;
-            const auto read_result_2 = config->read(
-                config, 
-                current_buffer_read_address / config->block_size, 
-                current_buffer_read_address % config->block_size, 
-                tmp, 
-                local_buffer_size);
-            if (read_result_2 != 0)
-            {
-                NRF_LOG_ERROR("mount: read operation during list evaluation has failed");
-                return -1;
-            }
-            current_description_offset = 0;
+            NRF_LOG_ERROR("failed to read file descriptor at %x", current_descriptor_address);
+            return read_res;
         }
-        memcpy(&d, &tmp[current_description_offset], single_file_descriptor_size_bytes);
+        print_flash_memory_area(*config, current_descriptor_address, 16);
         if (d.magic == empty_word_value)
         {
             // the next location for the new file has been discovered
             // TODO: check if previous write has been completed.
             if (is_first_descriptor_processed)
             {
-                const auto next_file_start_address = prev_d.start_address + prev_d.file_size; // todo: pad it to the %256==0
-                myfs->files_count = ((current_buffer_read_address - (myfs->fs_start_address)) + current_description_offset) / single_file_descriptor_size_bytes;
+                NRF_LOG_INFO("prev d 0x%x %d", prev_d.start_address, prev_d.file_size);
+                const auto next_file_start_address = prev_d.start_address + ((prev_d.file_size / page_size) + 1) * page_size; // todo: pad it to the %256==0
+                myfs->files_count = ((current_descriptor_address - (myfs->fs_start_address))) / single_file_descriptor_size_bytes - 1;
                 // TODO: it is set off by 1 or 2, check it at the first round of tests
-                NRF_LOG_INFO("found files end, files_count=%d (LIKELY SET OFF BY 1 OR 2!!!)", myfs->files_count);
+                NRF_LOG_INFO("\tfiles_count=%d", myfs->files_count);
                 myfs->next_file_start_address = next_file_start_address;
+                myfs->next_file_descriptor_address = current_descriptor_address;
                 myfs->is_mounted = true;
                 return 0;
             }
@@ -145,13 +138,13 @@ int myfs_mount(myfs_t *myfs, const myfs_config *config)
         else if (d.magic != file_magic_value)
         {
             // FS is corrupt and needs formatting
-            NRF_LOG_ERROR("mount: file magic value is not found");
+            NRF_LOG_ERROR("mount: file magic value is not found. is fs corrupt?");
             return -1;
         }
 
         prev_d = d;
         is_first_descriptor_processed = true;
-        current_description_offset += single_file_descriptor_size_bytes;
+        current_descriptor_address += single_file_descriptor_size_bytes;
     }
 
 
@@ -172,6 +165,31 @@ void print_buffer(uint8_t * buf, uint32_t size)
             buf[i+8], buf[i+9], buf[i+10], buf[i+11], buf[i+12], buf[i+13], buf[i+14], buf[i+15]
         );
         NRF_LOG_INFO("%s", str);
+        vTaskDelay(50);
+    }
+}
+
+void print_flash_memory_area(const myfs_config& c, uint32_t start_address, uint32_t size)
+{
+    // TODO: remove this function after maturing the file system
+    static constexpr uint32_t bytes_per_read{16};
+    static constexpr uint32_t single_line_length{12/* hex addr + space */ + bytes_per_read * 3  + 1};
+    static uint8_t tmp[bytes_per_read];
+    static char tmp_str[single_line_length]{0};
+    NRF_LOG_INFO("dump memory 0x%x:0x%x", start_address, start_address + size);
+    for (auto i = start_address; i < start_address + size; i += bytes_per_read)
+    {
+        const auto block = i / c.block_size;
+        const auto off = i % c.block_size;
+        c.read(&c, block, off, tmp, size);
+        int id = 0;
+        id += snprintf(tmp_str, single_line_length - id, "0x%x:", i);
+        for (auto j = 0; j < bytes_per_read; ++j)
+        {
+            id += snprintf(&tmp_str[id], single_line_length - id, "%02x ", tmp[j]);
+        }
+        tmp_str[single_line_length - 1] = '\0';
+        NRF_LOG_INFO("%s", tmp_str);
         vTaskDelay(50);
     }
 }
@@ -203,20 +221,9 @@ int write_myfs_descriptor(myfs_file_descriptor d, const uint32_t descriptor_addr
 
 int read_myfs_descriptor(myfs_file_descriptor& d, const uint32_t descriptor_address, const myfs_config& c)
 {
-    // uint8_t tmp[page_size];
-    // const auto page_address = (descriptor_address / page_size) * page_size;
     const auto block_id = descriptor_address / c.block_size;
     const auto block_offset = descriptor_address % c.block_size;
-    // const auto read_res = c.read(&c, block_id, block_offset, tmp, page_size);
-    // if (read_res != 0)
-    // {
-    //     NRF_LOG_ERROR("myfs descr write: readback failed");
-    //     return read_res;
-    // }
-    // const auto descriptor_offset_to_page = descriptor_address - page_address;
-    // memcpy(&d, &tmp[descriptor_offset_to_page], sizeof(d));
-    
-    uint8_t tmp[single_file_descriptor_size_bytes];
+
     const auto read_res = c.read(&c, block_id, block_offset, &d, single_file_descriptor_size_bytes);
     if (read_res != 0)
     {
@@ -256,22 +263,69 @@ int myfs_file_open(myfs_t *myfs, const myfs_config& config, myfs_file_t& file, u
         if (0 != descr_prog_result)
         {
             NRF_LOG_ERROR("myfs: descr prog failed");
-            return descr_prog_result;
+            return -5;
         }
 
         // 3. fill in required data into the file object
         file.flags = flags;
         file.is_open = true;
         file.is_write = true;
-        memcpy(file.id, file_id, d.file_id_size);
+        file.size = 0;
+        memcpy(file.id, file_id, myfs_file_t::id_size);
+
+        // 4. Debug printout of the configured descriptor
+        print_flash_memory_area(config, myfs->next_file_descriptor_address, single_file_descriptor_size_bytes);
         return 0;
     }
-
     return -1;
 }
 
+// close operation updates the descriptor contained in flash memory with value of size and (maybe later) CRC value
 int myfs_file_close(myfs_t *myfs, const myfs_config& config, myfs_file_t& file)
 {
+    if (myfs == nullptr) 
+    {
+        return -1;
+    }
+
+    if (!file.is_open)
+    {
+        return -1;
+    }
+
+    if (file.is_write)
+    {   
+        myfs_file_descriptor d;
+        const auto read_res = read_myfs_descriptor(d, myfs->next_file_descriptor_address, config);
+        if (0 != read_res)
+        {
+            return read_res;
+        }
+        if (d.magic != file_magic_value)
+        {
+            return -1;
+        }
+        d.file_size = file.size;
+        const auto prog_res = write_myfs_descriptor(d, myfs->next_file_descriptor_address, config);
+        if (0 != prog_res)
+        {
+            return prog_res;
+        }
+
+        const uint32_t next_descriptor_position = myfs->next_file_descriptor_address + single_file_descriptor_size_bytes;
+        const uint32_t next_file_start_address = myfs->next_file_start_address + ((file.size / page_size) + 1) * page_size;
+        NRF_LOG_INFO("closed file. next descr(0x%x), next addr (0x%x), size(%d)", next_descriptor_position, next_file_start_address, file.size);
+
+        vTaskDelay(50);
+        print_flash_memory_area(config, myfs->next_file_descriptor_address, single_file_descriptor_size_bytes);
+
+        myfs->next_file_descriptor_address = next_descriptor_position;
+        myfs->next_file_start_address = next_file_start_address;
+        myfs->files_count++;
+        
+        return 0;
+    }
+
     return -1;
 }
 

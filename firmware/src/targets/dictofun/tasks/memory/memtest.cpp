@@ -200,11 +200,20 @@ void launch_test_3(myfs_t& myfs, const myfs_config& myfs_configuration)
     ::filesystem::myfs_file_t test_file;
     uint8_t test_file_id[8]{0, 0, 23, 11, 1, 21, 30, 12};
     const auto create_result = myfs_file_open(&myfs, myfs_configuration, test_file, test_file_id, ::filesystem::MYFS_CREATE_FLAG | ::filesystem::MYFS_WRONLY_FLAG);
-    if (create_result < 0)
+
+    if (create_result != 0)
     {
-        NRF_LOG_ERROR("mem: failed to open file for write");
+        NRF_LOG_ERROR("mem: failed to open file for write (err %d)", create_result);
         return;
     }
+
+    const auto close_result = myfs_file_close(&myfs, myfs_configuration, test_file);
+    if (close_result != 0)
+    {
+        NRF_LOG_ERROR("mem: failed to close file after write (err %d)", close_result);
+        return;
+    }
+
     // memset(&memtest_file_config, 0, sizeof(memtest_file_config));
     // memtest_file_config.buffer = memtest_buffer;
     // memtest_file_config.attr_count = 0;

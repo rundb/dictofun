@@ -41,8 +41,9 @@ struct __attribute__((__packed__)) myfs_file_descriptor
 
 struct myfs_file_t
 {
+    static constexpr uint8_t id_size{myfs_file_descriptor::file_id_size};
     uint8_t flags;
-    uint8_t * id;
+    uint8_t id[id_size];
     uint32_t size;
     bool is_open{false};
     bool is_write{false};
