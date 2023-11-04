@@ -11,6 +11,8 @@ using myfs_size_t = uint32_t;
 // I will do my best to reuse LFS interfaces.
 // Assumptions:
 // - only one file can be open at a time
+// - uniqueness of the file names is not guaranteed
+// - file ids are always only 8 bytes
 namespace filesystem
 {
 static constexpr uint32_t global_magic_value{0x2A7B3D1FUL};

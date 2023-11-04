@@ -196,7 +196,7 @@ void launch_test_3(myfs_t& myfs, const myfs_config& myfs_configuration)
     }
 
     // ============= Step 2: create a test record, open file and write it
-    NRF_LOG_INFO("mem: creating first file");
+    NRF_LOG_INFO("mem: creating 2 files");
     ::filesystem::myfs_file_t test_file;
     uint8_t test_file_id[8]{0, 0, 23, 11, 1, 21, 30, 12};
     const auto create_result = myfs_file_open(&myfs, myfs_configuration, test_file, test_file_id, ::filesystem::MYFS_CREATE_FLAG | ::filesystem::MYFS_WRONLY_FLAG);
@@ -226,6 +226,29 @@ void launch_test_3(myfs_t& myfs, const myfs_config& myfs_configuration)
     if (close_result != 0)
     {
         NRF_LOG_ERROR("mem: failed to close file after write (err %d)", close_result);
+        return;
+    }
+
+    test_file_id[0]++;
+
+    const auto create_result_2 = myfs_file_open(&myfs, myfs_configuration, test_file, test_file_id, ::filesystem::MYFS_CREATE_FLAG | ::filesystem::MYFS_WRONLY_FLAG);
+
+    if (create_result_2 != 0)
+    {
+        NRF_LOG_ERROR("memtest: failed to create 2nd file (err %d)", create_result_2);
+        return;
+    }
+
+    const auto write_res = myfs_file_write(&myfs, myfs_configuration, test_file, tmp_data, sizeof(tmp_data));
+    if (write_res < 0)
+    {
+        NRF_LOG_ERROR("memtest: write 2 has failed (err %d)", write_res);
+    }
+
+    const auto close_res_2 = myfs_file_close(&myfs, myfs_configuration, test_file);
+    if (close_res_2 != 0)
+    {
+        NRF_LOG_ERROR("mem: failed to close file 2 after write (err %d)", close_res_2);
         return;
     }
 
