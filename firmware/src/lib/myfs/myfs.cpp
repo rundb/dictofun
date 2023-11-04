@@ -180,7 +180,7 @@ int myfs_file_open(myfs_t *myfs, const myfs_config& config, myfs_file_t& file, u
         if (0 != descr_prog_result)
         {
             NRF_LOG_ERROR("myfs: descr prog failed");
-            return -5;
+            return -1;
         }
 
         // 3. fill in required data into the file object
@@ -188,14 +188,58 @@ int myfs_file_open(myfs_t *myfs, const myfs_config& config, myfs_file_t& file, u
         file.is_open = true;
         file.is_write = true;
         file.size = 0;
-        myfs->write_buffer_pointer = reinterpret_cast<uint8_t*>(config.prog_buffer);
-        myfs->write_buffer_size = config.prog_size;
-        myfs->write_buffer_position = 0;
+        myfs->is_file_open = true;
+        myfs->buffer_pointer = reinterpret_cast<uint8_t*>(config.prog_buffer);
+        myfs->buffer_size = config.prog_size;
+        myfs->buffer_position = 0;
         memcpy(file.id, file_id, myfs_file_t::id_size);
 
         // 4. Debug printout of the configured descriptor
         print_flash_memory_area(config, myfs->next_file_descriptor_address, single_file_descriptor_size_bytes);
         return 0;
+    }
+    else if ((flags & MYFS_READ_FLAG) > 0)
+    {
+        // run through the filesystem and compare saved file IDs with the requested one
+        bool is_file_found{false};
+        uint32_t current_descriptor_address{myfs->fs_start_address + single_file_descriptor_size_bytes};
+        while (!is_file_found)
+        {
+            myfs_file_descriptor d;
+            const auto descr_read_result = read_myfs_descriptor(d, current_descriptor_address, config);
+            if (0 != descr_read_result)
+            {
+                NRF_LOG_ERROR("myfs:descr read failed");
+                return -1;
+            }
+            if (d.magic != file_magic_value)
+            {
+                NRF_LOG_WARNING("file not found, reached the end of the FS");
+                return -1;
+            }
+            if (memcmp(d.file_id, file_id, d.file_id_size) == 0)
+            {
+                // target file was found
+                file.flags = flags;
+                file.is_open = true;
+                file.is_write = false;
+                file.size = d.file_size;
+                file.read_pos = 0;
+                myfs->is_file_open = true;
+                myfs->buffer_pointer = reinterpret_cast<uint8_t *>(config.prog_buffer);
+                myfs->buffer_size = config.prog_size;
+                myfs->buffer_position = 0;
+                is_file_found = true;
+            }
+            else
+            {
+                current_descriptor_address += single_file_descriptor_size_bytes;
+            }
+        }
+        if (is_file_found)
+        {
+            return 0;
+        }
     }
     return -1;
 }
@@ -235,14 +279,14 @@ int myfs_file_close(myfs_t *myfs, const myfs_config& config, myfs_file_t& file)
         }
         const auto block = prog_address / config.block_size;
         const auto off = prog_address % config.block_size;
-        memset(&myfs->write_buffer_pointer[myfs->write_buffer_position], 0x00, myfs->write_buffer_size - myfs->write_buffer_position);
-        const auto prog_result = config.prog(&config, block, off, myfs->write_buffer_pointer, myfs->write_buffer_size);
+        memset(&myfs->buffer_pointer[myfs->buffer_position], 0x00, myfs->buffer_size - myfs->buffer_position);
+        const auto prog_result = config.prog(&config, block, off, myfs->buffer_pointer, myfs->buffer_size);
         if (prog_result != 0)
         {
             // it's not a critical error, we just lose data, but we still can proceed
             NRF_LOG_ERROR("myfs: failed to flash buffer");
         }
-        file.size += myfs->write_buffer_position;
+        file.size += myfs->buffer_position;
 
         d.file_size = file.size;
         const auto prog_res = write_myfs_descriptor(d, myfs->next_file_descriptor_address, config);
@@ -262,7 +306,15 @@ int myfs_file_close(myfs_t *myfs, const myfs_config& config, myfs_file_t& file)
         myfs->next_file_descriptor_address = next_descriptor_position;
         myfs->next_file_start_address = next_file_start_address;
         myfs->files_count++;
+        myfs->is_file_open = false;
+        file.is_open = false;
         
+        return 0;
+    }
+    else 
+    {
+        file.is_open = false;
+        myfs->is_file_open = false;
         return 0;
     }
 
@@ -271,20 +323,20 @@ int myfs_file_close(myfs_t *myfs, const myfs_config& config, myfs_file_t& file)
 
 int myfs_file_write(myfs_t *myfs, const myfs_config& config, myfs_file_t& file, void *buffer, myfs_size_t size)
 {
-    if (nullptr == myfs || nullptr == buffer)
+    if (nullptr == myfs || nullptr == buffer || !file.is_open || !file.is_write)
     {
         return -1;
     }
     // handle case of data fitting into the buffer
-    const auto leftover_space = myfs->write_buffer_size - myfs->write_buffer_position;
+    const auto leftover_space = myfs->buffer_size - myfs->buffer_position;
     if (leftover_space > size)
     {
-        memcpy(&myfs->write_buffer_pointer[myfs->write_buffer_position], buffer, size);
-        myfs->write_buffer_position += size;
+        memcpy(&myfs->buffer_pointer[myfs->buffer_position], buffer, size);
+        myfs->buffer_position += size;
         return 0;
     }
     // fill in the buffer until full, then flush onto the disk
-    memcpy(&myfs->write_buffer_pointer[myfs->write_buffer_position], buffer, leftover_space);
+    memcpy(&myfs->buffer_pointer[myfs->buffer_position], buffer, leftover_space);
     const auto prog_address = myfs->next_file_start_address + file.size;
     // should be page-aligned at this point
     if (prog_address % page_size != 0)
@@ -294,7 +346,7 @@ int myfs_file_write(myfs_t *myfs, const myfs_config& config, myfs_file_t& file, 
     }
     const auto block = prog_address / config.block_size;
     const auto off = prog_address % config.block_size;
-    const auto prog_result = config.prog(&config, block, off, myfs->write_buffer_pointer, myfs->write_buffer_size);
+    const auto prog_result = config.prog(&config, block, off, myfs->buffer_pointer, myfs->buffer_size);
     if (prog_result != 0)
     {
         // it's not a critical error, we just lose data, but we still can proceed
@@ -303,19 +355,29 @@ int myfs_file_write(myfs_t *myfs, const myfs_config& config, myfs_file_t& file, 
 
     // copy the rest of the data into the temporary buffer
     const auto leftover_data_size = size - leftover_space;
-    if (leftover_data_size > myfs->write_buffer_size)
+    if (leftover_data_size > myfs->buffer_size)
     {
         NRF_LOG_ERROR("myfs write err: it's uncapable of writing >256 bytes per run");
         return -1;
     }
-    memcpy(myfs->write_buffer_pointer, &(reinterpret_cast<uint8_t*>(buffer))[leftover_space], leftover_data_size);
+    memcpy(myfs->buffer_pointer, &(reinterpret_cast<uint8_t*>(buffer))[leftover_space], leftover_data_size);
 
-    myfs->write_buffer_position = leftover_data_size;
+    myfs->buffer_position = leftover_data_size;
 
     // file size only updates together with buffer flushing and follows it's size
-    file.size += myfs->write_buffer_size;
+    file.size += myfs->buffer_size;
 
     return 0;
+}
+
+int myfs_file_read(myfs_t *myfs, const myfs_config& config, myfs_file_t& file, void *buffer, myfs_size_t size)
+{
+    if (nullptr == myfs || nullptr == buffer || !file.is_open || file.is_write)
+    {
+        return -1;
+    }
+    
+    return -1;
 }
 
 

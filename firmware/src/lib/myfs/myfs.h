@@ -31,9 +31,9 @@ struct myfs_t
     uint32_t fs_start_address{0};
     bool is_file_open{false};
     uint32_t next_file_descriptor_address{0};
-    uint8_t * write_buffer_pointer{nullptr};
-    uint32_t write_buffer_size{page_size};
-    uint32_t write_buffer_position{0};
+    uint8_t * buffer_pointer{nullptr};
+    uint32_t buffer_size{page_size};
+    uint32_t buffer_position{0};
 };
 
 /// Bytes 0..3: magic, corresponding to a created file
@@ -57,13 +57,14 @@ struct myfs_file_t
     uint8_t flags;
     uint8_t id[id_size];
     uint32_t size;
+    uint32_t read_pos;
     bool is_open{false};
     bool is_write{false};
 };
 
 
 static constexpr uint8_t MYFS_CREATE_FLAG{1<<0};
-static constexpr uint8_t MYFS_WRONLY_FLAG{1<<1};
+static constexpr uint8_t MYFS_READ_FLAG{1<<1};
 
 struct myfs_config {
     void *context;
@@ -97,6 +98,7 @@ int myfs_mount(myfs_t *myfs, const myfs_config *config);
 int myfs_file_open(myfs_t *myfs, const myfs_config& config, myfs_file_t& file, uint8_t * file_id, uint8_t flags);
 int myfs_file_close(myfs_t *myfs, const myfs_config& config, myfs_file_t& file);
 int myfs_file_write(myfs_t *myfs, const myfs_config& config, myfs_file_t& file, void *buffer, myfs_size_t size);
+int myfs_file_read(myfs_t *myfs, const myfs_config& config, myfs_file_t& file, void *buffer, myfs_size_t size);
 // int lfs_unmount(lfs_t *lfs);
 // lfs_ssize_t lfs_file_read(lfs_t *lfs, lfs_file_t *file, void *buffer, lfs_size_t size);
 // lfs_dir_read

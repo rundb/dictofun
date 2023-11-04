@@ -199,7 +199,7 @@ void launch_test_3(myfs_t& myfs, const myfs_config& myfs_configuration)
     NRF_LOG_INFO("mem: creating 2 files");
     ::filesystem::myfs_file_t test_file;
     uint8_t test_file_id[8]{0, 0, 23, 11, 1, 21, 30, 12};
-    const auto create_result = myfs_file_open(&myfs, myfs_configuration, test_file, test_file_id, ::filesystem::MYFS_CREATE_FLAG | ::filesystem::MYFS_WRONLY_FLAG);
+    const auto create_result = myfs_file_open(&myfs, myfs_configuration, test_file, test_file_id, ::filesystem::MYFS_CREATE_FLAG);
 
     if (create_result != 0)
     {
@@ -231,7 +231,7 @@ void launch_test_3(myfs_t& myfs, const myfs_config& myfs_configuration)
 
     test_file_id[0]++;
 
-    const auto create_result_2 = myfs_file_open(&myfs, myfs_configuration, test_file, test_file_id, ::filesystem::MYFS_CREATE_FLAG | ::filesystem::MYFS_WRONLY_FLAG);
+    const auto create_result_2 = myfs_file_open(&myfs, myfs_configuration, test_file, test_file_id, ::filesystem::MYFS_CREATE_FLAG);
 
     if (create_result_2 != 0)
     {
@@ -249,6 +249,20 @@ void launch_test_3(myfs_t& myfs, const myfs_config& myfs_configuration)
     if (close_res_2 != 0)
     {
         NRF_LOG_ERROR("mem: failed to close file 2 after write (err %d)", close_res_2);
+        return;
+    }
+
+    const auto open_result_1 = myfs_file_open(&myfs, myfs_configuration, test_file, test_file_id, ::filesystem::MYFS_READ_FLAG);
+    if (open_result_1 != 0)
+    {
+        NRF_LOG_ERROR("mem: failed to open file 1 for read (err %d)", open_result_1);
+        return;
+    }
+
+    const auto close_res_3 = myfs_file_close(&myfs, myfs_configuration, test_file);
+    if (close_res_3 != 0)
+    {
+        NRF_LOG_ERROR("mem: failed to close file 3 after read (err %d)", close_res_3);
         return;
     }
 
