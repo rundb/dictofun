@@ -7,6 +7,7 @@
 #include "nrf_log.h"
 #include <algorithm>
 #include <cstring>
+#include "myfs.h"
 
 namespace memory
 {
@@ -26,58 +27,50 @@ static uint32_t _total_files_left{0};
 
 static uint32_t get_files_count(lfs_t& lfs);
 
-result::Result init_littlefs(lfs_t& lfs, const lfs_config& config)
+result::Result init_fs(::filesystem::myfs_t& fs, const ::filesystem::myfs_config& config)
 {
-    auto err = lfs_mount(&lfs, &config);
+    auto err = myfs_mount(&fs, &config);
     if(err != 0)
     {
-        // NRF_LOG_WARNING("mem: formatting FS");
-        // err = lfs_format(&lfs, &config);
-        // if(err != 0)
-        // {
-        //     NRF_LOG_ERROR("mem: failed to format LFS (%d)", err);
-        //     return result::Result::ERROR_GENERAL;
-        // }
-        // err = lfs_mount(&lfs, &config);
-        // if(err != 0)
-        // {
-        //     NRF_LOG_ERROR("mem: failed to mount LFS after formatting");
-        //     return result::Result::ERROR_GENERAL;
-        // }
-        NRF_LOG_ERROR("lfs format failed and won't proceed, as MyFS is in development");
-        return result::Result::ERROR_NOT_IMPLEMENTED;
+        NRF_LOG_WARNING("mem: formatting FS");
+        err = myfs_format(&fs, &config);
+        if(err != 0)
+        {
+            NRF_LOG_ERROR("mem: failed to format MyFS (%d)", err);
+            return result::Result::ERROR_GENERAL;
+        }
+        err = myfs_mount(&fs, &config);
+        if(err != 0)
+        {
+            NRF_LOG_ERROR("mem: failed to mount MyFS after formatting");
+            return result::Result::ERROR_GENERAL;
+        }
     }
 
-    const auto dir_open_result = lfs_dir_open(&lfs, &_active_dir, ".");
-    if(dir_open_result != 0)
-    {
-        NRF_LOG_ERROR("failed to open dir ./");
-        return result::Result::ERROR_GENERAL;
-    }
     _is_files_list_next_needed = false;
     _is_file_open = false;
 
     return result::Result::OK;
 }
 
-result::Result deinit_littlefs(lfs_t& lfs)
+result::Result deinit_fs(::filesystem::myfs_t& fs)
 {
-    if(_is_file_open)
-    {
-        const auto close_result = close_file(lfs, nullptr);
-        if(result::Result::OK != close_result)
-        {
-            NRF_LOG_ERROR("failed to close active file at deinit stage");
-        }
-        _is_file_open = false;
-    }
-    const auto unmount_result = lfs_unmount(&lfs);
-    if(unmount_result < 0)
-    {
-        NRF_LOG_ERROR("failed to unmount LFS (%d)", unmount_result);
-        return result::Result::ERROR_GENERAL;
-    }
-    return result::Result::OK;
+    // if(_is_file_open)
+    // {
+    //     const auto close_result = close_file(lfs, nullptr);
+    //     if(result::Result::OK != close_result)
+    //     {
+    //         NRF_LOG_ERROR("failed to close active file at deinit stage");
+    //     }
+    //     _is_file_open = false;
+    // }
+    // const auto unmount_result = lfs_unmount(&lfs);
+    // if(unmount_result < 0)
+    // {
+    //     NRF_LOG_ERROR("failed to unmount LFS (%d)", unmount_result);
+    //     return result::Result::ERROR_GENERAL;
+    // }
+    return result::Result::ERROR_NOT_IMPLEMENTED;
 }
 
 result::Result get_files_list(lfs_t& lfs,

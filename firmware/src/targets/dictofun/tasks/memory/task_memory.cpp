@@ -152,8 +152,8 @@ void task_memory(void* context_ptr)
     memory::block_device::myfs_register_flash_device(
         &flash, flash_sector_size, flash_page_size, flash_total_size);
 
-    // const auto init_result = memory::filesystem::init_littlefs(lfs, lfs_configuration);
-    const auto init_result = result::Result::ERROR_GENERAL;
+    const auto init_result = memory::filesystem::init_fs(myfs, myfs_configuration);
+
     if(result::Result::OK != init_result)
     {
         NRF_LOG_ERROR("mem: failed to mount littlefs");
@@ -404,8 +404,8 @@ void process_request_from_state(Context& context, const Command command_id, uint
 {
     switch(command_id)
     {
-    case Command::MOUNT_LFS: {
-        const auto init_result = memory::filesystem::init_littlefs(lfs, lfs_configuration);
+    case Command::MOUNT_FS: {
+        const auto init_result = memory::filesystem::init_fs(myfs, myfs_configuration);
         if(result::Result::OK != init_result)
         {
             NRF_LOG_ERROR("mem: failed to mount littlefs");
@@ -450,7 +450,7 @@ void process_request_from_state(Context& context, const Command command_id, uint
         break;
     }
     case Command::SELECT_OWNER_BLE: {
-        const auto deinit_result = memory::filesystem::deinit_littlefs(lfs);
+        const auto deinit_result = memory::filesystem::deinit_fs(myfs);
         if(result::Result::OK != deinit_result)
         {
             NRF_LOG_ERROR("lfs: deinit failed");
@@ -458,7 +458,7 @@ void process_request_from_state(Context& context, const Command command_id, uint
             xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
             break;
         }
-        const auto init_result = memory::filesystem::init_littlefs(lfs, lfs_configuration);
+        const auto init_result = memory::filesystem::init_fs(myfs, myfs_configuration);
         if(result::Result::OK != init_result)
         {
             NRF_LOG_ERROR("lfs: init failed");
@@ -474,7 +474,7 @@ void process_request_from_state(Context& context, const Command command_id, uint
         break;
     }
     case Command::SELECT_OWNER_AUDIO: {
-        const auto deinit_result = memory::filesystem::deinit_littlefs(lfs);
+        const auto deinit_result = memory::filesystem::deinit_fs(myfs);
         if(result::Result::OK != deinit_result)
         {
             NRF_LOG_ERROR("lfs: deinit failed");
@@ -482,7 +482,7 @@ void process_request_from_state(Context& context, const Command command_id, uint
             xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
             break;
         }
-        const auto init_result = memory::filesystem::init_littlefs(lfs, lfs_configuration);
+        const auto init_result = memory::filesystem::init_fs(myfs, myfs_configuration);
         if(result::Result::OK != init_result)
         {
             NRF_LOG_ERROR("lfs: init failed");
@@ -516,7 +516,7 @@ void process_request_from_state(Context& context, const Command command_id, uint
         launch_test_5(flash, arg0, arg1);
         break;
     }
-    case Command::UNMOUNT_LFS: {
+    case Command::UNMOUNT_FS: {
         NRF_LOG_ERROR("mem: lfs unmount is not implemented");
         break;
     }
@@ -563,7 +563,7 @@ void process_request_from_state(Context& context, const Command command_id, uint
         {
             NRF_LOG_INFO("task memory: chip erase took %d ms", end_tick - start_tick);
         }
-        const auto init_result = memory::filesystem::init_littlefs(lfs, lfs_configuration);
+        const auto init_result = memory::filesystem::init_fs(myfs, myfs_configuration);
         if(result::Result::OK != init_result)
         {
             NRF_LOG_ERROR("mem: failed to mount littlefs");

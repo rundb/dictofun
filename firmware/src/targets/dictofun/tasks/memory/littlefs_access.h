@@ -7,13 +7,15 @@
 #include "result.h"
 #include <stdint.h>
 
+#include "myfs.h"
+
 namespace memory
 {
 namespace filesystem
 {
 
-result::Result init_littlefs(lfs_t& lfs, const lfs_config& config);
-result::Result deinit_littlefs(lfs_t& lfs);
+result::Result init_fs(::filesystem::myfs_t& fs, const ::filesystem::myfs_config& config);
+result::Result deinit_fs(::filesystem::myfs_t& fs);
 result::Result close_file(lfs_t& lfs, const char* name);
 
 // Following methods face into the BLE part of the system
