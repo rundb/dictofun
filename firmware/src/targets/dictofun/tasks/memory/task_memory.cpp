@@ -248,7 +248,8 @@ void process_request_from_ble(Context& context,
         uint32_t total_files_list_data_size{0};
         memory::TimeProfile tp("get_files_list");
         const auto ls_result =
-            memory::filesystem::get_files_list(lfs,
+            memory::filesystem::get_files_list(myfs,
+                                               myfs_configuration,
                                                total_files_list_data_size,
                                                data_queue_elem.data,
                                                ble::fts::FtsService::get_file_list_char_size());
@@ -268,7 +269,8 @@ void process_request_from_ble(Context& context,
 
     case ble::CommandToMemory::GET_FILES_LIST_NEXT: {
         const auto ls_result = memory::filesystem::get_files_list_next(
-            lfs,
+            myfs,
+            myfs_configuration,
             data_queue_elem.size,
             data_queue_elem.data,
             ble::fts::FtsService::get_file_list_char_size());
@@ -415,7 +417,7 @@ void process_request_from_state(Context& context, const Command command_id, uint
     }
     case Command::CREATE_RECORD: {
         memory::generate_next_file_name(active_record_name, context);
-        memory::convert_filename_to_myfs_id(active_record_name, active_record_id);
+        memory::filesystem::convert_filename_to_myfs_id(active_record_name, active_record_id);
         {
             memory::TimeProfile tp("create_record");
             const auto create_result = memory::filesystem::create_file(myfs, myfs_configuration, active_record_id);
@@ -590,21 +592,6 @@ void generate_next_file_name_fallback(char* name)
     memcpy(name, fallback_name, sizeof(fallback_name));
 }
 
-void convert_filename_to_myfs_id(char* name, uint8_t * file_id)
-{
-    if (nullptr == file_id || nullptr == name)
-    {
-        return;
-    }
-    for (auto i = 0; i < ::filesystem::myfs_file_t::id_size; ++i)
-    {
-        char tmp[3];
-        tmp[0] = name[2 * i];
-        tmp[1] = name[2 * i + 1];
-        tmp[2] = '\0';
-        file_id[i] = static_cast<uint8_t>(strtol(tmp, nullptr, 10));
-    }
-}
 
 void generate_next_file_name(char* name, const Context& context)
 {

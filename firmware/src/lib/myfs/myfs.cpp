@@ -410,6 +410,44 @@ int myfs_unmount(myfs_t *myfs, const myfs_config& config)
     return 0;
 }
 
+int myfs_get_files_count(myfs_t& myfs)
+{
+    return myfs.files_count;
+}
+
+int myfs_rewind_dir(myfs_t& myfs)
+{
+    if (!myfs.is_mounted)
+    {
+        return -1;
+    }
+    myfs.current_id_search_pos = single_file_descriptor_size_bytes;
+    return 0;
+}
+
+int myfs_get_next_id(myfs_t& myfs, const myfs_config& config, uint8_t * file_id)
+{
+    if (nullptr == file_id)
+    {
+        return -1;
+    }
+
+    myfs_file_descriptor d;
+    const auto read_res = read_myfs_descriptor(d, myfs.current_id_search_pos, config);
+    if (0 != read_res)
+    {
+        NRF_LOG_ERROR("myfs: failed to read file descriptor @ %x", myfs.current_id_search_pos);
+        return -1;
+    }
+    if (d.magic != file_magic_value)
+    {
+        // end of file system has been reached
+        return 0;
+    }
+    memcpy(file_id, d.file_id, myfs_file_t::id_size);
+    return 1;
+}
+
 void print_buffer(uint8_t * buf, uint32_t size)
 {
     NRF_LOG_INFO("memory dump (%d bytes)", size);

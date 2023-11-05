@@ -25,8 +25,6 @@ static bool _is_files_list_next_needed{false};
 static constexpr uint32_t invalid_files_count{0xFEFEFEFDUL};
 static uint32_t _total_files_left{0};
 
-static uint32_t get_files_count(lfs_t& lfs);
-
 result::Result init_fs(::filesystem::myfs_t& fs, const ::filesystem::myfs_config& config)
 {
     auto err = myfs_mount(&fs, &config);
@@ -88,7 +86,8 @@ result::Result close_file(::filesystem::myfs_t& fs, const ::filesystem::myfs_con
 }
 
 
-result::Result get_files_list(lfs_t& lfs,
+result::Result get_files_list(::filesystem::myfs_t& fs,
+                              const ::filesystem::myfs_config& config,
                               uint32_t& total_data_size_bytes,
                               uint8_t* buffer,
                               const uint32_t max_data_size)
@@ -101,30 +100,22 @@ result::Result get_files_list(lfs_t& lfs,
     _is_files_list_next_needed = false;
 
     // First perform a dry run, to get the idea of how many files we've got in the FS
-    const auto total_files_count = get_files_count(lfs);
-    if(total_files_count == invalid_files_count)
-    {
-        return result::Result::ERROR_GENERAL;
-    }
+    const auto total_files_count = myfs_get_files_count(fs);
 
-    const auto rewind_result = lfs_dir_rewind(&lfs, &_active_dir);
-    if(rewind_result < 0)
-    {
-        NRF_LOG_ERROR("rewind has failed (%d)", rewind_result);
-        return result::Result::ERROR_GENERAL;
-    }
-
-    lfs_info info;
     static constexpr uint32_t single_entry_size{sizeof(ble::fts::file_id_type)};
-    // FIXME: need to properly think of how to organize buffers
+    
     static const uint32_t max_files_fitting_in_buffer{(max_data_size - 8) / single_entry_size};
     uint8_t buffer_pos{0};
     uint32_t file_ids_count{0};
 
+    myfs_rewind_dir(fs);
+    uint8_t file_id_buffer[::filesystem::myfs_file_t::id_size + 1]{0};
+    char file_name_buffer[single_entry_size + 1]{0};
+
     // TODO: check off-by-1 chance here (if there is -1 file ID in the list)
     while(file_ids_count < max_files_fitting_in_buffer)
     {
-        const auto dir_read_res = lfs_dir_read(&lfs, &_active_dir, &info);
+        const auto dir_read_res = myfs_get_next_id(fs, config, file_id_buffer);
         if(dir_read_res < 0)
         {
             NRF_LOG_ERROR("dir read operation failed (%d)", dir_read_res);
@@ -136,23 +127,10 @@ result::Result get_files_list(lfs_t& lfs,
             break;
         }
 
-        switch(info.type)
-        {
-        case LFS_TYPE_REG: {
-            const uint32_t name_len = strlen(info.name);
-            memcpy(&buffer[buffer_pos], info.name, std::min(name_len, single_entry_size));
-            if(name_len < single_entry_size)
-            {
-                memset(&buffer[buffer_pos + name_len], 0, single_entry_size - name_len);
-            }
-            buffer_pos += single_entry_size;
-            ++file_ids_count;
-            break;
-        }
-        default: {
-            break;
-        }
-        }
+        convert_myfs_id_to_filename(file_id_buffer, file_name_buffer);
+        memcpy(&buffer[buffer_pos], file_name_buffer, single_entry_size);
+        ++file_ids_count;
+        buffer_pos += single_entry_size;
     }
 
     NRF_LOG_DEBUG("req files list: ids %d, max %d", file_ids_count, total_files_count);
@@ -167,24 +145,29 @@ result::Result get_files_list(lfs_t& lfs,
 }
 
 result::Result
-get_files_list_next(lfs_t& lfs, uint32_t& data_size_bytes, uint8_t* buffer, uint32_t max_data_size)
+get_files_list_next(::filesystem::myfs_t& fs,
+                    const ::filesystem::myfs_config& config,
+                    uint32_t& data_size_bytes,
+                    uint8_t* buffer,
+                    const uint32_t max_data_size)
 {
     if(!_is_files_list_next_needed || buffer == nullptr)
     {
         return result::Result::ERROR_GENERAL;
     }
 
-    lfs_info info;
     static constexpr uint32_t single_entry_size{sizeof(ble::fts::file_id_type)};
     static const uint32_t max_files_fitting_in_buffer{max_data_size / single_entry_size};
 
     uint8_t buffer_pos{0};
     uint32_t file_ids_count{0};
+    uint8_t file_id_buffer[::filesystem::myfs_file_t::id_size + 1]{0};
+    char file_name_buffer[single_entry_size + 1]{0};
 
     // TODO: check off-by-1 chance here (if there is -1 file ID in the list)
     while(file_ids_count < max_files_fitting_in_buffer)
     {
-        const auto dir_read_res = lfs_dir_read(&lfs, &_active_dir, &info);
+        const auto dir_read_res = myfs_get_next_id(fs, config, file_id_buffer);
         if(dir_read_res < 0)
         {
             NRF_LOG_ERROR("dir read operation failed (%d)", dir_read_res);
@@ -196,23 +179,10 @@ get_files_list_next(lfs_t& lfs, uint32_t& data_size_bytes, uint8_t* buffer, uint
             break;
         }
 
-        switch(info.type)
-        {
-        case LFS_TYPE_REG: {
-            const uint32_t name_len = strlen(info.name);
-            memcpy(&buffer[buffer_pos], info.name, std::min(name_len, single_entry_size));
-            if(name_len < single_entry_size)
-            {
-                memset(&buffer[buffer_pos + name_len], 0, single_entry_size - name_len);
-            }
-            buffer_pos += single_entry_size;
-            ++file_ids_count;
-            break;
-        }
-        default: {
-            break;
-        }
-        }
+        convert_myfs_id_to_filename(file_id_buffer, file_name_buffer);
+        memcpy(&buffer[buffer_pos], file_name_buffer, single_entry_size);
+        ++file_ids_count;
+        buffer_pos += single_entry_size;
     }
 
     if(file_ids_count < _total_files_left)
@@ -393,53 +363,44 @@ result::Result write_data(::filesystem::myfs_t& fs, const ::filesystem::myfs_con
         NRF_LOG_ERROR("failed to write data to the active file");
         return result::Result::ERROR_GENERAL;
     }
-    if(static_cast<uint32_t>(write_result) != data_size)
-    {
-        NRF_LOG_WARNING("written and target sizes mismatch (%d != %d)", write_result, data_size);
-    }
 
     return result::Result::OK;
 }
 
-static uint32_t get_files_count(lfs_t& lfs)
+void convert_filename_to_myfs_id(char* name, uint8_t * file_id)
 {
-    const auto rewind_result = lfs_dir_rewind(&lfs, &_active_dir);
-    if(rewind_result < 0)
+    if (nullptr == file_id || nullptr == name)
     {
-        NRF_LOG_ERROR("rewind has failed (%d)", rewind_result);
-        return invalid_files_count;
+        return;
     }
-
-    uint32_t files_count{0};
-    lfs_info info;
-    // TODO: check off-by-1 chance here (if there is -1 file ID in the list)
-    while(true)
+    for (auto i = 0; i < ::filesystem::myfs_file_t::id_size; ++i)
     {
-        const auto dir_read_res = lfs_dir_read(&lfs, &_active_dir, &info);
-        if(dir_read_res < 0)
-        {
-            NRF_LOG_ERROR("dir read operation failed (%d)", dir_read_res);
-            return invalid_files_count;
-        }
-
-        if(dir_read_res == 0)
-        {
-            break;
-        }
-
-        switch(info.type)
-        {
-        case LFS_TYPE_REG: {
-            ++files_count;
-            break;
-        }
-        default: {
-            break;
-        }
-        }
+        char tmp[3];
+        tmp[0] = name[2 * i];
+        tmp[1] = name[2 * i + 1];
+        tmp[2] = '\0';
+        file_id[i] = static_cast<uint8_t>(strtol(tmp, nullptr, 10));
     }
-    return files_count;
 }
+
+void convert_myfs_id_to_filename(uint8_t * file_id, char* name)
+{
+    if (nullptr == file_id || nullptr == name)
+    {
+        return;
+    }
+
+    int pos{0};
+    static constexpr auto id_size = sizeof(ble::fts::file_id_type);
+    for (auto i = 0; i < ::filesystem::myfs_file_t::id_size; ++i)
+    {
+        pos += snprintf(&name[pos], id_size - pos, "%02d", file_id[i]);
+    }
+    // snprintf(name, sizeof(ble::fts::file_id_type), "%02d%02d%02d%02d%02d%02d%02d%02d",
+
+    // )
+}
+
 
 } // namespace filesystem
 } // namespace memory

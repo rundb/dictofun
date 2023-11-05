@@ -27,13 +27,17 @@ struct myfs_t
 {
     bool is_mounted{false};
     uint32_t files_count{0};
-    uint32_t next_file_start_address{0};
     uint32_t fs_start_address{0};
-    bool is_file_open{false};
+    uint32_t next_file_start_address{0};
     uint32_t next_file_descriptor_address{0};
+
     uint8_t * buffer_pointer{nullptr};
     uint32_t buffer_size{page_size};
     uint32_t buffer_position{0};
+
+    bool is_file_open{false};
+
+    uint32_t current_id_search_pos{0};
 };
 
 /// Bytes 0..3: magic, corresponding to a created file
@@ -101,8 +105,10 @@ int myfs_file_close(myfs_t *myfs, const myfs_config& config, myfs_file_t& file);
 int myfs_file_write(myfs_t *myfs, const myfs_config& config, myfs_file_t& file, void *buffer, myfs_size_t size);
 int myfs_file_read(myfs_t *myfs, const myfs_config& config, myfs_file_t& file, void *buffer, myfs_size_t max_size, myfs_size_t& read_size);
 int myfs_unmount(myfs_t *myfs, const myfs_config& config);
-// lfs_dir_read
-// lfs_stat
 
+// "dir"-related calls
+int myfs_get_files_count(myfs_t& myfs);
+int myfs_rewind_dir(myfs_t& myfs);
+int myfs_get_next_id(myfs_t& myfs, const myfs_config& config, uint8_t * file_id);
 
 }
