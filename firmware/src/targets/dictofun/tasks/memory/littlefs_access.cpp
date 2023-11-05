@@ -195,7 +195,8 @@ get_files_list_next(::filesystem::myfs_t& fs,
     return result::Result::OK;
 }
 
-result::Result get_file_info(lfs_t& lfs,
+result::Result get_file_info(::filesystem::myfs_t& fs, 
+                             const ::filesystem::myfs_config& config,
                              const char* name,
                              uint8_t* buffer,
                              uint32_t& data_size_bytes,
@@ -205,32 +206,16 @@ result::Result get_file_info(lfs_t& lfs,
     {
         return result::Result::ERROR_INVALID_PARAMETER;
     }
-
-    lfs_info info;
-
-    const auto rewind_result = lfs_dir_rewind(&lfs, &_active_dir);
-    if(rewind_result < 0)
+    uint8_t id[::filesystem::myfs_file_t::id_size]{0};
+    convert_filename_to_myfs_id(name, id);
+    const auto size = myfs_file_get_size(fs, config, id);
+    if (size < 0)
     {
-        NRF_LOG_ERROR("rewind has failed (%d)", rewind_result);
         return result::Result::ERROR_GENERAL;
-    }
-
-    const auto stat_result = lfs_stat(&lfs, name, &info);
-    if(stat_result < 0)
-    {
-        NRF_LOG_ERROR("lfs stat error(%d)", stat_result);
-        data_size_bytes = 0;
-        return result::Result::OK;
-    }
-    if(info.type != LFS_TYPE_REG)
-    {
-        // File not found use-case
-        data_size_bytes = 0;
-        return result::Result::OK;
     }
     // At this point we know the file size - info.size
     data_size_bytes =
-        snprintf(reinterpret_cast<char*>(buffer), max_data_size, "{\"s\":%lu}", info.size);
+        snprintf(reinterpret_cast<char*>(buffer), max_data_size, "{\"s\":%lu}", size);
 
     return result::Result::OK;
 }
@@ -367,7 +352,7 @@ result::Result write_data(::filesystem::myfs_t& fs, const ::filesystem::myfs_con
     return result::Result::OK;
 }
 
-void convert_filename_to_myfs_id(char* name, uint8_t * file_id)
+void convert_filename_to_myfs_id(const char* name, uint8_t * file_id)
 {
     if (nullptr == file_id || nullptr == name)
     {
@@ -383,7 +368,7 @@ void convert_filename_to_myfs_id(char* name, uint8_t * file_id)
     }
 }
 
-void convert_myfs_id_to_filename(uint8_t * file_id, char* name)
+void convert_myfs_id_to_filename(const uint8_t * file_id, char* name)
 {
     if (nullptr == file_id || nullptr == name)
     {

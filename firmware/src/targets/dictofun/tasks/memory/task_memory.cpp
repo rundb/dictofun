@@ -287,7 +287,8 @@ void process_request_from_ble(Context& context,
         convert_file_id_to_string(file_id, target_file_name);
         
         const auto file_info_result = memory::filesystem::get_file_info(
-            lfs,
+            myfs,
+            myfs_configuration,
             target_file_name,
             data_queue_elem.data,
             data_queue_elem.size,

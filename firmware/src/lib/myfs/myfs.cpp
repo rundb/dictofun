@@ -448,6 +448,41 @@ int myfs_get_next_id(myfs_t& myfs, const myfs_config& config, uint8_t * file_id)
     return 1;
 }
 
+int myfs_file_get_size(myfs_t& myfs, const myfs_config& config, uint8_t * file_id)
+{
+    if (nullptr == file_id)
+    {
+        return -1;
+    }
+    bool is_file_found{false};
+    uint32_t current_descriptor_address{myfs.fs_start_address + single_file_descriptor_size_bytes};
+    while (!is_file_found)
+    {
+        myfs_file_descriptor d;
+        const auto descr_read_result = read_myfs_descriptor(d, current_descriptor_address, config);
+        if (0 != descr_read_result)
+        {
+            NRF_LOG_ERROR("myfs:descr read failed");
+            return -1;
+        }
+        if (d.magic != file_magic_value)
+        {
+            NRF_LOG_WARNING("file not found, reached the end of the FS");
+            return -1;
+        }
+        if (memcmp(d.file_id, file_id, d.file_id_size) == 0)
+        {
+            is_file_found = true;
+            if (d.file_size != empty_word_value)
+            {
+                return d.file_id_size;
+            }
+            return -1;
+        }
+    }
+    return -1;
+}
+
 void print_buffer(uint8_t * buf, uint32_t size)
 {
     NRF_LOG_INFO("memory dump (%d bytes)", size);

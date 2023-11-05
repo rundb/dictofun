@@ -101,6 +101,7 @@ int myfs_format(myfs_t *myfs, const myfs_config *config);
 int myfs_mount(myfs_t *myfs, const myfs_config *config);
 
 int myfs_file_open(myfs_t *myfs, const myfs_config& config, myfs_file_t& file, uint8_t * file_id, uint8_t flags);
+int myfs_file_get_size(myfs_t& myfs, const myfs_config& config, uint8_t * file_id);
 int myfs_file_close(myfs_t *myfs, const myfs_config& config, myfs_file_t& file);
 int myfs_file_write(myfs_t *myfs, const myfs_config& config, myfs_file_t& file, void *buffer, myfs_size_t size);
 int myfs_file_read(myfs_t *myfs, const myfs_config& config, myfs_file_t& file, void *buffer, myfs_size_t max_size, myfs_size_t& read_size);
