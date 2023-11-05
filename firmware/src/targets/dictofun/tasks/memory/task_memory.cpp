@@ -60,8 +60,6 @@ enum class MemoryOwner
 };
 static MemoryOwner _memory_owner{MemoryOwner::AUDIO};
 
-::filesystem::myfs_t myfs;
-
 struct ::filesystem::myfs_config myfs_configuration = {
     .read = memory::block_device::myfs_read,
     .prog = memory::block_device::myfs_program,
@@ -80,6 +78,8 @@ struct ::filesystem::myfs_config myfs_configuration = {
     .prog_buffer = myfs_prog_buffer,
     .lookahead_buffer = myfs_lookahead_buffer,
 };
+
+::filesystem::myfs_t myfs{myfs_configuration};
 
 constexpr uint32_t cmd_wait_idle_ticks{5};
 constexpr uint32_t cmd_wait_fast_ticks{1};
@@ -129,7 +129,7 @@ void task_memory(void* context_ptr)
     memory::block_device::myfs_register_flash_device(
         &flash, flash_sector_size, flash_page_size, flash_total_size);
 
-    const auto init_result = memory::filesystem::init_fs(myfs, myfs_configuration);
+    const auto init_result = memory::filesystem::init_fs(myfs);
 
     if(result::Result::OK != init_result)
     {
@@ -386,177 +386,177 @@ void process_request_from_state(Context& context, const Command command_id, uint
 {
     switch(command_id)
     {
-    case Command::MOUNT_FS: {
-        const auto init_result = memory::filesystem::init_fs(myfs, myfs_configuration);
-        if(result::Result::OK != init_result)
-        {
-            NRF_LOG_ERROR("mem: failed to mount myfs");
-        }
-        break;
-    }
-    case Command::CREATE_RECORD: {
-        memory::generate_next_file_name(active_record_name, context);
-        memory::filesystem::convert_filename_to_myfs_id(active_record_name, active_record_id);
-        {
-            memory::TimeProfile tp("create_record");
-            const auto create_result = memory::filesystem::create_file(myfs, myfs_configuration, active_record_id);
-            if(result::Result::OK != create_result)
+        case Command::MOUNT_FS: {
+            const auto init_result = memory::filesystem::init_fs(myfs);
+            if(result::Result::OK != init_result)
             {
-                NRF_LOG_ERROR("myfs: failed to create a new rec");
-                StatusQueueElement response{Command::CREATE_RECORD, Status::ERROR_GENERAL};
+                NRF_LOG_ERROR("mem: failed to mount myfs");
+            }
+            break;
+        }
+        case Command::CREATE_RECORD: {
+            memory::generate_next_file_name(active_record_name, context);
+            memory::filesystem::convert_filename_to_myfs_id(active_record_name, active_record_id);
+            {
+                memory::TimeProfile tp("create_record");
+                const auto create_result = memory::filesystem::create_file(myfs, myfs_configuration, active_record_id);
+                if(result::Result::OK != create_result)
+                {
+                    NRF_LOG_ERROR("myfs: failed to create a new rec");
+                    StatusQueueElement response{Command::CREATE_RECORD, Status::ERROR_GENERAL};
+                    xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
+                    return;
+                }
+                NRF_LOG_DEBUG("created record [%s]", active_record_name);
+                _file_operation_context.is_file_open = true;
+                StatusQueueElement response{Command::CREATE_RECORD, Status::OK};
+                xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
+                written_record_size = 0;
+            }
+            break;
+        }
+        case Command::CLOSE_WRITTEN_FILE: {
+            NRF_LOG_INFO("mem: closing file");
+            memory::TimeProfile tp("close_record");
+            const auto close_result = memory::filesystem::close_file(myfs, myfs_configuration);
+            if(close_result != result::Result::OK)
+            {
+                NRF_LOG_ERROR("myfs: failed to close file after writing");
+                StatusQueueElement response{Command::CLOSE_WRITTEN_FILE, Status::ERROR_GENERAL};
                 xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
                 return;
             }
-            NRF_LOG_DEBUG("created record [%s]", active_record_name);
-            _file_operation_context.is_file_open = true;
-            StatusQueueElement response{Command::CREATE_RECORD, Status::OK};
-            xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
-            written_record_size = 0;
-        }
-        break;
-    }
-    case Command::CLOSE_WRITTEN_FILE: {
-        NRF_LOG_INFO("mem: closing file");
-        memory::TimeProfile tp("close_record");
-        const auto close_result = memory::filesystem::close_file(myfs, myfs_configuration);
-        if(close_result != result::Result::OK)
-        {
-            NRF_LOG_ERROR("myfs: failed to close file after writing");
-            StatusQueueElement response{Command::CLOSE_WRITTEN_FILE, Status::ERROR_GENERAL};
-            xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
-            return;
-        }
-        NRF_LOG_DEBUG("closed record. written size = %d bytes", written_record_size);
-        _file_operation_context.is_file_open = false;
-        StatusQueueElement response{Command::CLOSE_WRITTEN_FILE, Status::OK};
-        xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
-        break;
-    }
-    case Command::SELECT_OWNER_BLE: {
-        const auto deinit_result = memory::filesystem::deinit_fs(myfs, myfs_configuration);
-        if(result::Result::OK != deinit_result)
-        {
-            NRF_LOG_ERROR("myfs: deinit failed");
-            StatusQueueElement response{Command::SELECT_OWNER_BLE, Status::ERROR_GENERAL};
+            NRF_LOG_DEBUG("closed record. written size = %d bytes", written_record_size);
+            _file_operation_context.is_file_open = false;
+            StatusQueueElement response{Command::CLOSE_WRITTEN_FILE, Status::OK};
             xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
             break;
         }
-        const auto init_result = memory::filesystem::init_fs(myfs, myfs_configuration);
-        if(result::Result::OK != init_result)
-        {
-            NRF_LOG_ERROR("myfs: init failed");
-            StatusQueueElement response{Command::SELECT_OWNER_BLE, Status::ERROR_GENERAL};
-            xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
-            break;
-        }
-        NRF_LOG_INFO("mem: owner changed to ble");
-        _memory_owner = MemoryOwner::BLE;
+        case Command::SELECT_OWNER_BLE: {
+            const auto deinit_result = memory::filesystem::deinit_fs(myfs, myfs_configuration);
+            if(result::Result::OK != deinit_result)
+            {
+                NRF_LOG_ERROR("myfs: deinit failed");
+                StatusQueueElement response{Command::SELECT_OWNER_BLE, Status::ERROR_GENERAL};
+                xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
+                break;
+            }
+            const auto init_result = memory::filesystem::init_fs(myfs);
+            if(result::Result::OK != init_result)
+            {
+                NRF_LOG_ERROR("myfs: init failed");
+                StatusQueueElement response{Command::SELECT_OWNER_BLE, Status::ERROR_GENERAL};
+                xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
+                break;
+            }
+            NRF_LOG_INFO("mem: owner changed to ble");
+            _memory_owner = MemoryOwner::BLE;
 
-        StatusQueueElement response{Command::SELECT_OWNER_BLE, Status::OK};
-        xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
-        break;
-    }
-    case Command::SELECT_OWNER_AUDIO: {
-        const auto deinit_result = memory::filesystem::deinit_fs(myfs, myfs_configuration);
-        if(result::Result::OK != deinit_result)
-        {
-            NRF_LOG_ERROR("myfs: deinit failed");
-            StatusQueueElement response{Command::SELECT_OWNER_AUDIO, Status::ERROR_GENERAL};
+            StatusQueueElement response{Command::SELECT_OWNER_BLE, Status::OK};
             xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
             break;
         }
-        const auto init_result = memory::filesystem::init_fs(myfs, myfs_configuration);
-        if(result::Result::OK != init_result)
-        {
-            NRF_LOG_ERROR("myfs: init failed");
-            StatusQueueElement response{Command::SELECT_OWNER_AUDIO, Status::ERROR_GENERAL};
+        case Command::SELECT_OWNER_AUDIO: {
+            const auto deinit_result = memory::filesystem::deinit_fs(myfs, myfs_configuration);
+            if(result::Result::OK != deinit_result)
+            {
+                NRF_LOG_ERROR("myfs: deinit failed");
+                StatusQueueElement response{Command::SELECT_OWNER_AUDIO, Status::ERROR_GENERAL};
+                xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
+                break;
+            }
+            const auto init_result = memory::filesystem::init_fs(myfs);
+            if(result::Result::OK != init_result)
+            {
+                NRF_LOG_ERROR("myfs: init failed");
+                StatusQueueElement response{Command::SELECT_OWNER_AUDIO, Status::ERROR_GENERAL};
+                xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
+                break;
+            }
+            NRF_LOG_INFO("mem: owner changed to audio");
+            _memory_owner = MemoryOwner::AUDIO;
+            StatusQueueElement response{Command::SELECT_OWNER_AUDIO, Status::OK};
             xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
             break;
         }
-        NRF_LOG_INFO("mem: owner changed to audio");
-        _memory_owner = MemoryOwner::AUDIO;
-        StatusQueueElement response{Command::SELECT_OWNER_AUDIO, Status::OK};
-        xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
-        break;
-    }
-    case Command::LAUNCH_TEST_1: {
-        launch_test_1(flash);
-        break;
-    }
-    case Command::LAUNCH_TEST_2: {
-        launch_test_2(flash);
-        break;
-    }
-    case Command::LAUNCH_TEST_3: {
-        launch_test_3(myfs, myfs_configuration);
-        break;
-    }
-    case Command::LAUNCH_TEST_4: {
-        NRF_LOG_WARNING("memtest 4 has been removed");
-        break;
-    }
-    case Command::LAUNCH_TEST_5: {
-        launch_test_5(flash, arg0, arg1);
-        break;
-    }
-    case Command::UNMOUNT_FS: {
-        NRF_LOG_ERROR("mem: myfs unmount is not implemented");
-        break;
-    }
-    case Command::PERFORM_MEMORY_CHECK: {
-        static constexpr uint32_t max_files_count{30};
-        const auto fs_stat_result =
-            memory::filesystem::get_fs_stat(myfs, myfs_configuration, data_queue_elem.data);
-        if(result::Result::OK != fs_stat_result)
-        {
-            NRF_LOG_ERROR("mem: failed to fetch fs stat");
-            StatusQueueElement response{Command::PERFORM_MEMORY_CHECK, Status::ERROR_GENERAL};
+        case Command::LAUNCH_TEST_1: {
+            launch_test_1(flash);
+            break;
+        }
+        case Command::LAUNCH_TEST_2: {
+            launch_test_2(flash);
+            break;
+        }
+        case Command::LAUNCH_TEST_3: {
+            launch_test_3(myfs, myfs_configuration);
+            break;
+        }
+        case Command::LAUNCH_TEST_4: {
+            NRF_LOG_WARNING("memtest 4 has been removed");
+            break;
+        }
+        case Command::LAUNCH_TEST_5: {
+            launch_test_5(flash, arg0, arg1);
+            break;
+        }
+        case Command::UNMOUNT_FS: {
+            NRF_LOG_ERROR("mem: myfs unmount is not implemented");
+            break;
+        }
+        case Command::PERFORM_MEMORY_CHECK: {
+            static constexpr uint32_t max_files_count{30};
+            const auto fs_stat_result =
+                memory::filesystem::get_fs_stat(myfs, myfs_configuration, data_queue_elem.data);
+            if(result::Result::OK != fs_stat_result)
+            {
+                NRF_LOG_ERROR("mem: failed to fetch fs stat");
+                StatusQueueElement response{Command::PERFORM_MEMORY_CHECK, Status::ERROR_GENERAL};
+                xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
+            }
+            ble::fts::FileSystemInterface::FSStatus fsStatus;
+            memcpy(&fsStatus, &data_queue_elem.data, sizeof(fsStatus));
+            NRF_LOG_INFO("FS stats: %d/%d(%d)", fsStatus.occupied_space, fsStatus.free_space, fsStatus.files_count);
+            StatusQueueElement response{Command::PERFORM_MEMORY_CHECK, Status::OK};
+            if ((fsStatus.occupied_space > (flash_total_size/2)) || (fsStatus.files_count > max_files_count))
+            {
+                response.status = Status::FORMAT_REQUIRED;
+            }
             xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
+            break;
         }
-        ble::fts::FileSystemInterface::FSStatus fsStatus;
-        memcpy(&fsStatus, &data_queue_elem.data, sizeof(fsStatus));
-        NRF_LOG_INFO("FS stats: %d/%d(%d)", fsStatus.occupied_space, fsStatus.free_space, fsStatus.files_count);
-        StatusQueueElement response{Command::PERFORM_MEMORY_CHECK, Status::OK};
-        if ((fsStatus.occupied_space > (flash_total_size/2)) || (fsStatus.files_count > max_files_count))
+        case Command::FORMAT_FS:
         {
-            response.status = Status::FORMAT_REQUIRED;
-        }
-        xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
-        break;
-    }
-    case Command::FORMAT_FS:
-    {
-        // erase the flash chip
-        NRF_LOG_INFO("task memory: launching chip erase. Memory task shall not accept commands during the execution of this command.");
-        const auto start_tick = xTaskGetTickCount();
-        flash.eraseChip();
-        static constexpr uint32_t max_chip_erase_duration{44000};
-        while(flash.isBusy() && (xTaskGetTickCount() - start_tick) < max_chip_erase_duration)
-        {
-            vTaskDelay(200);
-        }
-        const auto end_tick = xTaskGetTickCount();
-        StatusQueueElement response{Command::FORMAT_FS, Status::OK};
-        if((end_tick - start_tick) > max_chip_erase_duration)
-        {
-            NRF_LOG_WARNING("task memory: chip erase timed out");
-            response.status = Status::ERROR_BUSY;
-        }
-        else
-        {
-            NRF_LOG_INFO("task memory: chip erase took %d ms", end_tick - start_tick);
-        }
-        const auto init_result = memory::filesystem::init_fs(myfs, myfs_configuration);
-        if(result::Result::OK != init_result)
-        {
-            NRF_LOG_ERROR("mem: failed to mount myfs");
-            response.status = Status::ERROR_GENERAL;
-        }
-        
+            // erase the flash chip
+            NRF_LOG_INFO("task memory: launching chip erase. Memory task shall not accept commands during the execution of this command.");
+            const auto start_tick = xTaskGetTickCount();
+            flash.eraseChip();
+            static constexpr uint32_t max_chip_erase_duration{44000};
+            while(flash.isBusy() && (xTaskGetTickCount() - start_tick) < max_chip_erase_duration)
+            {
+                vTaskDelay(200);
+            }
+            const auto end_tick = xTaskGetTickCount();
+            StatusQueueElement response{Command::FORMAT_FS, Status::OK};
+            if((end_tick - start_tick) > max_chip_erase_duration)
+            {
+                NRF_LOG_WARNING("task memory: chip erase timed out");
+                response.status = Status::ERROR_BUSY;
+            }
+            else
+            {
+                NRF_LOG_INFO("task memory: chip erase took %d ms", end_tick - start_tick);
+            }
+            const auto init_result = memory::filesystem::init_fs(myfs);
+            if(result::Result::OK != init_result)
+            {
+                NRF_LOG_ERROR("mem: failed to mount myfs");
+                response.status = Status::ERROR_GENERAL;
+            }
+            
 
-        xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
-        break;
-    }
+            xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
+            break;
+        }
     }
 }
 

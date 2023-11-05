@@ -27,6 +27,32 @@ static constexpr uint32_t myfs_format_marker_size{single_file_descriptor_size_by
 static constexpr uint32_t first_file_start_location{4096};
 static constexpr uint32_t page_size{256};
 
+struct myfs_config {
+    void *context;
+    int (*read)(const struct myfs_config *c, myfs_block_t block, myfs_off_t off, void *buffer, myfs_size_t size);
+    int (*prog)(const struct myfs_config *c, myfs_block_t block, myfs_off_t off, const void *buffer, myfs_size_t size);
+    int (*erase)(const struct myfs_config *c, myfs_block_t block);
+    int (*sync)(const struct myfs_config *c);
+
+    myfs_size_t read_size;
+    myfs_size_t prog_size;
+    myfs_size_t block_size;
+    myfs_size_t block_count;
+    int32_t block_cycles;
+
+    myfs_size_t cache_size;
+    myfs_size_t lookahead_size;
+
+    void *read_buffer;
+    void *prog_buffer;
+    void *lookahead_buffer;
+
+    myfs_size_t name_max;
+    myfs_size_t file_max;
+    myfs_size_t attr_max;
+    myfs_size_t metadata_max;
+};
+
 struct myfs_t
 {
     bool is_mounted{false};
@@ -42,6 +68,10 @@ struct myfs_t
     bool is_file_open{false};
 
     uint32_t current_id_search_pos{0};
+
+    myfs_config& config;
+    
+    myfs_t(myfs_config& cfg): config(cfg){}
 };
 
 /// Bytes 0..3: magic, corresponding to a created file
@@ -73,32 +103,6 @@ struct myfs_file_t
 
 static constexpr uint8_t MYFS_CREATE_FLAG{1<<0};
 static constexpr uint8_t MYFS_READ_FLAG{1<<1};
-
-struct myfs_config {
-    void *context;
-    int (*read)(const struct myfs_config *c, myfs_block_t block, myfs_off_t off, void *buffer, myfs_size_t size);
-    int (*prog)(const struct myfs_config *c, myfs_block_t block, myfs_off_t off, const void *buffer, myfs_size_t size);
-    int (*erase)(const struct myfs_config *c, myfs_block_t block);
-    int (*sync)(const struct myfs_config *c);
-
-    myfs_size_t read_size;
-    myfs_size_t prog_size;
-    myfs_size_t block_size;
-    myfs_size_t block_count;
-    int32_t block_cycles;
-
-    myfs_size_t cache_size;
-    myfs_size_t lookahead_size;
-
-    void *read_buffer;
-    void *prog_buffer;
-    void *lookahead_buffer;
-
-    myfs_size_t name_max;
-    myfs_size_t file_max;
-    myfs_size_t attr_max;
-    myfs_size_t metadata_max;
-};
 
 int myfs_format(myfs_t *myfs, const myfs_config *config);
 int myfs_mount(myfs_t *myfs, const myfs_config *config);

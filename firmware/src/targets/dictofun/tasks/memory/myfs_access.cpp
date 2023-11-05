@@ -23,8 +23,9 @@ static bool _is_files_list_next_needed{false};
 static constexpr uint32_t invalid_files_count{0xFEFEFEFDUL};
 static uint32_t _total_files_left{0};
 
-result::Result init_fs(::filesystem::myfs_t& fs, const ::filesystem::myfs_config& config)
+result::Result init_fs(::filesystem::myfs_t& fs)
 {
+    const ::filesystem::myfs_config& config(fs.config);
     auto err = myfs_mount(&fs, &config);
     if(err != 0)
     {

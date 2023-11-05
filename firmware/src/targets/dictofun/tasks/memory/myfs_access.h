@@ -14,7 +14,7 @@ namespace memory
 namespace filesystem
 {
 
-result::Result init_fs(::filesystem::myfs_t& fs, const ::filesystem::myfs_config& config);
+result::Result init_fs(::filesystem::myfs_t& fs);
 result::Result deinit_fs(::filesystem::myfs_t& fs, const ::filesystem::myfs_config& config);
 result::Result close_file(::filesystem::myfs_t& fs, const ::filesystem::myfs_config& config);
 
