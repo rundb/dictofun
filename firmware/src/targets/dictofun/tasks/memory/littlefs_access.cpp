@@ -253,19 +253,25 @@ result::Result open_file(::filesystem::myfs_t& fs, const ::filesystem::myfs_conf
 }
 
 result::Result
-get_file_data(lfs_t& lfs, uint8_t* buffer, uint32_t& actual_size, const uint32_t max_data_size)
+get_file_data(::filesystem::myfs_t& fs, const ::filesystem::myfs_config& config, uint8_t* buffer, uint32_t& actual_size, uint32_t max_data_size)
 {
     if(buffer == nullptr || max_data_size == 0)
     {
         return result::Result::ERROR_INVALID_PARAMETER;
     }
-    const auto result = -1; //lfs_file_read(&lfs, &_active_file, buffer, max_data_size);
-    if(result < 0)
+    if (!fs.is_file_open || _active_file.is_write)
     {
-        NRF_LOG_ERROR("read err(%d)", result);
+        NRF_LOG_ERROR("fs integr: file is not correctly open");
         return result::Result::ERROR_GENERAL;
     }
-    actual_size = result;
+    // const auto result = -1; //lfs_file_read(&lfs, &_active_file, buffer, max_data_size);
+    const auto read_result = myfs_file_read(&fs, config, _active_file, buffer, max_data_size, actual_size);
+    if(read_result < 0)
+    {
+        NRF_LOG_ERROR("read err(%d)", read_result);
+        return result::Result::ERROR_GENERAL;
+    }
+    
     return result::Result::OK;
 }
 

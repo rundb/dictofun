@@ -351,7 +351,8 @@ void process_request_from_ble(Context& context,
     }
     case ble::CommandToMemory::GET_FILE_DATA: {
         const auto file_data_result = memory::filesystem::get_file_data(
-            lfs,
+            myfs,
+            myfs_configuration,
             data_queue_elem.data,
             data_queue_elem.size,
             ble::FileDataFromMemoryQueueElement::element_max_size);

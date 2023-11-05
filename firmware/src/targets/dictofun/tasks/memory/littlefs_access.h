@@ -36,8 +36,7 @@ result::Result get_file_info(::filesystem::myfs_t& fs,
                              uint32_t& data_size_bytes,
                              uint32_t max_data_size);
 result::Result open_file(::filesystem::myfs_t& fs, const ::filesystem::myfs_config& config, const char* name, uint32_t& file_size_bytes);
-result::Result
-get_file_data(lfs_t& lfs, uint8_t* buffer, uint32_t& actual_size, uint32_t max_data_size);
+result::Result get_file_data(::filesystem::myfs_t& fs, const ::filesystem::myfs_config& config, uint8_t* buffer, uint32_t& actual_size, uint32_t max_data_size);
 result::Result get_fs_stat(lfs_t& lfs, uint8_t* buffer, const lfs_config& config);
 
 // Following methods face into audio part of the system
