@@ -3,7 +3,7 @@
  * Copyright (c) 2023, Roman Turkin
  */
 #pragma once
-#include "lfs.h"
+
 #include "result.h"
 #include <stdint.h>
 

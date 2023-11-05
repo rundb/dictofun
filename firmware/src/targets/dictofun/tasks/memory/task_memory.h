@@ -8,7 +8,6 @@
 #include "FreeRTOS.h"
 #include "queue.h"
 
-#include "lfs.h"
 #include "spi_flash.h"
 #include "myfs.h"
 
@@ -21,7 +20,7 @@ using namespace filesystem;
 void task_memory(void* context_ptr);
 void launch_test_1(flash::SpiFlash& flash);
 void launch_test_2(flash::SpiFlash& flash);
-// void launch_test_3(lfs_t& lfs, const lfs_config& lfs_configuration);
+
 void launch_test_3(myfs_t& myfs, const myfs_config& myfs_configuration);
 void launch_test_5(flash::SpiFlash& flash, const uint32_t range_start, const uint32_t range_end);
 

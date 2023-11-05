@@ -8,8 +8,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-#include "lfs.h"
-#include "littlefs_access.h"
+#include "myfs_access.h"
 #include "nrf_log.h"
 
 namespace memory

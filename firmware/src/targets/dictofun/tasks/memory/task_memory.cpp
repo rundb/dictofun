@@ -9,9 +9,8 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-#include "block_api.h"
 #include "boards.h"
-#include "littlefs_access.h"
+#include "myfs_access.h"
 #include "spi_flash.h"
 #include <cstdio>
 #include <cstdlib>
@@ -127,8 +126,6 @@ void task_memory(void* context_ptr)
     flash.readJedecId(jedec_id);
     NRF_LOG_INFO("memory id: %x-%x-%x", jedec_id[0], jedec_id[1], jedec_id[2]);
 
-    memory::block_device::register_flash_device(
-        &flash, flash_sector_size, flash_page_size, flash_total_size);
     memory::block_device::myfs_register_flash_device(
         &flash, flash_sector_size, flash_page_size, flash_total_size);
 
@@ -136,7 +133,7 @@ void task_memory(void* context_ptr)
 
     if(result::Result::OK != init_result)
     {
-        NRF_LOG_ERROR("mem: failed to mount littlefs");
+        NRF_LOG_ERROR("mem: failed to mount myfs");
     }
 
     while(1)
@@ -393,7 +390,7 @@ void process_request_from_state(Context& context, const Command command_id, uint
         const auto init_result = memory::filesystem::init_fs(myfs, myfs_configuration);
         if(result::Result::OK != init_result)
         {
-            NRF_LOG_ERROR("mem: failed to mount littlefs");
+            NRF_LOG_ERROR("mem: failed to mount myfs");
         }
         break;
     }
@@ -552,7 +549,7 @@ void process_request_from_state(Context& context, const Command command_id, uint
         const auto init_result = memory::filesystem::init_fs(myfs, myfs_configuration);
         if(result::Result::OK != init_result)
         {
-            NRF_LOG_ERROR("mem: failed to mount littlefs");
+            NRF_LOG_ERROR("mem: failed to mount myfs");
             response.status = Status::ERROR_GENERAL;
         }
         

@@ -138,7 +138,7 @@ def launch_tests(dictofun):
 
 
 """
-This method should be run after switching the dictofun into target mode (thus connecting littlefs and FTS)
+This method should be run after switching the dictofun into target mode (thus connecting MyFS and FTS)
 """
 def launch_checks(dictofun):
     fts = None
