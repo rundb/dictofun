@@ -318,7 +318,7 @@ void process_request_from_ble(Context& context,
         char target_file_name[max_file_name_size] = {0};
         convert_file_id_to_string(file_id, target_file_name);
         const auto file_open_result =
-            memory::filesystem::open_file(lfs, target_file_name, status.data_size);
+            memory::filesystem::open_file(myfs, myfs_configuration, target_file_name, status.data_size);
         if(result::Result::OK != file_open_result)
         {
             status.status = ble::StatusFromMemory::ERROR_FILE_NOT_FOUND;

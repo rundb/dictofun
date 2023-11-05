@@ -220,35 +220,34 @@ result::Result get_file_info(::filesystem::myfs_t& fs,
     return result::Result::OK;
 }
 
-result::Result open_file(lfs_t& lfs, const char* name, uint32_t& file_size_bytes)
+result::Result open_file(::filesystem::myfs_t& fs, const ::filesystem::myfs_config& config, const char* name, uint32_t& file_size_bytes)
 {
-    lfs_info info;
-    const auto stat_result = lfs_stat(&lfs, name, &info);
-    if(stat_result < 0)
+    if (nullptr == name)
     {
-        NRF_LOG_ERROR("open: lfs stat error(%d)", stat_result);
-        file_size_bytes = 0;
-        return result::Result::OK;
-    }
-    if(info.type != LFS_TYPE_REG)
-    {
-        // File not found use-case
-        file_size_bytes = 0;
-        return result::Result::ERROR_INVALID_PARAMETER;
-    }
-    file_size_bytes = info.size;
-    memset(&_active_file_config, 0, sizeof(_active_file_config));
-    _active_file_config.buffer = _active_file_buffer;
-    _active_file_config.attr_count = 0;
-    // const auto config_res =
-    //     lfs_file_opencfg(&lfs, &_active_file, name, LFS_O_RDONLY, &_active_file_config);
-    const auto config_res = -1;
-
-    if(config_res < 0)
-    {
-        NRF_LOG_ERROR("failed to open file %s", name);
         return result::Result::ERROR_GENERAL;
     }
+    if (_active_file.is_open || fs.is_file_open)
+    {
+        return result::Result::ERROR_GENERAL;
+    }
+
+    uint8_t id[::filesystem::myfs_file_t::id_size]{0};
+    convert_filename_to_myfs_id(name, id);
+    const auto get_size_result = myfs_file_get_size(fs, config, id);
+    if (get_size_result < 0)
+    {
+        NRF_LOG_ERROR("fs integr: failed to get file size before open file %s", name);
+        return result::Result::ERROR_GENERAL;
+    }
+
+    const auto open_result = myfs_file_open(&fs, config, _active_file, id, ::filesystem::MYFS_READ_FLAG);
+    if (open_result < 0)
+    {
+        NRF_LOG_ERROR("fs integr: failed to open file %s", name);
+        return result::Result::ERROR_GENERAL;
+    }
+    file_size_bytes = get_size_result;
+    
     _is_file_open = true;
     return result::Result::OK;
 }
