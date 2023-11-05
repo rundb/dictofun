@@ -218,7 +218,7 @@ result::Result get_file_info(::filesystem::myfs_t& fs,
     data_size_bytes =
         snprintf(reinterpret_cast<char*>(buffer), max_data_size, "{\"s\":%lu}", size);
     buffer[data_size_bytes] = 0;
-    NRF_LOG_INFO("get file info: %s", buffer);
+    
     return result::Result::OK;
 }
 

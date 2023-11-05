@@ -232,7 +232,7 @@ int myfs_file_open(myfs_t *myfs, const myfs_config& config, myfs_file_t& file, u
                 myfs->buffer_size = config.prog_size;
                 myfs->buffer_position = 0;
                 is_file_found = true;
-                NRF_LOG_INFO("myfs open, size %d, addr 0x%x", file.size, current_descriptor_address);
+                NRF_LOG_DEBUG("myfs open, size %d, addr 0x%x", file.size, current_descriptor_address);
             }
             else
             {
@@ -300,8 +300,8 @@ int myfs_file_close(myfs_t *myfs, const myfs_config& config, myfs_file_t& file)
 
         const uint32_t next_descriptor_position = myfs->next_file_descriptor_address + single_file_descriptor_size_bytes;
         const uint32_t next_file_start_address = myfs->next_file_start_address + ((file.size / page_size) + 1) * page_size;
-        NRF_LOG_INFO("closed file. next descr(0x%x), next addr (0x%x), size(%d)", next_descriptor_position, next_file_start_address, file.size);
-        NRF_LOG_INFO("cmd: memtest 5 %d %d", myfs->next_file_start_address, next_file_start_address);
+        NRF_LOG_DEBUG("closed file. next descr(0x%x), next addr (0x%x), size(%d)", next_descriptor_position, next_file_start_address, file.size);
+        NRF_LOG_DEBUG("cmd: memtest 5 %d %d", myfs->next_file_start_address, next_file_start_address);
 
         vTaskDelay(50);
         print_flash_memory_area(config, myfs->next_file_descriptor_address, single_file_descriptor_size_bytes);
@@ -445,6 +445,7 @@ int myfs_get_next_id(myfs_t& myfs, const myfs_config& config, uint8_t * file_id)
         return 0;
     }
     memcpy(file_id, d.file_id, myfs_file_t::id_size);
+    myfs.current_id_search_pos += single_file_descriptor_size_bytes;
     return 1;
 }
 
@@ -549,7 +550,7 @@ void print_flash_memory_area(const myfs_config& c, uint32_t start_address, uint3
     static constexpr uint32_t single_line_length{12/* hex addr + space */ + bytes_per_read * 3  + 1};
     static uint8_t tmp[bytes_per_read];
     static char tmp_str[single_line_length]{0};
-    NRF_LOG_INFO("dump memory 0x%x:0x%x", start_address, start_address + size);
+    NRF_LOG_DEBUG("dump memory 0x%x:0x%x", start_address, start_address + size);
     for (auto i = start_address; i < start_address + size; i += bytes_per_read)
     {
         const auto block = i / c.block_size;
@@ -562,7 +563,7 @@ void print_flash_memory_area(const myfs_config& c, uint32_t start_address, uint3
             id += snprintf(&tmp_str[id], single_line_length - id, "%02x ", tmp[j]);
         }
         tmp_str[single_line_length - 1] = '\0';
-        NRF_LOG_INFO("%s", tmp_str);
+        NRF_LOG_DEBUG("%s", tmp_str);
         vTaskDelay(50);
     }
 }
