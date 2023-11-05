@@ -113,5 +113,5 @@ int myfs_rewind_dir(myfs_t& myfs);
 int myfs_get_next_id(myfs_t& myfs, const myfs_config& config, uint8_t * file_id);
 
 // "stat"-related call
-int myfs_get_fs_stat(myfs_t& myfs, const myfs_config& config, uint32_t& files_count, uint32_t occupied_space);
+int myfs_get_fs_stat(myfs_t& myfs, const myfs_config& config, uint32_t& files_count, uint32_t& occupied_space);
 }

@@ -115,7 +115,7 @@ int myfs_mount(myfs_t *myfs, const myfs_config *config)
             // TODO: check if previous write has been completed.
             if (is_first_descriptor_processed)
             {
-                NRF_LOG_INFO("prev d 0x%x %d", prev_d.start_address, prev_d.file_size);
+                NRF_LOG_DEBUG("prev d 0x%x %d", prev_d.start_address, prev_d.file_size);
                 const auto next_file_start_address = prev_d.start_address + ((prev_d.file_size / page_size) + 1) * page_size; // todo: pad it to the %256==0
                 myfs->files_count = ((current_descriptor_address - (myfs->fs_start_address))) / single_file_descriptor_size_bytes - 1;
                 // TODO: it is set off by 1 or 2, check it at the first round of tests
@@ -489,7 +489,7 @@ int myfs_file_get_size(myfs_t& myfs, const myfs_config& config, uint8_t * file_i
     return -1;
 }
 
-int myfs_get_fs_stat(myfs_t& myfs, const myfs_config& config, uint32_t& files_count, uint32_t occupied_space)
+int myfs_get_fs_stat(myfs_t& myfs, const myfs_config& config, uint32_t& files_count, uint32_t& occupied_space)
 {
     if (!myfs.is_mounted)
     {
@@ -521,6 +521,7 @@ int myfs_get_fs_stat(myfs_t& myfs, const myfs_config& config, uint32_t& files_co
         {
             NRF_LOG_WARNING("get fs stat: discovered an not-closed file, might need a repair");
         }
+        current_descriptor_address += single_file_descriptor_size_bytes;
     }
     return 0;
 }
