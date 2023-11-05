@@ -124,6 +124,7 @@ static struct FileOperationContext
 } _file_operation_context;
 
 char active_record_name[sizeof(ble::fts::file_id_type) + 1]{0};
+uint8_t active_record_id[::filesystem::myfs_file_t::id_size]{0};
 
 static uint32_t written_record_size{0};
 
@@ -334,7 +335,7 @@ void process_request_from_ble(Context& context,
         char target_file_name[max_file_name_size] = {0};
         convert_file_id_to_string(file_id, target_file_name);
         
-        const auto file_close_result = memory::filesystem::close_file(lfs, target_file_name);
+        const auto file_close_result = memory::filesystem::close_file(myfs, myfs_configuration);
         if(result::Result::OK != file_close_result)
         {
             status.status = ble::StatusFromMemory::ERROR_FILE_NOT_FOUND;
@@ -414,9 +415,10 @@ void process_request_from_state(Context& context, const Command command_id, uint
     }
     case Command::CREATE_RECORD: {
         memory::generate_next_file_name(active_record_name, context);
+        memory::convert_filename_to_myfs_id(active_record_name, active_record_id);
         {
             memory::TimeProfile tp("create_record");
-            const auto create_result = memory::filesystem::create_file(lfs, active_record_name);
+            const auto create_result = memory::filesystem::create_file(myfs, myfs_configuration, active_record_id);
             if(result::Result::OK != create_result)
             {
                 NRF_LOG_ERROR("lfs: failed to create a new rec");
@@ -435,7 +437,7 @@ void process_request_from_state(Context& context, const Command command_id, uint
     case Command::CLOSE_WRITTEN_FILE: {
         NRF_LOG_INFO("mem: closing file");
         memory::TimeProfile tp("close_record");
-        const auto close_result = memory::filesystem::close_file(lfs, active_record_name);
+        const auto close_result = memory::filesystem::close_file(myfs, myfs_configuration);
         if(close_result != result::Result::OK)
         {
             NRF_LOG_ERROR("lfs: failed to close file after writing");
@@ -450,7 +452,7 @@ void process_request_from_state(Context& context, const Command command_id, uint
         break;
     }
     case Command::SELECT_OWNER_BLE: {
-        const auto deinit_result = memory::filesystem::deinit_fs(myfs);
+        const auto deinit_result = memory::filesystem::deinit_fs(myfs, myfs_configuration);
         if(result::Result::OK != deinit_result)
         {
             NRF_LOG_ERROR("lfs: deinit failed");
@@ -474,7 +476,7 @@ void process_request_from_state(Context& context, const Command command_id, uint
         break;
     }
     case Command::SELECT_OWNER_AUDIO: {
-        const auto deinit_result = memory::filesystem::deinit_fs(myfs);
+        const auto deinit_result = memory::filesystem::deinit_fs(myfs, myfs_configuration);
         if(result::Result::OK != deinit_result)
         {
             NRF_LOG_ERROR("lfs: deinit failed");
@@ -599,6 +601,22 @@ void generate_next_file_name_fallback(char* name)
     const auto next_id = last_id + 1;
     name[ble::fts::file_id_size - 2] = ((next_id / 10) % 10) + '0';
     name[ble::fts::file_id_size - 1] = (next_id % 10) + '0';
+}
+
+void convert_filename_to_myfs_id(char* name, uint8_t * file_id)
+{
+    if (nullptr == file_id || nullptr == name)
+    {
+        return;
+    }
+    for (auto i = 0; i < ::filesystem::myfs_file_t::id_size; ++i)
+    {
+        char tmp[3];
+        tmp[0] = name[2 * i];
+        tmp[1] = name[2 * i + 1];
+        tmp[2] = '\0';
+        file_id[i] = static_cast<uint8_t>(strtol(tmp, nullptr, 10));
+    }
 }
 
 void generate_next_file_name(char* name, const Context& context)

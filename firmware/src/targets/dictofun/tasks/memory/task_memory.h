@@ -28,6 +28,7 @@ void launch_test_5(flash::SpiFlash& flash, const uint32_t range_start, const uin
 
 struct Context;
 void generate_next_file_name(char* name, const Context& context);
+void convert_filename_to_myfs_id(char* name, uint8_t * file_id);
 
 enum class Command
 {

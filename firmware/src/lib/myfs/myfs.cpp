@@ -400,6 +400,15 @@ int myfs_file_read(myfs_t *myfs, const myfs_config& config, myfs_file_t& file, v
     return 0;
 }
 
+int myfs_unmount(myfs_t *myfs, const myfs_config& config)
+{
+    if (myfs == nullptr)
+    {
+        return -1;
+    }
+    myfs->is_mounted = false;
+    return 0;
+}
 
 void print_buffer(uint8_t * buf, uint32_t size)
 {

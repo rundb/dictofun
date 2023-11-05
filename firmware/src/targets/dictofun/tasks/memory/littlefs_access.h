@@ -15,8 +15,8 @@ namespace filesystem
 {
 
 result::Result init_fs(::filesystem::myfs_t& fs, const ::filesystem::myfs_config& config);
-result::Result deinit_fs(::filesystem::myfs_t& fs);
-result::Result close_file(lfs_t& lfs, const char* name);
+result::Result deinit_fs(::filesystem::myfs_t& fs, const ::filesystem::myfs_config& config);
+result::Result close_file(::filesystem::myfs_t& fs, const ::filesystem::myfs_config& config);
 
 // Following methods face into the BLE part of the system
 result::Result get_files_list(lfs_t& lfs,
@@ -36,7 +36,7 @@ get_file_data(lfs_t& lfs, uint8_t* buffer, uint32_t& actual_size, uint32_t max_d
 result::Result get_fs_stat(lfs_t& lfs, uint8_t* buffer, const lfs_config& config);
 
 // Following methods face into audio part of the system
-result::Result create_file(lfs_t& lfs, const char* name);
+result::Result create_file(::filesystem::myfs_t& fs, const ::filesystem::myfs_config& config, uint8_t* file_id);
 result::Result get_latest_file_name(lfs_t& lfs, char* name, uint32_t& name_len);
 result::Result write_data(lfs_t& lfs, const uint8_t* data, uint32_t data_size);
 

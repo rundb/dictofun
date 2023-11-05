@@ -452,47 +452,47 @@ void launch_test_3(myfs_t& myfs, const myfs_config& myfs_configuration)
 
 void launch_test_4(lfs_t& lfs)
 {
-    NRF_LOG_INFO("mem: launching LFS write access test");
-    // Step 1. Fetch last record's name
-    char tmp_record_name[10]{0};
-    uint32_t tmp_length{0};
-    const auto name_read_result =
-        memory::filesystem::get_latest_file_name(lfs, tmp_record_name, tmp_length);
-    if(result::Result::OK != name_read_result)
-    {
-        NRF_LOG_ERROR("failed to read latest record name. aborting the test");
-        return;
-    }
-    memory::Context context;
-    memory::generate_next_file_name(tmp_record_name, context);
-    // ============ Step 2: create a file and write content into it
-    NRF_LOG_DEBUG("mem: creating file");
-    const auto create_result = memory::filesystem::create_file(lfs, tmp_record_name);
-    if(result::Result::OK != create_result)
-    {
-        NRF_LOG_ERROR("lfs: failed to create a file");
-    }
+    NRF_LOG_ERROR("mem: memtest 4 is unavailable during the MyFS integration");
+    // // Step 1. Fetch last record's name
+    // char tmp_record_name[10]{0};
+    // uint32_t tmp_length{0};
+    // const auto name_read_result =
+    //     memory::filesystem::get_latest_file_name(lfs, tmp_record_name, tmp_length);
+    // if(result::Result::OK != name_read_result)
+    // {
+    //     NRF_LOG_ERROR("failed to read latest record name. aborting the test");
+    //     return;
+    // }
+    // memory::Context context;
+    // memory::generate_next_file_name(tmp_record_name, context);
+    // // ============ Step 2: create a file and write content into it
+    // NRF_LOG_DEBUG("mem: creating file");
+    // const auto create_result = memory::filesystem::create_file(lfs, tmp_record_name);
+    // if(result::Result::OK != create_result)
+    // {
+    //     NRF_LOG_ERROR("lfs: failed to create a file");
+    // }
 
-    constexpr size_t test_data_size{512};
-    uint8_t test_data[test_data_size];
-    for(size_t i = 0; i < test_data_size; ++i)
-    {
-        test_data[i] = i & 0xFF;
-    }
-    const auto write_result = memory::filesystem::write_data(lfs, test_data, test_data_size);
-    if(result::Result::OK != write_result)
-    {
-        NRF_LOG_ERROR("memtest: write data failed");
-    }
+    // constexpr size_t test_data_size{512};
+    // uint8_t test_data[test_data_size];
+    // for(size_t i = 0; i < test_data_size; ++i)
+    // {
+    //     test_data[i] = i & 0xFF;
+    // }
+    // const auto write_result = memory::filesystem::write_data(lfs, test_data, test_data_size);
+    // if(result::Result::OK != write_result)
+    // {
+    //     NRF_LOG_ERROR("memtest: write data failed");
+    // }
 
-    // ============ Step 3: close the file
-    NRF_LOG_INFO("mem: closing file");
-    const auto close_result = memory::filesystem::close_file(lfs, tmp_record_name);
-    if(close_result != result::Result::OK)
-    {
-        NRF_LOG_ERROR("lfs: failed to close file after writing");
-        return;
-    }
+    // // ============ Step 3: close the file
+    // NRF_LOG_INFO("mem: closing file");
+    // const auto close_result = memory::filesystem::close_file(&myfs, );
+    // if(close_result != result::Result::OK)
+    // {
+    //     NRF_LOG_ERROR("lfs: failed to close file after writing");
+    //     return;
+    // }
 }
 
 void launch_test_5(flash::SpiFlash& flash,const uint32_t range_start, const uint32_t range_end)

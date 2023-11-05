@@ -17,7 +17,7 @@ namespace filesystem
 // see https://github.com/littlefs-project/littlefs/issues/304 for reference
 static constexpr size_t active_file_buffer_size{256};
 static uint8_t _active_file_buffer[active_file_buffer_size]{0};
-static lfs_file_t _active_file;
+static ::filesystem::myfs_file_t _active_file;
 static lfs_dir_t _active_dir;
 static lfs_file_config _active_file_config;
 static bool _is_file_open{false};
@@ -53,25 +53,40 @@ result::Result init_fs(::filesystem::myfs_t& fs, const ::filesystem::myfs_config
     return result::Result::OK;
 }
 
-result::Result deinit_fs(::filesystem::myfs_t& fs)
+result::Result deinit_fs(::filesystem::myfs_t& fs, const ::filesystem::myfs_config& config)
 {
-    // if(_is_file_open)
-    // {
-    //     const auto close_result = close_file(lfs, nullptr);
-    //     if(result::Result::OK != close_result)
-    //     {
-    //         NRF_LOG_ERROR("failed to close active file at deinit stage");
-    //     }
-    //     _is_file_open = false;
-    // }
-    // const auto unmount_result = lfs_unmount(&lfs);
-    // if(unmount_result < 0)
-    // {
-    //     NRF_LOG_ERROR("failed to unmount LFS (%d)", unmount_result);
-    //     return result::Result::ERROR_GENERAL;
-    // }
+    if(_active_file.is_open)
+    {
+        const auto close_result = close_file(fs, config);
+        if(result::Result::OK != close_result)
+        {
+            NRF_LOG_ERROR("failed to close active file at deinit stage");
+        }
+        _is_file_open = false;
+    }
+    const auto unmount_result = myfs_unmount(&fs, config);
+    if(unmount_result < 0)
+    {
+        NRF_LOG_ERROR("failed to unmount MyFS (%d)", unmount_result);
+        return result::Result::ERROR_GENERAL;
+    }
     return result::Result::ERROR_NOT_IMPLEMENTED;
 }
+
+result::Result close_file(::filesystem::myfs_t& fs, const ::filesystem::myfs_config& config)
+{
+    // TODO: add comparison of the name to the name of an active file
+    const auto close_result = myfs_file_close(&fs, config, _active_file);
+    if(close_result < 0)
+    {
+        NRF_LOG_ERROR("failed to close active file");
+        return result::Result::ERROR_GENERAL;
+    }
+    // todo: consider removing this var, as it exists within the _active_file
+    _is_file_open = false;
+    return result::Result::OK;
+}
+
 
 result::Result get_files_list(lfs_t& lfs,
                               uint32_t& total_data_size_bytes,
@@ -270,8 +285,9 @@ result::Result open_file(lfs_t& lfs, const char* name, uint32_t& file_size_bytes
     memset(&_active_file_config, 0, sizeof(_active_file_config));
     _active_file_config.buffer = _active_file_buffer;
     _active_file_config.attr_count = 0;
-    const auto config_res =
-        lfs_file_opencfg(&lfs, &_active_file, name, LFS_O_RDONLY, &_active_file_config);
+    // const auto config_res =
+    //     lfs_file_opencfg(&lfs, &_active_file, name, LFS_O_RDONLY, &_active_file_config);
+    const auto config_res = -1;
 
     if(config_res < 0)
     {
@@ -289,26 +305,13 @@ get_file_data(lfs_t& lfs, uint8_t* buffer, uint32_t& actual_size, const uint32_t
     {
         return result::Result::ERROR_INVALID_PARAMETER;
     }
-    const auto result = lfs_file_read(&lfs, &_active_file, buffer, max_data_size);
+    const auto result = -1; //lfs_file_read(&lfs, &_active_file, buffer, max_data_size);
     if(result < 0)
     {
         NRF_LOG_ERROR("read err(%d)", result);
         return result::Result::ERROR_GENERAL;
     }
     actual_size = result;
-    return result::Result::OK;
-}
-
-result::Result close_file(lfs_t& lfs, const char* name)
-{
-    // TODO: add comparison of the name to the name of an active file
-    const auto close_result = lfs_file_close(&lfs, &_active_file);
-    if(close_result < 0)
-    {
-        NRF_LOG_ERROR("failed to close active file");
-        return result::Result::ERROR_GENERAL;
-    }
-    _is_file_open = false;
     return result::Result::OK;
 }
 
@@ -418,19 +421,13 @@ result::Result get_latest_file_name(lfs_t& lfs, char* name, uint32_t& name_len)
     return result::Result::OK;
 }
 
-result::Result create_file(lfs_t& lfs, const char* name)
+result::Result create_file(::filesystem::myfs_t& fs, const ::filesystem::myfs_config& config, uint8_t* file_id)
 {
-    memset(&_active_file_config, 0, sizeof(_active_file_config));
-    _active_file_config.buffer = _active_file_buffer;
-    _active_file_config.attr_count = 0;
-    memset(&_active_file, 0, sizeof(_active_file));
-    memset(_active_file_buffer, 0, sizeof(_active_file_buffer));
-    const auto config_res = lfs_file_opencfg(
-        &lfs, &_active_file, name, LFS_O_CREAT | LFS_O_WRONLY, &_active_file_config);
+    const auto create_res = myfs_file_open(&fs, config, _active_file, file_id, ::filesystem::MYFS_CREATE_FLAG);
 
-    if(config_res < 0)
+    if(create_res < 0)
     {
-        NRF_LOG_ERROR("failed to open file %s for write", name);
+        NRF_LOG_ERROR("failed to create file");
         return result::Result::ERROR_GENERAL;
     }
     _is_file_open = true;
@@ -439,7 +436,7 @@ result::Result create_file(lfs_t& lfs, const char* name)
 
 result::Result write_data(lfs_t& lfs, const uint8_t* data, const uint32_t data_size)
 {
-    const auto write_result = lfs_file_write(&lfs, &_active_file, data, data_size);
+    const auto write_result = -1;//lfs_file_write(&lfs, &_active_file, data, data_size);
     if(write_result < 0)
     {
         NRF_LOG_ERROR("failed to write data to the active file");
