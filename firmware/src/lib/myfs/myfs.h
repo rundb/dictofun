@@ -27,12 +27,21 @@ static constexpr uint32_t myfs_format_marker_size{single_file_descriptor_size_by
 static constexpr uint32_t first_file_start_location{4096};
 static constexpr uint32_t page_size{256};
 
-struct myfs_config {
-    void *context;
-    int (*read)(const struct myfs_config *c, myfs_block_t block, myfs_off_t off, void *buffer, myfs_size_t size);
-    int (*prog)(const struct myfs_config *c, myfs_block_t block, myfs_off_t off, const void *buffer, myfs_size_t size);
-    int (*erase)(const struct myfs_config *c, myfs_block_t block);
-    int (*sync)(const struct myfs_config *c);
+struct myfs_config
+{
+    void* context;
+    int (*read)(const struct myfs_config* c,
+                myfs_block_t block,
+                myfs_off_t off,
+                void* buffer,
+                myfs_size_t size);
+    int (*prog)(const struct myfs_config* c,
+                myfs_block_t block,
+                myfs_off_t off,
+                const void* buffer,
+                myfs_size_t size);
+    int (*erase)(const struct myfs_config* c, myfs_block_t block);
+    int (*sync)(const struct myfs_config* c);
 
     myfs_size_t read_size;
     myfs_size_t prog_size;
@@ -43,9 +52,9 @@ struct myfs_config {
     myfs_size_t cache_size;
     myfs_size_t lookahead_size;
 
-    void *read_buffer;
-    void *prog_buffer;
-    void *lookahead_buffer;
+    void* read_buffer;
+    void* prog_buffer;
+    void* lookahead_buffer;
 
     myfs_size_t name_max;
     myfs_size_t file_max;
@@ -61,7 +70,7 @@ struct myfs_t
     uint32_t next_file_start_address{0};
     uint32_t next_file_descriptor_address{0};
 
-    uint8_t * buffer_pointer{nullptr};
+    uint8_t* buffer_pointer{nullptr};
     uint32_t buffer_size{page_size};
     uint32_t buffer_position{0};
 
@@ -71,7 +80,9 @@ struct myfs_t
 
     myfs_config& config;
 
-    myfs_t(myfs_config& cfg): config(cfg){}
+    myfs_t(myfs_config& cfg)
+        : config(cfg)
+    { }
 };
 
 /// Bytes 0..3: magic, corresponding to a created file
@@ -79,7 +90,7 @@ struct myfs_t
 /// Bytes 8..15: file identifier/name (0 is a valid value, shall be converted to text `00`)
 /// Bytes 16..19: file size (also it's a marker that file has been closed after the write)
 /// Bytes 20..23: reserved for CRC
-struct __attribute__((__packed__)) myfs_file_descriptor 
+struct __attribute__((__packed__)) myfs_file_descriptor
 {
     static constexpr uint32_t file_id_size{8};
     uint32_t magic;
@@ -101,24 +112,25 @@ struct myfs_file_t
     bool is_write{false};
 };
 
-static constexpr uint8_t MYFS_CREATE_FLAG{1<<0};
-static constexpr uint8_t MYFS_READ_FLAG{1<<1};
+static constexpr uint8_t MYFS_CREATE_FLAG{1 << 0};
+static constexpr uint8_t MYFS_READ_FLAG{1 << 1};
 
 int myfs_format(myfs_t& myfs);
 int myfs_mount(myfs_t& myfs);
 
-int myfs_file_open(myfs_t& myfs, myfs_file_t& file, uint8_t * file_id, uint8_t flags);
-int myfs_file_get_size(myfs_t& myfs, uint8_t * file_id);
+int myfs_file_open(myfs_t& myfs, myfs_file_t& file, uint8_t* file_id, uint8_t flags);
+int myfs_file_get_size(myfs_t& myfs, uint8_t* file_id);
 int myfs_file_close(myfs_t& myfs, myfs_file_t& file);
-int myfs_file_write(myfs_t& myfs, myfs_file_t& file, void *buffer, myfs_size_t size);
-int myfs_file_read(myfs_t& myfs, myfs_file_t& file, void *buffer, myfs_size_t max_size, myfs_size_t& read_size);
+int myfs_file_write(myfs_t& myfs, myfs_file_t& file, void* buffer, myfs_size_t size);
+int myfs_file_read(
+    myfs_t& myfs, myfs_file_t& file, void* buffer, myfs_size_t max_size, myfs_size_t& read_size);
 int myfs_unmount(myfs_t& myfs);
 
 // "dir"-related calls
 uint32_t myfs_get_files_count(myfs_t& myfs);
 int myfs_rewind_dir(myfs_t& myfs);
-int myfs_get_next_id(myfs_t& myfs, uint8_t * file_id);
+int myfs_get_next_id(myfs_t& myfs, uint8_t* file_id);
 
 // "stat"-related call
 int myfs_get_fs_stat(myfs_t& myfs, uint32_t& files_count, uint32_t& occupied_space);
-}
+} // namespace filesystem

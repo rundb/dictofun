@@ -24,9 +24,9 @@ static uint8_t sectors_erasure_bitmap[sectors_erasure_max_bitmap_size];
 static uint32_t sectors_erasure_actual_bitmap_size_{0};
 
 void myfs_register_flash_device(memory::SpiNorFlashIf* flash,
-                           uint32_t sector_size,
-                           uint32_t page_size,
-                           uint32_t memory_size)
+                                uint32_t sector_size,
+                                uint32_t page_size,
+                                uint32_t memory_size)
 {
     flash_ = flash;
     sector_size_ = sector_size;
@@ -93,12 +93,11 @@ void myfs_mark_sector_as_needs_erasure(myfs_block_t block)
     }
 }
 
-int myfs_read(
-    const struct ::filesystem::myfs_config* c, 
-    myfs_block_t block, 
-    myfs_off_t off, 
-    void* buffer, 
-    myfs_size_t size)
+int myfs_read(const struct ::filesystem::myfs_config* c,
+              myfs_block_t block,
+              myfs_off_t off,
+              void* buffer,
+              myfs_size_t size)
 {
     const auto read_result =
         flash_->read(block * sector_size_ + off, reinterpret_cast<uint8_t*>(buffer), size);
@@ -110,10 +109,10 @@ int myfs_read(
 }
 
 int myfs_program(const struct ::filesystem::myfs_config* c,
-            const myfs_block_t block,
-            const myfs_off_t off,
-            const void* buffer,
-            const myfs_size_t size)
+                 const myfs_block_t block,
+                 const myfs_off_t off,
+                 const void* buffer,
+                 const myfs_size_t size)
 {
     if(size % page_size_ != 0)
     {

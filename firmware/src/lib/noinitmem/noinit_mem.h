@@ -10,7 +10,7 @@
 namespace noinit
 {
 
-enum ResetReason: std::uint32_t 
+enum ResetReason : std::uint32_t
 {
     UNKNOWN,
     FILE_SYSTEM_ERROR_DURING_RECORD = 0x8E5A301FUL,
@@ -21,7 +21,7 @@ enum ResetReason: std::uint32_t
 
 static constexpr uint32_t VALID_MAGIC{0x8F1A2B3C};
 
-// This class contains memory variables that are preserved after a restart of an MCU. 
+// This class contains memory variables that are preserved after a restart of an MCU.
 #pragma pack(1)
 struct NoInitMemory
 {
@@ -38,9 +38,10 @@ struct NoInitMemory
     uint32_t boot_count;
 
     uint32_t _crc;
+
 private:
     void reset();
 };
 #pragma pack(0)
 
-}
+} // namespace noinit

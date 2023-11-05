@@ -3,29 +3,32 @@
  * Copyright (c) 2023, Roman Turkin
  */
 
-#include "crc32.h"
 #include "noinit_mem.h"
+#include "crc32.h"
 #include "nrf_log.h"
 
 namespace noinit
 {
 
-static NoInitMemory _noinit_memory __attribute__((section(".noinit")));;
+static NoInitMemory _noinit_memory __attribute__((section(".noinit")));
+;
 
-static uint32_t get_noinit_memory_crc() {
-    return crc32_compute(
-        reinterpret_cast<const uint8_t*>(&_noinit_memory), sizeof(NoInitMemory) - sizeof(uint32_t), 0);
+static uint32_t get_noinit_memory_crc()
+{
+    return crc32_compute(reinterpret_cast<const uint8_t*>(&_noinit_memory),
+                         sizeof(NoInitMemory) - sizeof(uint32_t),
+                         0);
 }
 
 void NoInitMemory::load()
 {
     const auto crc_calculated = get_noinit_memory_crc();
     auto& nim = instance();
-    if (nim._magic != VALID_MAGIC && nim._crc != crc_calculated)
+    if(nim._magic != VALID_MAGIC && nim._crc != crc_calculated)
     {
         nim.reset();
     }
-    else 
+    else
     {
         NRF_LOG_INFO("noinit mem: ok, boot = %d, reset = %d", nim.boot_count, nim.reset_count);
         nim.boot_count++;
@@ -46,7 +49,7 @@ void NoInitMemory::reset()
 void NoInitMemory::store()
 {
     auto& nim = instance();
-    if (nim._magic != VALID_MAGIC)
+    if(nim._magic != VALID_MAGIC)
     {
         nim.reset();
     }
@@ -58,5 +61,4 @@ NoInitMemory& NoInitMemory::instance()
     return _noinit_memory;
 }
 
-
-}
+} // namespace noinit
