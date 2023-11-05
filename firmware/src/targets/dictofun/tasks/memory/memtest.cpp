@@ -169,18 +169,18 @@ void launch_test_3(myfs_t& myfs, const myfs_config& myfs_configuration)
     NRF_LOG_INFO("mem: launching simple MyFS operation test");
     // ============ Step 1: initialize the FS (and format it, if necessary)
     vTaskDelay(20);
-    auto err = myfs_mount(&myfs, &myfs_configuration);
+    auto err = myfs_mount(myfs);
     if(err != 0)
     {
         vTaskDelay(20);
         NRF_LOG_INFO("mem: formatting MyFS");
-        err = myfs_format(&myfs, &myfs_configuration);
+        err = myfs_format(myfs);
         if(err != 0)
         {
             NRF_LOG_ERROR("mem: failed to format MyFS (%d)", err);
             return;
         }
-        err = myfs_mount(&myfs, &myfs_configuration);
+        err = myfs_mount(myfs);
         if(err != 0)
         {
             NRF_LOG_ERROR("mem: failed to mount MyFS after formatting");
@@ -192,7 +192,7 @@ void launch_test_3(myfs_t& myfs, const myfs_config& myfs_configuration)
     NRF_LOG_INFO("mem: creating 2 files");
     ::filesystem::myfs_file_t test_file;
     uint8_t test_file_id[8]{0, 0, 23, 11, 1, 21, 30, 12};
-    const auto create_result = myfs_file_open(&myfs, myfs_configuration, test_file, test_file_id, ::filesystem::MYFS_CREATE_FLAG);
+    const auto create_result = myfs_file_open(myfs, test_file, test_file_id, ::filesystem::MYFS_CREATE_FLAG);
 
     if (create_result != 0)
     {
@@ -208,14 +208,14 @@ void launch_test_3(myfs_t& myfs, const myfs_config& myfs_configuration)
 
     for (auto i = 0; i < 420; i += sizeof(tmp_data))
     {
-        const auto write_res = myfs_file_write(&myfs, myfs_configuration, test_file, tmp_data, sizeof(tmp_data));
+        const auto write_res = myfs_file_write(myfs, test_file, tmp_data, sizeof(tmp_data));
         if (write_res < 0)
         {
             NRF_LOG_ERROR("memtest: write has failed (pos %d)", i);
         }
     }
 
-    const auto close_result = myfs_file_close(&myfs, myfs_configuration, test_file);
+    const auto close_result = myfs_file_close(myfs, test_file);
     if (close_result != 0)
     {
         NRF_LOG_ERROR("mem: failed to close file after write (err %d)", close_result);
@@ -224,7 +224,7 @@ void launch_test_3(myfs_t& myfs, const myfs_config& myfs_configuration)
 
     test_file_id[0]++;
 
-    const auto create_result_2 = myfs_file_open(&myfs, myfs_configuration, test_file, test_file_id, ::filesystem::MYFS_CREATE_FLAG);
+    const auto create_result_2 = myfs_file_open(myfs, test_file, test_file_id, ::filesystem::MYFS_CREATE_FLAG);
 
     if (create_result_2 != 0)
     {
@@ -232,13 +232,13 @@ void launch_test_3(myfs_t& myfs, const myfs_config& myfs_configuration)
         return;
     }
 
-    const auto write_res = myfs_file_write(&myfs, myfs_configuration, test_file, tmp_data, sizeof(tmp_data));
+    const auto write_res = myfs_file_write(myfs, test_file, tmp_data, sizeof(tmp_data));
     if (write_res < 0)
     {
         NRF_LOG_ERROR("memtest: write 2 has failed (err %d)", write_res);
     }
 
-    const auto close_res_2 = myfs_file_close(&myfs, myfs_configuration, test_file);
+    const auto close_res_2 = myfs_file_close(myfs, test_file);
     if (close_res_2 != 0)
     {
         NRF_LOG_ERROR("mem: failed to close file 2 after write (err %d)", close_res_2);
@@ -246,7 +246,7 @@ void launch_test_3(myfs_t& myfs, const myfs_config& myfs_configuration)
     }
 
     test_file_id[0]--;
-    const auto open_result_1 = myfs_file_open(&myfs, myfs_configuration, test_file, test_file_id, ::filesystem::MYFS_READ_FLAG);
+    const auto open_result_1 = myfs_file_open(myfs, test_file, test_file_id, ::filesystem::MYFS_READ_FLAG);
     if (open_result_1 != 0)
     {
         NRF_LOG_ERROR("mem: failed to open file 1 for read (err %d)", open_result_1);
@@ -257,7 +257,7 @@ void launch_test_3(myfs_t& myfs, const myfs_config& myfs_configuration)
     uint32_t actually_read_size;
     do 
     {
-        const auto read_result = myfs_file_read(&myfs, myfs_configuration, test_file, tmp_data, sizeof(tmp_data), actually_read_size);
+        const auto read_result = myfs_file_read(myfs, test_file, tmp_data, sizeof(tmp_data), actually_read_size);
         if (0 != read_result)
         {
             NRF_LOG_ERROR("memtest: data read failed");
@@ -266,7 +266,7 @@ void launch_test_3(myfs_t& myfs, const myfs_config& myfs_configuration)
         NRF_LOG_INFO("memtest: read %d bytes", actually_read_size);
     } while (actually_read_size != 0);
 
-    const auto close_res_3 = myfs_file_close(&myfs, myfs_configuration, test_file);
+    const auto close_res_3 = myfs_file_close(myfs, test_file);
     if (close_res_3 != 0)
     {
         NRF_LOG_ERROR("mem: failed to close file 3 after read (err %d)", close_res_3);

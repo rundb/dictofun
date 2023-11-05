@@ -70,7 +70,7 @@ struct myfs_t
     uint32_t current_id_search_pos{0};
 
     myfs_config& config;
-    
+
     myfs_t(myfs_config& cfg): config(cfg){}
 };
 
@@ -104,21 +104,21 @@ struct myfs_file_t
 static constexpr uint8_t MYFS_CREATE_FLAG{1<<0};
 static constexpr uint8_t MYFS_READ_FLAG{1<<1};
 
-int myfs_format(myfs_t *myfs, const myfs_config *config);
-int myfs_mount(myfs_t *myfs, const myfs_config *config);
+int myfs_format(myfs_t& myfs);
+int myfs_mount(myfs_t& myfs);
 
-int myfs_file_open(myfs_t *myfs, const myfs_config& config, myfs_file_t& file, uint8_t * file_id, uint8_t flags);
-int myfs_file_get_size(myfs_t& myfs, const myfs_config& config, uint8_t * file_id);
-int myfs_file_close(myfs_t *myfs, const myfs_config& config, myfs_file_t& file);
-int myfs_file_write(myfs_t *myfs, const myfs_config& config, myfs_file_t& file, void *buffer, myfs_size_t size);
-int myfs_file_read(myfs_t *myfs, const myfs_config& config, myfs_file_t& file, void *buffer, myfs_size_t max_size, myfs_size_t& read_size);
-int myfs_unmount(myfs_t *myfs, const myfs_config& config);
+int myfs_file_open(myfs_t& myfs, myfs_file_t& file, uint8_t * file_id, uint8_t flags);
+int myfs_file_get_size(myfs_t& myfs, uint8_t * file_id);
+int myfs_file_close(myfs_t& myfs, myfs_file_t& file);
+int myfs_file_write(myfs_t& myfs, myfs_file_t& file, void *buffer, myfs_size_t size);
+int myfs_file_read(myfs_t& myfs, myfs_file_t& file, void *buffer, myfs_size_t max_size, myfs_size_t& read_size);
+int myfs_unmount(myfs_t& myfs);
 
 // "dir"-related calls
 uint32_t myfs_get_files_count(myfs_t& myfs);
 int myfs_rewind_dir(myfs_t& myfs);
-int myfs_get_next_id(myfs_t& myfs, const myfs_config& config, uint8_t * file_id);
+int myfs_get_next_id(myfs_t& myfs, uint8_t * file_id);
 
 // "stat"-related call
-int myfs_get_fs_stat(myfs_t& myfs, const myfs_config& config, uint32_t& files_count, uint32_t& occupied_space);
+int myfs_get_fs_stat(myfs_t& myfs, uint32_t& files_count, uint32_t& occupied_space);
 }

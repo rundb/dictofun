@@ -25,18 +25,17 @@ static uint32_t _total_files_left{0};
 
 result::Result init_fs(::filesystem::myfs_t& fs)
 {
-    const ::filesystem::myfs_config& config(fs.config);
-    auto err = myfs_mount(&fs, &config);
+    auto err = myfs_mount(fs);
     if(err != 0)
     {
         NRF_LOG_WARNING("mem: formatting FS");
-        err = myfs_format(&fs, &config);
+        err = myfs_format(fs);
         if(err != 0)
         {
             NRF_LOG_ERROR("mem: failed to format MyFS (%d)", err);
             return result::Result::ERROR_GENERAL;
         }
-        err = myfs_mount(&fs, &config);
+        err = myfs_mount(fs);
         if(err != 0)
         {
             NRF_LOG_ERROR("mem: failed to mount MyFS after formatting");
@@ -52,7 +51,6 @@ result::Result init_fs(::filesystem::myfs_t& fs)
 
 result::Result deinit_fs(::filesystem::myfs_t& fs)
 {
-    const ::filesystem::myfs_config& config(fs.config);
     if(_active_file.is_open)
     {
         const auto close_result = close_file(fs);
@@ -62,7 +60,7 @@ result::Result deinit_fs(::filesystem::myfs_t& fs)
         }
         _is_file_open = false;
     }
-    const auto unmount_result = myfs_unmount(&fs, config);
+    const auto unmount_result = myfs_unmount(fs);
     if(unmount_result < 0)
     {
         NRF_LOG_ERROR("failed to unmount MyFS (%d)", unmount_result);
@@ -73,9 +71,8 @@ result::Result deinit_fs(::filesystem::myfs_t& fs)
 
 result::Result close_file(::filesystem::myfs_t& fs)
 {
-    const ::filesystem::myfs_config& config(fs.config);
     // TODO: add comparison of the name to the name of an active file
-    const auto close_result = myfs_file_close(&fs, config, _active_file);
+    const auto close_result = myfs_file_close(fs, _active_file);
     if(close_result < 0)
     {
         NRF_LOG_ERROR("failed to close active file");
@@ -92,7 +89,6 @@ result::Result get_files_list(::filesystem::myfs_t& fs,
                               uint8_t* buffer,
                               const uint32_t max_data_size)
 {
-    const ::filesystem::myfs_config& config(fs.config);
     // TODO: add an assert if max_data_size % single_entry_size != 0
     if(buffer == nullptr || max_data_size < 8)
     {
@@ -116,7 +112,7 @@ result::Result get_files_list(::filesystem::myfs_t& fs,
     // TODO: check off-by-1 chance here (if there is -1 file ID in the list)
     while(file_ids_count < max_files_fitting_in_buffer)
     {
-        const auto dir_read_res = myfs_get_next_id(fs, config, file_id_buffer);
+        const auto dir_read_res = myfs_get_next_id(fs, file_id_buffer);
         if(dir_read_res < 0)
         {
             NRF_LOG_ERROR("dir read operation failed (%d)", dir_read_res);
@@ -155,7 +151,6 @@ get_files_list_next(::filesystem::myfs_t& fs,
     {
         return result::Result::ERROR_GENERAL;
     }
-    const ::filesystem::myfs_config& config(fs.config);
 
     static constexpr uint32_t single_entry_size{sizeof(ble::fts::file_id_type)};
     static const uint32_t max_files_fitting_in_buffer{max_data_size / single_entry_size};
@@ -168,7 +163,7 @@ get_files_list_next(::filesystem::myfs_t& fs,
     // TODO: check off-by-1 chance here (if there is -1 file ID in the list)
     while(file_ids_count < max_files_fitting_in_buffer)
     {
-        const auto dir_read_res = myfs_get_next_id(fs, config, file_id_buffer);
+        const auto dir_read_res = myfs_get_next_id(fs, file_id_buffer);
         if(dir_read_res < 0)
         {
             NRF_LOG_ERROR("dir read operation failed (%d)", dir_read_res);
@@ -207,10 +202,9 @@ result::Result get_file_info(::filesystem::myfs_t& fs,
         return result::Result::ERROR_INVALID_PARAMETER;
     }
     uint8_t id[::filesystem::myfs_file_t::id_size]{0};
-    const ::filesystem::myfs_config& config(fs.config);
     
     convert_filename_to_myfs_id(name, id);
-    const auto size = myfs_file_get_size(fs, config, id);
+    const auto size = myfs_file_get_size(fs, id);
     if (size < 0)
     {
         return result::Result::ERROR_GENERAL;
@@ -234,18 +228,16 @@ result::Result open_file(::filesystem::myfs_t& fs, const char* name, uint32_t& f
         return result::Result::ERROR_GENERAL;
     }
 
-    const ::filesystem::myfs_config& config(fs.config);
-
     uint8_t id[::filesystem::myfs_file_t::id_size]{0};
     convert_filename_to_myfs_id(name, id);
-    const auto get_size_result = myfs_file_get_size(fs, config, id);
+    const auto get_size_result = myfs_file_get_size(fs, id);
     if (get_size_result < 0)
     {
         NRF_LOG_ERROR("fs integr: failed to get file size before open file %s", name);
         return result::Result::ERROR_GENERAL;
     }
 
-    const auto open_result = myfs_file_open(&fs, config, _active_file, id, ::filesystem::MYFS_READ_FLAG);
+    const auto open_result = myfs_file_open(fs, _active_file, id, ::filesystem::MYFS_READ_FLAG);
     if (open_result < 0)
     {
         NRF_LOG_ERROR("fs integr: failed to open file %s", name);
@@ -270,9 +262,7 @@ get_file_data(::filesystem::myfs_t& fs, uint8_t* buffer, uint32_t& actual_size, 
         return result::Result::ERROR_GENERAL;
     }
 
-    const ::filesystem::myfs_config& config(fs.config);
-
-    const auto read_result = myfs_file_read(&fs, config, _active_file, buffer, max_data_size, actual_size);
+    const auto read_result = myfs_file_read(fs, _active_file, buffer, max_data_size, actual_size);
     if(read_result < 0)
     {
         NRF_LOG_ERROR("read err(%d)", read_result);
@@ -289,12 +279,10 @@ result::Result get_fs_stat(::filesystem::myfs_t& fs, uint8_t* buffer)
         return result::Result::ERROR_INVALID_PARAMETER;
     }
 
-    const ::filesystem::myfs_config& config(fs.config);
-
     ble::fts::FileSystemInterface::FSStatus fs_stat;
     uint32_t files_count{0};
     uint32_t occupied_space{0};
-    const auto get_stat_result = myfs_get_fs_stat(fs, config, files_count, occupied_space);
+    const auto get_stat_result = myfs_get_fs_stat(fs, files_count, occupied_space);
 
     if (get_stat_result < 0)
     {
@@ -302,7 +290,7 @@ result::Result get_fs_stat(::filesystem::myfs_t& fs, uint8_t* buffer)
     }
     fs_stat.files_count = files_count;
     fs_stat.occupied_space = occupied_space;
-    fs_stat.free_space = config.block_count * 4096 - occupied_space;
+    fs_stat.free_space = fs.config.block_count * 4096 - occupied_space;
     memcpy(buffer, &fs_stat, sizeof(fs_stat));
     
     return result::Result::OK;
@@ -314,8 +302,7 @@ result::Result create_file(::filesystem::myfs_t& fs, uint8_t* file_id)
     {
         return result::Result::ERROR_GENERAL;
     }
-    const ::filesystem::myfs_config& config(fs.config);
-    const auto create_res = myfs_file_open(&fs, config, _active_file, file_id, ::filesystem::MYFS_CREATE_FLAG);
+    const auto create_res = myfs_file_open(fs, _active_file, file_id, ::filesystem::MYFS_CREATE_FLAG);
 
     if(create_res < 0)
     {
@@ -328,12 +315,11 @@ result::Result create_file(::filesystem::myfs_t& fs, uint8_t* file_id)
 
 result::Result write_data(::filesystem::myfs_t& fs, uint8_t* data, uint32_t data_size)
 {
-    const ::filesystem::myfs_config& config(fs.config);
     if (nullptr == data)
     {
         return result::Result::ERROR_GENERAL;
     }
-    const auto write_result = myfs_file_write(&fs, config, _active_file, reinterpret_cast<void *>(data), data_size);
+    const auto write_result = myfs_file_write(fs, _active_file, reinterpret_cast<void *>(data), data_size);
     if(write_result < 0)
     {
         NRF_LOG_ERROR("failed to write data to the active file");
