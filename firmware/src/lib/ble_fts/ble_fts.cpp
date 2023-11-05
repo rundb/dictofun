@@ -327,6 +327,10 @@ void FtsService::on_control_point_write(const uint32_t len, const uint8_t* data)
         on_req_fs_status(len - 1);
         break;
     }
+    case static_cast<int>(ControlPointOpcode::REQ_RECEIVE_COMPLETE): {
+        on_req_receive_complete(len - 1);
+        break;
+    }
     default: {
         NRF_LOG_ERROR("cp.write: wrong opcode");
         // TODO: send a response to the client in order to notify it about an error.
@@ -387,6 +391,16 @@ void FtsService::on_req_fs_status(const uint32_t size)
     _context.pending_command = FtsService::ControlPointOpcode::REQ_FS_STATUS;
 }
 
+void FtsService::on_req_receive_complete(uint32_t size)
+{
+    if(size != 0)
+    {
+        NRF_LOG_ERROR("cp.write: rx complete requ wrong size");
+        return;
+    }
+    _context.pending_command = FtsService::ControlPointOpcode::REQ_RECEIVE_COMPLETE;
+}
+
 void FtsService::on_connect(ble_evt_t const* p_ble_evt, ClientContext& client_context)
 {
     _context.conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
@@ -433,7 +447,7 @@ void FtsService::on_ble_evt(ble_evt_t const* p_ble_evt, void* p_context)
         // NRF_LOG_DEBUG("ble::fts::evt_conn_param_upd. id=%d, len=%d",
         //               p_ble_evt->header.evt_id,
         //               p_ble_evt->header.evt_len);
-        const auto& conn_param_upd_evt = p_ble_evt->evt.gap_evt.params.conn_param_update;
+        // const auto& conn_param_upd_evt = p_ble_evt->evt.gap_evt.params.conn_param_update;
 
         // NRF_LOG_DEBUG("conn param event: min=%d, max=%d, lat=%d, timeout=%d",
         //               conn_param_upd_evt.conn_params.min_conn_interval,
@@ -659,6 +673,12 @@ void FtsService::process_client_request(ControlPointOpcode client_request)
         }
         _context.active_command = _context.pending_command;
         _context.pending_command = FtsService::ControlPointOpcode::IDLE;
+        break;
+    }
+    case FtsService::ControlPointOpcode::REQ_RECEIVE_COMPLETE: 
+    {
+        NRF_LOG_DEBUG("Host confirmed reception completion");
+        _fs_if.receive_completed_function();
         break;
     }
     default:

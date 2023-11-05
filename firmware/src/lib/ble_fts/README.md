@@ -67,12 +67,14 @@ Service advertises following set of characteristics.
 
 `Control point` characteristic shall support following commands:
 
-| Opcode | Procedure                | Parameters        |Response       |
-|:-------|:-------------------------|:------------------|:--------------|
-| 01     | Request list of files    | N/A               | Status, UINT8 |
-| 02     | Request file info        | File ID (UINT64)  | Status, UINT8 |
-| 03     | Request file data        | File ID (UINT64)  | Status, UINT8 |
-| 04     | Request FS status        | N/A               | Status, UINT8 |
+| Opcode | Procedure                  | Parameters        |Response       |
+|:-------|:---------------------------|:------------------|:--------------|
+| 01     | Request list of files      | N/A               | Status, UINT8 |
+| 02     | Request file info          | File ID (UINT64)  | Status, UINT8 |
+| 03     | Request file data          | File ID (UINT64)  | Status, UINT8 |
+| 04     | Request FS status          | N/A               | Status, UINT8 |
+| 05     | Request next list of files | N/A               | Status, UINT8 |
+| 06     | Confirm receive completion | N/A               | Status, UINT8 |
 
 
 ##### Opcode 0x01 - Request list of files
@@ -90,6 +92,16 @@ If operation is successful, device shall ASAP start sending the contents of the 
 by using `Request file info` command.
 
 TODO: specify way to signal error to the host (f.e. if file doesn't exist)
+
+##### Opcode 0x05 - Request next list of files
+
+Upon reception of this command device continues sending the list of files on the device (it's necessary, if the list
+of the files is too long to fit into one characteristic).
+
+##### Opcode 0x06 - Confirm receive completion
+
+If the host has received all of the files present on the device, it can optionally signal the device about it. This 
+allows the device to format the file storage without losing the data. 
 
 #### Data transfer procedure for the read/notify characteristics
 

@@ -49,7 +49,6 @@ constexpr size_t CACHE_SIZE{flash_page_size};
 uint8_t myfs_prog_buffer[CACHE_SIZE];
 uint8_t myfs_read_buffer[CACHE_SIZE];
 
-
 enum class MemoryOwner
 {
     AUDIO,
@@ -98,6 +97,7 @@ char active_record_name[sizeof(ble::fts::file_id_type) + 1]{0};
 uint8_t active_record_id[::filesystem::myfs_file_t::id_size]{0};
 
 static uint32_t written_record_size{0};
+static bool is_formatting_allowed{false};
 
 static bool is_ble_access_allowed();
 void process_request_from_ble(Context& context,
@@ -346,6 +346,11 @@ void process_request_from_ble(Context& context,
         }
         status.data_size = sizeof(ble::fts::FileSystemInterface::FSStatus);
         data_queue_elem.size = status.data_size;
+        break;
+    }
+    case ble::CommandToMemory::ALLOW_MEMORY_FORMATTING: {
+        is_formatting_allowed = true;
+        break;
     }
     default: {
         NRF_LOG_ERROR("mem from ble: command %d not yet implemented", command_id);
@@ -493,7 +498,8 @@ void process_request_from_state(Context& context, const Command command_id, uint
             break;
         }
         case Command::PERFORM_MEMORY_CHECK: {
-            static constexpr uint32_t max_files_count{30};
+            static constexpr uint32_t max_files_count{100};
+            static constexpr float formatting_trigger_level{0.8};
             const auto fs_stat_result =
                 memory::filesystem::get_fs_stat(myfs, data_queue_elem.data);
             if(result::Result::OK != fs_stat_result)
@@ -506,7 +512,7 @@ void process_request_from_state(Context& context, const Command command_id, uint
             memcpy(&fsStatus, &data_queue_elem.data, sizeof(fsStatus));
             NRF_LOG_INFO("FS stats: %d/%d(%d)", fsStatus.occupied_space, fsStatus.free_space, fsStatus.files_count);
             StatusQueueElement response{Command::PERFORM_MEMORY_CHECK, Status::OK};
-            if ((fsStatus.occupied_space > (flash_total_size/2)) || (fsStatus.files_count > max_files_count))
+            if ((fsStatus.occupied_space > (flash_total_size * formatting_trigger_level)) || (fsStatus.files_count > max_files_count))
             {
                 response.status = Status::FORMAT_REQUIRED;
             }
