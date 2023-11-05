@@ -1,3 +1,8 @@
+// SPDX-License-Identifier:  Apache-2.0
+/*
+ * Copyright (c) 2023, Roman Turkin
+ */
+
 #include "myfs.h"
 
 #include <cstring>
@@ -6,9 +11,6 @@
 
 #include <cstdio>
 #include <algorithm>
-
-#include "FreeRTOS.h"
-#include "task.h"
 
 namespace filesystem
 {
@@ -108,7 +110,7 @@ int myfs_mount(myfs_t *myfs, const myfs_config *config)
             NRF_LOG_ERROR("failed to read file descriptor at %x", current_descriptor_address);
             return read_res;
         }
-        print_flash_memory_area(*config, current_descriptor_address, 16);
+        // print_flash_memory_area(*config, current_descriptor_address, 16);
         if (d.magic == empty_word_value)
         {
             // the next location for the new file has been discovered
@@ -147,7 +149,6 @@ int myfs_mount(myfs_t *myfs, const myfs_config *config)
         is_first_descriptor_processed = true;
         current_descriptor_address += single_file_descriptor_size_bytes;
     }
-
 
     return -1;
 }
@@ -196,7 +197,7 @@ int myfs_file_open(myfs_t *myfs, const myfs_config& config, myfs_file_t& file, u
         memcpy(file.id, file_id, myfs_file_t::id_size);
 
         // 4. Debug printout of the configured descriptor
-        print_flash_memory_area(config, myfs->next_file_descriptor_address, single_file_descriptor_size_bytes);
+        // print_flash_memory_area(config, myfs->next_file_descriptor_address, single_file_descriptor_size_bytes);
         return 0;
     }
     else if ((flags & MYFS_READ_FLAG) > 0)
@@ -303,8 +304,7 @@ int myfs_file_close(myfs_t *myfs, const myfs_config& config, myfs_file_t& file)
         NRF_LOG_DEBUG("closed file. next descr(0x%x), next addr (0x%x), size(%d)", next_descriptor_position, next_file_start_address, file.size);
         NRF_LOG_DEBUG("cmd: memtest 5 %d %d", myfs->next_file_start_address, next_file_start_address);
 
-        vTaskDelay(50);
-        print_flash_memory_area(config, myfs->next_file_descriptor_address, single_file_descriptor_size_bytes);
+        //print_flash_memory_area(config, myfs->next_file_descriptor_address, single_file_descriptor_size_bytes);
 
         myfs->next_file_descriptor_address = next_descriptor_position;
         myfs->next_file_start_address = next_file_start_address;
@@ -410,7 +410,7 @@ int myfs_unmount(myfs_t *myfs, const myfs_config& config)
     return 0;
 }
 
-int myfs_get_files_count(myfs_t& myfs)
+uint32_t myfs_get_files_count(myfs_t& myfs)
 {
     return myfs.files_count;
 }
@@ -528,19 +528,18 @@ int myfs_get_fs_stat(myfs_t& myfs, const myfs_config& config, uint32_t& files_co
 
 void print_buffer(uint8_t * buf, uint32_t size)
 {
-    NRF_LOG_INFO("memory dump (%d bytes)", size);
+    NRF_LOG_DEBUG("memory dump (%lu bytes)", size);
     
     static constexpr uint32_t single_print_size{16};
     char str[9 + single_print_size * 3 + 2]{0};
-    for (auto i = 0; i < size; i += single_print_size)
+    for (uint32_t i = 0; i < size; i += single_print_size)
     {
         snprintf(str, sizeof(str), "%08x: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
-            i,
+            static_cast<unsigned int>(i),
             buf[i+0], buf[i+1], buf[i+2], buf[i+3], buf[i+4], buf[i+5], buf[i+6], buf[i+7],
             buf[i+8], buf[i+9], buf[i+10], buf[i+11], buf[i+12], buf[i+13], buf[i+14], buf[i+15]
         );
-        NRF_LOG_INFO("%s", str);
-        vTaskDelay(50);
+        NRF_LOG_DEBUG("%s", str);
     }
 }
 
@@ -558,14 +557,13 @@ void print_flash_memory_area(const myfs_config& c, uint32_t start_address, uint3
         const auto off = i % c.block_size;
         c.read(&c, block, off, tmp, size);
         int id = 0;
-        id += snprintf(tmp_str, single_line_length - id, "0x%x:", i);
-        for (auto j = 0; j < bytes_per_read; ++j)
+        id += snprintf(tmp_str, single_line_length - id, "0x%x:", static_cast<unsigned int>(i));
+        for (uint32_t j = 0; j < bytes_per_read; ++j)
         {
             id += snprintf(&tmp_str[id], single_line_length - id, "%02x ", tmp[j]);
         }
         tmp_str[single_line_length - 1] = '\0';
         NRF_LOG_DEBUG("%s", tmp_str);
-        vTaskDelay(50);
     }
 }
 

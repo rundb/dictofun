@@ -12,8 +12,4 @@ target_link_libraries(myfs PUBLIC
 
 target_link_libraries(myfs PRIVATE
     nrf5_log
-    nrf5_freertos
-    nrf52_freertos_portable_gcc
-    nrf52_freertos_portable_cmsis
-    nrf5_freertos_portable_memmang_1
 )

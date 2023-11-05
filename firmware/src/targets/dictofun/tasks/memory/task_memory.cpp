@@ -495,7 +495,7 @@ void process_request_from_state(Context& context, const Command command_id, uint
         break;
     }
     case Command::LAUNCH_TEST_4: {
-        // launch_test_4(lfs);
+        NRF_LOG_WARNING("memtest 4 has been removed");
         break;
     }
     case Command::LAUNCH_TEST_5: {

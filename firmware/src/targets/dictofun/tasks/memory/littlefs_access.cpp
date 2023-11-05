@@ -13,13 +13,9 @@ namespace memory
 {
 namespace filesystem
 {
-// This is a workaround to keep state of the active file between the calls
-// see https://github.com/littlefs-project/littlefs/issues/304 for reference
-static constexpr size_t active_file_buffer_size{256};
-static uint8_t _active_file_buffer[active_file_buffer_size]{0};
+
 static ::filesystem::myfs_file_t _active_file;
-static lfs_dir_t _active_dir;
-static lfs_file_config _active_file_config;
+
 static bool _is_file_open{false};
 static bool _is_files_list_next_needed{false};
 static constexpr uint32_t invalid_files_count{0xFEFEFEFDUL};
@@ -216,7 +212,7 @@ result::Result get_file_info(::filesystem::myfs_t& fs,
     }
     // At this point we know the file size - info.size
     data_size_bytes =
-        snprintf(reinterpret_cast<char*>(buffer), max_data_size, "{\"s\":%lu}", size);
+        snprintf(reinterpret_cast<char*>(buffer), max_data_size, "{\"s\":%lu}", static_cast<uint32_t>(size));
     buffer[data_size_bytes] = 0;
     
     return result::Result::OK;
@@ -266,7 +262,7 @@ get_file_data(::filesystem::myfs_t& fs, const ::filesystem::myfs_config& config,
         NRF_LOG_ERROR("fs integr: file is not correctly open");
         return result::Result::ERROR_GENERAL;
     }
-    // const auto result = -1; //lfs_file_read(&lfs, &_active_file, buffer, max_data_size);
+
     const auto read_result = myfs_file_read(&fs, config, _active_file, buffer, max_data_size, actual_size);
     if(read_result < 0)
     {
@@ -313,10 +309,8 @@ result::Result create_file(::filesystem::myfs_t& fs, const ::filesystem::myfs_co
     return result::Result::OK;
 }
 
-//result::Result write_data(lfs_t& lfs, const uint8_t* data, const uint32_t data_size)
 result::Result write_data(::filesystem::myfs_t& fs, const ::filesystem::myfs_config& config, uint8_t* data, uint32_t data_size)
 {
-    // const auto write_result = -1;//lfs_file_write(&lfs, &_active_file, data, data_size);
     const auto write_result = myfs_file_write(&fs, config, _active_file, reinterpret_cast<void *>(data), data_size);
     if(write_result < 0)
     {

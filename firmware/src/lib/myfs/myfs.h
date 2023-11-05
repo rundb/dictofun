@@ -1,3 +1,7 @@
+// SPDX-License-Identifier:  Apache-2.0
+/*
+ * Copyright (c) 2023, Roman Turkin
+ */
 #pragma once
 
 #include <cstdint>
@@ -67,7 +71,6 @@ struct myfs_file_t
     bool is_write{false};
 };
 
-
 static constexpr uint8_t MYFS_CREATE_FLAG{1<<0};
 static constexpr uint8_t MYFS_READ_FLAG{1<<1};
 
@@ -108,7 +111,7 @@ int myfs_file_read(myfs_t *myfs, const myfs_config& config, myfs_file_t& file, v
 int myfs_unmount(myfs_t *myfs, const myfs_config& config);
 
 // "dir"-related calls
-int myfs_get_files_count(myfs_t& myfs);
+uint32_t myfs_get_files_count(myfs_t& myfs);
 int myfs_rewind_dir(myfs_t& myfs);
 int myfs_get_next_id(myfs_t& myfs, const myfs_config& config, uint8_t * file_id);
 
