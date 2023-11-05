@@ -483,6 +483,42 @@ int myfs_file_get_size(myfs_t& myfs, const myfs_config& config, uint8_t * file_i
     return -1;
 }
 
+int myfs_get_fs_stat(myfs_t& myfs, const myfs_config& config, uint32_t& files_count, uint32_t occupied_space)
+{
+    if (!myfs.is_mounted)
+    {
+        return -1;
+    }
+
+    uint32_t current_descriptor_address{myfs.fs_start_address + single_file_descriptor_size_bytes};
+    files_count = 0;
+    occupied_space = first_file_start_location;
+    while (true)
+    {
+        myfs_file_descriptor d;
+        const auto descr_read_result = read_myfs_descriptor(d, current_descriptor_address, config);
+        if (0 != descr_read_result)
+        {
+            NRF_LOG_ERROR("myfs:descr read at fs stat failed");
+            return -1;
+        }
+        if (d.magic != file_magic_value)
+        {
+            return 0;
+        }
+        files_count++;
+        if (d.file_size != empty_word_value)
+        {
+            occupied_space += d.file_size;
+        }
+        else
+        {
+            NRF_LOG_WARNING("get fs stat: discovered an not-closed file, might need a repair");
+        }
+    }
+    return 0;
+}
+
 void print_buffer(uint8_t * buf, uint32_t size)
 {
     NRF_LOG_INFO("memory dump (%d bytes)", size);

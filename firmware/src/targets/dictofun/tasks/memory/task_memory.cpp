@@ -370,7 +370,7 @@ void process_request_from_ble(Context& context,
     }
     case ble::CommandToMemory::GET_FS_STATUS: {
         const auto fs_stat_result =
-            memory::filesystem::get_fs_stat(lfs, data_queue_elem.data, lfs_configuration);
+            memory::filesystem::get_fs_stat(myfs, myfs_configuration, data_queue_elem.data);
         if(result::Result::OK != fs_stat_result)
         {
             NRF_LOG_ERROR("mem: failed to fetch fs stat");
@@ -529,7 +529,7 @@ void process_request_from_state(Context& context, const Command command_id, uint
     case Command::PERFORM_MEMORY_CHECK: {
         static constexpr uint32_t max_files_count{30};
         const auto fs_stat_result =
-            memory::filesystem::get_fs_stat(lfs, data_queue_elem.data, lfs_configuration);
+            memory::filesystem::get_fs_stat(myfs, myfs_configuration, data_queue_elem.data);
         if(result::Result::OK != fs_stat_result)
         {
             NRF_LOG_ERROR("mem: failed to fetch fs stat");
