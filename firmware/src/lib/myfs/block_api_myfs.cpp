@@ -3,7 +3,8 @@
  * Copyright (c) 2023, Roman Turkin
  */
 
-#include "block_api.h"
+#include "block_api_myfs.h"
+#include "myfs.h"
 
 namespace memory
 {
@@ -22,10 +23,10 @@ constexpr uint32_t sectors_erasure_max_bitmap_size{max_supported_memory_size / 8
 static uint8_t sectors_erasure_bitmap[sectors_erasure_max_bitmap_size];
 static uint32_t sectors_erasure_actual_bitmap_size_{0};
 
-void register_flash_device(memory::SpiNorFlashIf* flash,
-                           uint32_t sector_size,
-                           uint32_t page_size,
-                           uint32_t memory_size)
+void myfs_register_flash_device(memory::SpiNorFlashIf* flash,
+                                uint32_t sector_size,
+                                uint32_t page_size,
+                                uint32_t memory_size)
 {
     flash_ = flash;
     sector_size_ = sector_size;
@@ -41,7 +42,7 @@ void register_flash_device(memory::SpiNorFlashIf* flash,
     }
 }
 
-bool is_sector_erased(lfs_block_t block)
+bool myfs_is_sector_erased(myfs_block_t block)
 {
     const auto byte_offset{block / 8};
     const auto bit_offset{block % 8};
@@ -49,7 +50,7 @@ bool is_sector_erased(lfs_block_t block)
     return (sectors_erasure_bitmap[byte_offset] & (1 << bit_offset)) > 0;
 }
 
-void mark_sector_as_erased(lfs_block_t block)
+void myfs_mark_sector_as_erased(myfs_block_t block)
 {
     const auto byte_offset{block / 8};
     const auto bit_offset{block % 8};
@@ -69,7 +70,7 @@ void mark_sector_as_erased(lfs_block_t block)
     }
 }
 
-void mark_sector_as_needs_erasure(lfs_block_t block)
+void myfs_mark_sector_as_needs_erasure(myfs_block_t block)
 {
     const auto byte_offset{block / 8};
     const auto bit_offset{block % 8};
@@ -92,8 +93,11 @@ void mark_sector_as_needs_erasure(lfs_block_t block)
     }
 }
 
-int read(
-    const struct lfs_config* c, lfs_block_t block, lfs_off_t off, void* buffer, lfs_size_t size)
+int myfs_read(const struct ::filesystem::myfs_config* c,
+              myfs_block_t block,
+              myfs_off_t off,
+              void* buffer,
+              myfs_size_t size)
 {
     const auto read_result =
         flash_->read(block * sector_size_ + off, reinterpret_cast<uint8_t*>(buffer), size);
@@ -104,12 +108,11 @@ int read(
     return 0;
 }
 
-/// @brief Perform an LFS program operation. Only aligned offsets and sizes are supported
-int program(const struct lfs_config* c,
-            const lfs_block_t block,
-            const lfs_off_t off,
-            const void* buffer,
-            const lfs_size_t size)
+int myfs_program(const struct ::filesystem::myfs_config* c,
+                 const myfs_block_t block,
+                 const myfs_off_t off,
+                 const void* buffer,
+                 const myfs_size_t size)
 {
     if(size % page_size_ != 0)
     {
@@ -131,23 +134,23 @@ int program(const struct lfs_config* c,
         {
             return -1;
         }
-        lfs_block_t block_to_check{block};
+        myfs_block_t block_to_check{block};
         if((off + page_id * page_size_) > sector_size_)
         {
             block_to_check += (off + page_id * page_size_) / sector_size_;
         }
 
-        if(is_sector_erased(block_to_check))
+        if(myfs_is_sector_erased(block_to_check))
         {
-            mark_sector_as_needs_erasure(block_to_check);
+            myfs_mark_sector_as_needs_erasure(block_to_check);
         }
     }
     return 0;
 }
 
-int erase(const struct lfs_config* c, lfs_block_t block)
+int myfs_erase(const struct ::filesystem::myfs_config* c, myfs_block_t block)
 {
-    if(is_sector_erased(block))
+    if(myfs_is_sector_erased(block))
     {
         return 0;
     }
@@ -156,12 +159,12 @@ int erase(const struct lfs_config* c, lfs_block_t block)
     {
         return -1;
     }
-    mark_sector_as_erased(block);
+    myfs_mark_sector_as_erased(block);
 
     return 0;
 }
 
-int sync(const struct lfs_config* c)
+int myfs_sync(const struct ::filesystem::myfs_config* c)
 {
     return 0;
 }

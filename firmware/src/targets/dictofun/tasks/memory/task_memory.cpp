@@ -9,9 +9,8 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-#include "block_api.h"
 #include "boards.h"
-#include "littlefs_access.h"
+#include "myfs_access.h"
 #include "spi_flash.h"
 #include <cstdio>
 #include <cstdlib>
@@ -24,7 +23,8 @@
 
 #include "time_profiler.h"
 
-#include "lfs.h"
+#include "myfs.h"
+#include "block_api_myfs.h"
 
 namespace memory
 {
@@ -49,6 +49,9 @@ constexpr size_t LOOKAHEAD_BUFFER_SIZE{64};
 uint8_t prog_buffer[CACHE_SIZE];
 uint8_t read_buffer[CACHE_SIZE];
 uint8_t lookahead_buffer[CACHE_SIZE];
+uint8_t myfs_prog_buffer[CACHE_SIZE];
+uint8_t myfs_read_buffer[CACHE_SIZE];
+uint8_t myfs_lookahead_buffer[CACHE_SIZE];
 
 enum class MemoryOwner
 {
@@ -57,13 +60,11 @@ enum class MemoryOwner
 };
 static MemoryOwner _memory_owner{MemoryOwner::AUDIO};
 
-lfs_t lfs;
-
-const struct lfs_config lfs_configuration = {
-    .read = memory::block_device::read,
-    .prog = memory::block_device::program,
-    .erase = memory::block_device::erase,
-    .sync = memory::block_device::sync,
+struct ::filesystem::myfs_config myfs_configuration = {
+    .read = memory::block_device::myfs_read,
+    .prog = memory::block_device::myfs_program,
+    .erase = memory::block_device::myfs_erase,
+    .sync = memory::block_device::myfs_sync,
 
     // block device configuration
     .read_size = 16,
@@ -73,10 +74,12 @@ const struct lfs_config lfs_configuration = {
     .block_cycles = 500,
     .cache_size = CACHE_SIZE,
     .lookahead_size = LOOKAHEAD_BUFFER_SIZE,
-    .read_buffer = read_buffer,
-    .prog_buffer = prog_buffer,
-    .lookahead_buffer = lookahead_buffer,
+    .read_buffer = myfs_read_buffer,
+    .prog_buffer = myfs_prog_buffer,
+    .lookahead_buffer = myfs_lookahead_buffer,
 };
+
+::filesystem::myfs_t myfs{myfs_configuration};
 
 constexpr uint32_t cmd_wait_idle_ticks{5};
 constexpr uint32_t cmd_wait_fast_ticks{1};
@@ -99,6 +102,7 @@ static struct FileOperationContext
 } _file_operation_context;
 
 char active_record_name[sizeof(ble::fts::file_id_type) + 1]{0};
+uint8_t active_record_id[::filesystem::myfs_file_t::id_size]{0};
 
 static uint32_t written_record_size{0};
 
@@ -122,13 +126,14 @@ void task_memory(void* context_ptr)
     flash.readJedecId(jedec_id);
     NRF_LOG_INFO("memory id: %x-%x-%x", jedec_id[0], jedec_id[1], jedec_id[2]);
 
-    memory::block_device::register_flash_device(
+    memory::block_device::myfs_register_flash_device(
         &flash, flash_sector_size, flash_page_size, flash_total_size);
 
-    const auto init_result = memory::filesystem::init_littlefs(lfs, lfs_configuration);
+    const auto init_result = memory::filesystem::init_fs(myfs);
+
     if(result::Result::OK != init_result)
     {
-        NRF_LOG_ERROR("mem: failed to mount littlefs");
+        NRF_LOG_ERROR("mem: failed to mount myfs");
     }
 
     while(1)
@@ -167,7 +172,7 @@ void task_memory(void* context_ptr)
                     if(pdPASS == audio_data_receive_status)
                     {
                         const auto write_result = memory::filesystem::write_data(
-                            lfs, audio_data_queue_element.data, sizeof(audio_data_queue_element));
+                            myfs, audio_data_queue_element.data, sizeof(audio_data_queue_element));
 
                         if(result::Result::OK != write_result)
                         {
@@ -219,7 +224,7 @@ void process_request_from_ble(Context& context,
         uint32_t total_files_list_data_size{0};
         memory::TimeProfile tp("get_files_list");
         const auto ls_result =
-            memory::filesystem::get_files_list(lfs,
+            memory::filesystem::get_files_list(myfs,
                                                total_files_list_data_size,
                                                data_queue_elem.data,
                                                ble::fts::FtsService::get_file_list_char_size());
@@ -239,7 +244,7 @@ void process_request_from_ble(Context& context,
 
     case ble::CommandToMemory::GET_FILES_LIST_NEXT: {
         const auto ls_result = memory::filesystem::get_files_list_next(
-            lfs,
+            myfs,
             data_queue_elem.size,
             data_queue_elem.data,
             ble::fts::FtsService::get_file_list_char_size());
@@ -252,11 +257,12 @@ void process_request_from_ble(Context& context,
         break;
     }
     case ble::CommandToMemory::GET_FILE_INFO: {
-        char target_file_name[max_file_name_size] = {0};
+        char target_file_name[max_file_name_size+1]{0};
         convert_file_id_to_string(file_id, target_file_name);
-        
+        target_file_name[max_file_name_size] = '\0';
+
         const auto file_info_result = memory::filesystem::get_file_info(
-            lfs,
+            myfs,
             target_file_name,
             data_queue_elem.data,
             data_queue_elem.size,
@@ -286,7 +292,7 @@ void process_request_from_ble(Context& context,
         char target_file_name[max_file_name_size] = {0};
         convert_file_id_to_string(file_id, target_file_name);
         const auto file_open_result =
-            memory::filesystem::open_file(lfs, target_file_name, status.data_size);
+            memory::filesystem::open_file(myfs, target_file_name, status.data_size);
         if(result::Result::OK != file_open_result)
         {
             status.status = ble::StatusFromMemory::ERROR_FILE_NOT_FOUND;
@@ -306,7 +312,7 @@ void process_request_from_ble(Context& context,
         char target_file_name[max_file_name_size] = {0};
         convert_file_id_to_string(file_id, target_file_name);
         
-        const auto file_close_result = memory::filesystem::close_file(lfs, target_file_name);
+        const auto file_close_result = memory::filesystem::close_file(myfs);
         if(result::Result::OK != file_close_result)
         {
             status.status = ble::StatusFromMemory::ERROR_FILE_NOT_FOUND;
@@ -319,7 +325,7 @@ void process_request_from_ble(Context& context,
     }
     case ble::CommandToMemory::GET_FILE_DATA: {
         const auto file_data_result = memory::filesystem::get_file_data(
-            lfs,
+            myfs,
             data_queue_elem.data,
             data_queue_elem.size,
             ble::FileDataFromMemoryQueueElement::element_max_size);
@@ -337,7 +343,7 @@ void process_request_from_ble(Context& context,
     }
     case ble::CommandToMemory::GET_FS_STATUS: {
         const auto fs_stat_result =
-            memory::filesystem::get_fs_stat(lfs, data_queue_elem.data, lfs_configuration);
+            memory::filesystem::get_fs_stat(myfs, data_queue_elem.data);
         if(result::Result::OK != fs_stat_result)
         {
             NRF_LOG_ERROR("mem: failed to fetch fs stat");
@@ -376,176 +382,177 @@ void process_request_from_state(Context& context, const Command command_id, uint
 {
     switch(command_id)
     {
-    case Command::MOUNT_LFS: {
-        const auto init_result = memory::filesystem::init_littlefs(lfs, lfs_configuration);
-        if(result::Result::OK != init_result)
-        {
-            NRF_LOG_ERROR("mem: failed to mount littlefs");
-        }
-        break;
-    }
-    case Command::CREATE_RECORD: {
-        memory::generate_next_file_name(active_record_name, context);
-        {
-            memory::TimeProfile tp("create_record");
-            const auto create_result = memory::filesystem::create_file(lfs, active_record_name);
-            if(result::Result::OK != create_result)
+        case Command::MOUNT_FS: {
+            const auto init_result = memory::filesystem::init_fs(myfs);
+            if(result::Result::OK != init_result)
             {
-                NRF_LOG_ERROR("lfs: failed to create a new rec");
-                StatusQueueElement response{Command::CREATE_RECORD, Status::ERROR_GENERAL};
+                NRF_LOG_ERROR("mem: failed to mount myfs");
+            }
+            break;
+        }
+        case Command::CREATE_RECORD: {
+            memory::generate_next_file_name(active_record_name, context);
+            memory::filesystem::convert_filename_to_myfs_id(active_record_name, active_record_id);
+            {
+                memory::TimeProfile tp("create_record");
+                const auto create_result = memory::filesystem::create_file(myfs, active_record_id);
+                if(result::Result::OK != create_result)
+                {
+                    NRF_LOG_ERROR("myfs: failed to create a new rec");
+                    StatusQueueElement response{Command::CREATE_RECORD, Status::ERROR_GENERAL};
+                    xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
+                    return;
+                }
+                NRF_LOG_DEBUG("created record [%s]", active_record_name);
+                _file_operation_context.is_file_open = true;
+                StatusQueueElement response{Command::CREATE_RECORD, Status::OK};
+                xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
+                written_record_size = 0;
+            }
+            break;
+        }
+        case Command::CLOSE_WRITTEN_FILE: {
+            NRF_LOG_INFO("mem: closing file");
+            memory::TimeProfile tp("close_record");
+            const auto close_result = memory::filesystem::close_file(myfs);
+            if(close_result != result::Result::OK)
+            {
+                NRF_LOG_ERROR("myfs: failed to close file after writing");
+                StatusQueueElement response{Command::CLOSE_WRITTEN_FILE, Status::ERROR_GENERAL};
                 xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
                 return;
             }
-            NRF_LOG_DEBUG("created record [%s]", active_record_name);
-            _file_operation_context.is_file_open = true;
-            StatusQueueElement response{Command::CREATE_RECORD, Status::OK};
-            xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
-            written_record_size = 0;
-        }
-        break;
-    }
-    case Command::CLOSE_WRITTEN_FILE: {
-        NRF_LOG_INFO("mem: closing file");
-        memory::TimeProfile tp("close_record");
-        const auto close_result = memory::filesystem::close_file(lfs, active_record_name);
-        if(close_result != result::Result::OK)
-        {
-            NRF_LOG_ERROR("lfs: failed to close file after writing");
-            StatusQueueElement response{Command::CLOSE_WRITTEN_FILE, Status::ERROR_GENERAL};
-            xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
-            return;
-        }
-        NRF_LOG_DEBUG("closed record. written size = %d bytes", written_record_size);
-        _file_operation_context.is_file_open = false;
-        StatusQueueElement response{Command::CLOSE_WRITTEN_FILE, Status::OK};
-        xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
-        break;
-    }
-    case Command::SELECT_OWNER_BLE: {
-        const auto deinit_result = memory::filesystem::deinit_littlefs(lfs);
-        if(result::Result::OK != deinit_result)
-        {
-            NRF_LOG_ERROR("lfs: deinit failed");
-            StatusQueueElement response{Command::SELECT_OWNER_BLE, Status::ERROR_GENERAL};
+            NRF_LOG_DEBUG("closed record. written size = %d bytes", written_record_size);
+            _file_operation_context.is_file_open = false;
+            StatusQueueElement response{Command::CLOSE_WRITTEN_FILE, Status::OK};
             xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
             break;
         }
-        const auto init_result = memory::filesystem::init_littlefs(lfs, lfs_configuration);
-        if(result::Result::OK != init_result)
-        {
-            NRF_LOG_ERROR("lfs: init failed");
-            StatusQueueElement response{Command::SELECT_OWNER_BLE, Status::ERROR_GENERAL};
-            xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
-            break;
-        }
-        NRF_LOG_INFO("mem: owner changed to ble");
-        _memory_owner = MemoryOwner::BLE;
+        case Command::SELECT_OWNER_BLE: {
+            const auto deinit_result = memory::filesystem::deinit_fs(myfs);
+            if(result::Result::OK != deinit_result)
+            {
+                NRF_LOG_ERROR("myfs: deinit failed");
+                StatusQueueElement response{Command::SELECT_OWNER_BLE, Status::ERROR_GENERAL};
+                xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
+                break;
+            }
+            const auto init_result = memory::filesystem::init_fs(myfs);
+            if(result::Result::OK != init_result)
+            {
+                NRF_LOG_ERROR("myfs: init failed");
+                StatusQueueElement response{Command::SELECT_OWNER_BLE, Status::ERROR_GENERAL};
+                xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
+                break;
+            }
+            NRF_LOG_INFO("mem: owner changed to ble");
+            _memory_owner = MemoryOwner::BLE;
 
-        StatusQueueElement response{Command::SELECT_OWNER_BLE, Status::OK};
-        xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
-        break;
-    }
-    case Command::SELECT_OWNER_AUDIO: {
-        const auto deinit_result = memory::filesystem::deinit_littlefs(lfs);
-        if(result::Result::OK != deinit_result)
-        {
-            NRF_LOG_ERROR("lfs: deinit failed");
-            StatusQueueElement response{Command::SELECT_OWNER_AUDIO, Status::ERROR_GENERAL};
+            StatusQueueElement response{Command::SELECT_OWNER_BLE, Status::OK};
             xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
             break;
         }
-        const auto init_result = memory::filesystem::init_littlefs(lfs, lfs_configuration);
-        if(result::Result::OK != init_result)
-        {
-            NRF_LOG_ERROR("lfs: init failed");
-            StatusQueueElement response{Command::SELECT_OWNER_AUDIO, Status::ERROR_GENERAL};
+        case Command::SELECT_OWNER_AUDIO: {
+            const auto deinit_result = memory::filesystem::deinit_fs(myfs);
+            if(result::Result::OK != deinit_result)
+            {
+                NRF_LOG_ERROR("myfs: deinit failed");
+                StatusQueueElement response{Command::SELECT_OWNER_AUDIO, Status::ERROR_GENERAL};
+                xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
+                break;
+            }
+            const auto init_result = memory::filesystem::init_fs(myfs);
+            if(result::Result::OK != init_result)
+            {
+                NRF_LOG_ERROR("myfs: init failed");
+                StatusQueueElement response{Command::SELECT_OWNER_AUDIO, Status::ERROR_GENERAL};
+                xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
+                break;
+            }
+            NRF_LOG_INFO("mem: owner changed to audio");
+            _memory_owner = MemoryOwner::AUDIO;
+            StatusQueueElement response{Command::SELECT_OWNER_AUDIO, Status::OK};
             xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
             break;
         }
-        NRF_LOG_INFO("mem: owner changed to audio");
-        _memory_owner = MemoryOwner::AUDIO;
-        StatusQueueElement response{Command::SELECT_OWNER_AUDIO, Status::OK};
-        xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
-        break;
-    }
-    case Command::LAUNCH_TEST_1: {
-        launch_test_1(flash);
-        break;
-    }
-    case Command::LAUNCH_TEST_2: {
-        launch_test_2(flash);
-        break;
-    }
-    case Command::LAUNCH_TEST_3: {
-        launch_test_3(lfs, lfs_configuration);
-        break;
-    }
-    case Command::LAUNCH_TEST_4: {
-        launch_test_4(lfs);
-        break;
-    }
-    case Command::LAUNCH_TEST_5: {
-        launch_test_5(flash, arg0, arg1);
-        break;
-    }
-    case Command::UNMOUNT_LFS: {
-        NRF_LOG_ERROR("mem: lfs unmount is not implemented");
-        break;
-    }
-    case Command::PERFORM_MEMORY_CHECK: {
-        static constexpr uint32_t max_files_count{30};
-        const auto fs_stat_result =
-            memory::filesystem::get_fs_stat(lfs, data_queue_elem.data, lfs_configuration);
-        if(result::Result::OK != fs_stat_result)
-        {
-            NRF_LOG_ERROR("mem: failed to fetch fs stat");
-            StatusQueueElement response{Command::PERFORM_MEMORY_CHECK, Status::ERROR_GENERAL};
+        case Command::LAUNCH_TEST_1: {
+            launch_test_1(flash);
+            break;
+        }
+        case Command::LAUNCH_TEST_2: {
+            launch_test_2(flash);
+            break;
+        }
+        case Command::LAUNCH_TEST_3: {
+            launch_test_3(myfs, myfs_configuration);
+            break;
+        }
+        case Command::LAUNCH_TEST_4: {
+            NRF_LOG_WARNING("memtest 4 has been removed");
+            break;
+        }
+        case Command::LAUNCH_TEST_5: {
+            launch_test_5(flash, arg0, arg1);
+            break;
+        }
+        case Command::UNMOUNT_FS: {
+            NRF_LOG_ERROR("mem: myfs unmount is not implemented");
+            break;
+        }
+        case Command::PERFORM_MEMORY_CHECK: {
+            static constexpr uint32_t max_files_count{30};
+            const auto fs_stat_result =
+                memory::filesystem::get_fs_stat(myfs, data_queue_elem.data);
+            if(result::Result::OK != fs_stat_result)
+            {
+                NRF_LOG_ERROR("mem: failed to fetch fs stat");
+                StatusQueueElement response{Command::PERFORM_MEMORY_CHECK, Status::ERROR_GENERAL};
+                xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
+            }
+            ble::fts::FileSystemInterface::FSStatus fsStatus;
+            memcpy(&fsStatus, &data_queue_elem.data, sizeof(fsStatus));
+            NRF_LOG_INFO("FS stats: %d/%d(%d)", fsStatus.occupied_space, fsStatus.free_space, fsStatus.files_count);
+            StatusQueueElement response{Command::PERFORM_MEMORY_CHECK, Status::OK};
+            if ((fsStatus.occupied_space > (flash_total_size/2)) || (fsStatus.files_count > max_files_count))
+            {
+                response.status = Status::FORMAT_REQUIRED;
+            }
             xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
+            break;
         }
-        ble::fts::FileSystemInterface::FSStatus fsStatus;
-        memcpy(&fsStatus, &data_queue_elem.data, sizeof(fsStatus));
-        NRF_LOG_INFO("FS stats: %d/%d(%d)", fsStatus.occupied_space, fsStatus.free_space, fsStatus.files_count);
-        StatusQueueElement response{Command::PERFORM_MEMORY_CHECK, Status::OK};
-        if ((fsStatus.occupied_space > (flash_total_size/2)) || (fsStatus.files_count > max_files_count))
+        case Command::FORMAT_FS:
         {
-            response.status = Status::FORMAT_REQUIRED;
-        }
-        xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
-        break;
-    }
-    case Command::FORMAT_FS:
-    {
-        // erase the flash chip
-        NRF_LOG_INFO("task memory: launching chip erase. Memory task shall not accept commands during the execution of this command.");
-        const auto start_tick = xTaskGetTickCount();
-        flash.eraseChip();
-        static constexpr uint32_t max_chip_erase_duration{44000};
-        while(flash.isBusy() && (xTaskGetTickCount() - start_tick) < max_chip_erase_duration)
-        {
-            vTaskDelay(200);
-        }
-        const auto end_tick = xTaskGetTickCount();
-        StatusQueueElement response{Command::FORMAT_FS, Status::OK};
-        if((end_tick - start_tick) > max_chip_erase_duration)
-        {
-            NRF_LOG_WARNING("task memory: chip erase timed out");
-            response.status = Status::ERROR_BUSY;
-        }
-        else
-        {
-            NRF_LOG_INFO("task memory: chip erase took %d ms", end_tick - start_tick);
-        }
-        const auto init_result = memory::filesystem::init_littlefs(lfs, lfs_configuration);
-        if(result::Result::OK != init_result)
-        {
-            NRF_LOG_ERROR("mem: failed to mount littlefs");
-            response.status = Status::ERROR_GENERAL;
-        }
-        
+            // erase the flash chip
+            NRF_LOG_INFO("task memory: launching chip erase. Memory task shall not accept commands during the execution of this command.");
+            const auto start_tick = xTaskGetTickCount();
+            flash.eraseChip();
+            static constexpr uint32_t max_chip_erase_duration{44000};
+            while(flash.isBusy() && (xTaskGetTickCount() - start_tick) < max_chip_erase_duration)
+            {
+                vTaskDelay(200);
+            }
+            const auto end_tick = xTaskGetTickCount();
+            StatusQueueElement response{Command::FORMAT_FS, Status::OK};
+            if((end_tick - start_tick) > max_chip_erase_duration)
+            {
+                NRF_LOG_WARNING("task memory: chip erase timed out");
+                response.status = Status::ERROR_BUSY;
+            }
+            else
+            {
+                NRF_LOG_INFO("task memory: chip erase took %d ms", end_tick - start_tick);
+            }
+            const auto init_result = memory::filesystem::init_fs(myfs);
+            if(result::Result::OK != init_result)
+            {
+                NRF_LOG_ERROR("mem: failed to mount myfs");
+                response.status = Status::ERROR_GENERAL;
+            }
+            
 
-        xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
-        break;
-    }
+            xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
+            break;
+        }
     }
 }
 
@@ -556,22 +563,10 @@ void generate_next_file_name_fallback(char* name)
         NRF_LOG_ERROR("File name generation error: nullptr");
         return;
     }
-
-    uint32_t tmp_length{0};
-    const auto name_read_result = memory::filesystem::get_latest_file_name(lfs, name, tmp_length);
-    if(result::Result::OK != name_read_result)
-    {
-        NRF_LOG_WARNING("Failed to read latest record name. Using the default name");
-        memset(name, '0', ble::fts::file_id_size);
-        return;
-    }
-
-    const auto last_id =
-        (name[ble::fts::file_id_size - 2] - '0') * 10 + (name[ble::fts::file_id_size - 1] - '0');
-    const auto next_id = last_id + 1;
-    name[ble::fts::file_id_size - 2] = ((next_id / 10) % 10) + '0';
-    name[ble::fts::file_id_size - 1] = (next_id % 10) + '0';
+    char fallback_name[16 + 1] = "0000000000000000";
+    memcpy(name, fallback_name, sizeof(fallback_name));
 }
+
 
 void generate_next_file_name(char* name, const Context& context)
 {
@@ -586,6 +581,7 @@ void generate_next_file_name(char* name, const Context& context)
         // Queue operation has failed
         NRF_LOG_WARNING("mem: get time request has failed. Using fallback generator");
         generate_next_file_name_fallback(name);
+
         return;
     }
 

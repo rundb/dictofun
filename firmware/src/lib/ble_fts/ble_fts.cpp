@@ -863,6 +863,7 @@ result::Result FtsService::continue_sending_file_data()
             nim.reset_reason = ResetReason::FILE_SYSTEM_ERROR_DURING_BLE;
             nim.reset_count++;
             NoInitMemory::store();
+            NVIC_SystemReset();
         }
     }
     _transaction_ctx.idx = 0;

@@ -149,6 +149,7 @@ void task_system_state(void* context_ptr)
                 battery_measurement_buffer.battery_voltage_level};
             if (context->_is_ble_system_active)
             {
+                xQueueReset(context->battery_level_to_ble_handle);
                 const auto batt_info_send_result =
                     xQueueSend(context->battery_level_to_ble_handle,
                             reinterpret_cast<void*>(&battery_level_msg),
