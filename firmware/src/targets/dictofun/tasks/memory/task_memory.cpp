@@ -45,13 +45,10 @@ constexpr uint32_t flash_total_size{16 * 1024 * 1024 - 4096};
 constexpr uint32_t flash_sectors_count{flash_total_size / flash_sector_size};
 
 constexpr size_t CACHE_SIZE{flash_page_size};
-constexpr size_t LOOKAHEAD_BUFFER_SIZE{64};
-uint8_t prog_buffer[CACHE_SIZE];
-uint8_t read_buffer[CACHE_SIZE];
-uint8_t lookahead_buffer[CACHE_SIZE];
+
 uint8_t myfs_prog_buffer[CACHE_SIZE];
 uint8_t myfs_read_buffer[CACHE_SIZE];
-uint8_t myfs_lookahead_buffer[CACHE_SIZE];
+
 
 enum class MemoryOwner
 {
@@ -71,12 +68,8 @@ struct ::filesystem::myfs_config myfs_configuration = {
     .prog_size = flash_page_size,
     .block_size = flash_sector_size,
     .block_count = flash_sectors_count,
-    .block_cycles = 500,
-    .cache_size = CACHE_SIZE,
-    .lookahead_size = LOOKAHEAD_BUFFER_SIZE,
     .read_buffer = myfs_read_buffer,
     .prog_buffer = myfs_prog_buffer,
-    .lookahead_buffer = myfs_lookahead_buffer,
 };
 
 ::filesystem::myfs_t myfs{myfs_configuration};

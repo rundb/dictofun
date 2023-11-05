@@ -47,19 +47,9 @@ struct myfs_config
     myfs_size_t prog_size;
     myfs_size_t block_size;
     myfs_size_t block_count;
-    int32_t block_cycles;
-
-    myfs_size_t cache_size;
-    myfs_size_t lookahead_size;
 
     void* read_buffer;
     void* prog_buffer;
-    void* lookahead_buffer;
-
-    myfs_size_t name_max;
-    myfs_size_t file_max;
-    myfs_size_t attr_max;
-    myfs_size_t metadata_max;
 };
 
 struct myfs_t
