@@ -172,7 +172,7 @@ void task_memory(void* context_ptr)
                     if(pdPASS == audio_data_receive_status)
                     {
                         const auto write_result = memory::filesystem::write_data(
-                            myfs, myfs_configuration, audio_data_queue_element.data, sizeof(audio_data_queue_element));
+                            myfs, audio_data_queue_element.data, sizeof(audio_data_queue_element));
 
                         if(result::Result::OK != write_result)
                         {
@@ -225,7 +225,6 @@ void process_request_from_ble(Context& context,
         memory::TimeProfile tp("get_files_list");
         const auto ls_result =
             memory::filesystem::get_files_list(myfs,
-                                               myfs_configuration,
                                                total_files_list_data_size,
                                                data_queue_elem.data,
                                                ble::fts::FtsService::get_file_list_char_size());
@@ -246,7 +245,6 @@ void process_request_from_ble(Context& context,
     case ble::CommandToMemory::GET_FILES_LIST_NEXT: {
         const auto ls_result = memory::filesystem::get_files_list_next(
             myfs,
-            myfs_configuration,
             data_queue_elem.size,
             data_queue_elem.data,
             ble::fts::FtsService::get_file_list_char_size());
@@ -265,7 +263,6 @@ void process_request_from_ble(Context& context,
 
         const auto file_info_result = memory::filesystem::get_file_info(
             myfs,
-            myfs_configuration,
             target_file_name,
             data_queue_elem.data,
             data_queue_elem.size,
@@ -295,7 +292,7 @@ void process_request_from_ble(Context& context,
         char target_file_name[max_file_name_size] = {0};
         convert_file_id_to_string(file_id, target_file_name);
         const auto file_open_result =
-            memory::filesystem::open_file(myfs, myfs_configuration, target_file_name, status.data_size);
+            memory::filesystem::open_file(myfs, target_file_name, status.data_size);
         if(result::Result::OK != file_open_result)
         {
             status.status = ble::StatusFromMemory::ERROR_FILE_NOT_FOUND;
@@ -315,7 +312,7 @@ void process_request_from_ble(Context& context,
         char target_file_name[max_file_name_size] = {0};
         convert_file_id_to_string(file_id, target_file_name);
         
-        const auto file_close_result = memory::filesystem::close_file(myfs, myfs_configuration);
+        const auto file_close_result = memory::filesystem::close_file(myfs);
         if(result::Result::OK != file_close_result)
         {
             status.status = ble::StatusFromMemory::ERROR_FILE_NOT_FOUND;
@@ -329,7 +326,6 @@ void process_request_from_ble(Context& context,
     case ble::CommandToMemory::GET_FILE_DATA: {
         const auto file_data_result = memory::filesystem::get_file_data(
             myfs,
-            myfs_configuration,
             data_queue_elem.data,
             data_queue_elem.size,
             ble::FileDataFromMemoryQueueElement::element_max_size);
@@ -347,7 +343,7 @@ void process_request_from_ble(Context& context,
     }
     case ble::CommandToMemory::GET_FS_STATUS: {
         const auto fs_stat_result =
-            memory::filesystem::get_fs_stat(myfs, myfs_configuration, data_queue_elem.data);
+            memory::filesystem::get_fs_stat(myfs, data_queue_elem.data);
         if(result::Result::OK != fs_stat_result)
         {
             NRF_LOG_ERROR("mem: failed to fetch fs stat");
@@ -399,7 +395,7 @@ void process_request_from_state(Context& context, const Command command_id, uint
             memory::filesystem::convert_filename_to_myfs_id(active_record_name, active_record_id);
             {
                 memory::TimeProfile tp("create_record");
-                const auto create_result = memory::filesystem::create_file(myfs, myfs_configuration, active_record_id);
+                const auto create_result = memory::filesystem::create_file(myfs, active_record_id);
                 if(result::Result::OK != create_result)
                 {
                     NRF_LOG_ERROR("myfs: failed to create a new rec");
@@ -418,7 +414,7 @@ void process_request_from_state(Context& context, const Command command_id, uint
         case Command::CLOSE_WRITTEN_FILE: {
             NRF_LOG_INFO("mem: closing file");
             memory::TimeProfile tp("close_record");
-            const auto close_result = memory::filesystem::close_file(myfs, myfs_configuration);
+            const auto close_result = memory::filesystem::close_file(myfs);
             if(close_result != result::Result::OK)
             {
                 NRF_LOG_ERROR("myfs: failed to close file after writing");
@@ -433,7 +429,7 @@ void process_request_from_state(Context& context, const Command command_id, uint
             break;
         }
         case Command::SELECT_OWNER_BLE: {
-            const auto deinit_result = memory::filesystem::deinit_fs(myfs, myfs_configuration);
+            const auto deinit_result = memory::filesystem::deinit_fs(myfs);
             if(result::Result::OK != deinit_result)
             {
                 NRF_LOG_ERROR("myfs: deinit failed");
@@ -457,7 +453,7 @@ void process_request_from_state(Context& context, const Command command_id, uint
             break;
         }
         case Command::SELECT_OWNER_AUDIO: {
-            const auto deinit_result = memory::filesystem::deinit_fs(myfs, myfs_configuration);
+            const auto deinit_result = memory::filesystem::deinit_fs(myfs);
             if(result::Result::OK != deinit_result)
             {
                 NRF_LOG_ERROR("myfs: deinit failed");
@@ -506,7 +502,7 @@ void process_request_from_state(Context& context, const Command command_id, uint
         case Command::PERFORM_MEMORY_CHECK: {
             static constexpr uint32_t max_files_count{30};
             const auto fs_stat_result =
-                memory::filesystem::get_fs_stat(myfs, myfs_configuration, data_queue_elem.data);
+                memory::filesystem::get_fs_stat(myfs, data_queue_elem.data);
             if(result::Result::OK != fs_stat_result)
             {
                 NRF_LOG_ERROR("mem: failed to fetch fs stat");

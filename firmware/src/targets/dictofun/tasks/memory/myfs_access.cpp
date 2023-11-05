@@ -50,11 +50,12 @@ result::Result init_fs(::filesystem::myfs_t& fs)
     return result::Result::OK;
 }
 
-result::Result deinit_fs(::filesystem::myfs_t& fs, const ::filesystem::myfs_config& config)
+result::Result deinit_fs(::filesystem::myfs_t& fs)
 {
+    const ::filesystem::myfs_config& config(fs.config);
     if(_active_file.is_open)
     {
-        const auto close_result = close_file(fs, config);
+        const auto close_result = close_file(fs);
         if(result::Result::OK != close_result)
         {
             NRF_LOG_ERROR("failed to close active file at deinit stage");
@@ -70,8 +71,9 @@ result::Result deinit_fs(::filesystem::myfs_t& fs, const ::filesystem::myfs_conf
     return result::Result::OK;
 }
 
-result::Result close_file(::filesystem::myfs_t& fs, const ::filesystem::myfs_config& config)
+result::Result close_file(::filesystem::myfs_t& fs)
 {
+    const ::filesystem::myfs_config& config(fs.config);
     // TODO: add comparison of the name to the name of an active file
     const auto close_result = myfs_file_close(&fs, config, _active_file);
     if(close_result < 0)
@@ -86,11 +88,11 @@ result::Result close_file(::filesystem::myfs_t& fs, const ::filesystem::myfs_con
 
 
 result::Result get_files_list(::filesystem::myfs_t& fs,
-                              const ::filesystem::myfs_config& config,
                               uint32_t& total_data_size_bytes,
                               uint8_t* buffer,
                               const uint32_t max_data_size)
 {
+    const ::filesystem::myfs_config& config(fs.config);
     // TODO: add an assert if max_data_size % single_entry_size != 0
     if(buffer == nullptr || max_data_size < 8)
     {
@@ -145,7 +147,6 @@ result::Result get_files_list(::filesystem::myfs_t& fs,
 
 result::Result
 get_files_list_next(::filesystem::myfs_t& fs,
-                    const ::filesystem::myfs_config& config,
                     uint32_t& data_size_bytes,
                     uint8_t* buffer,
                     const uint32_t max_data_size)
@@ -154,6 +155,7 @@ get_files_list_next(::filesystem::myfs_t& fs,
     {
         return result::Result::ERROR_GENERAL;
     }
+    const ::filesystem::myfs_config& config(fs.config);
 
     static constexpr uint32_t single_entry_size{sizeof(ble::fts::file_id_type)};
     static const uint32_t max_files_fitting_in_buffer{max_data_size / single_entry_size};
@@ -195,7 +197,6 @@ get_files_list_next(::filesystem::myfs_t& fs,
 }
 
 result::Result get_file_info(::filesystem::myfs_t& fs, 
-                             const ::filesystem::myfs_config& config,
                              const char* name,
                              uint8_t* buffer,
                              uint32_t& data_size_bytes,
@@ -206,6 +207,7 @@ result::Result get_file_info(::filesystem::myfs_t& fs,
         return result::Result::ERROR_INVALID_PARAMETER;
     }
     uint8_t id[::filesystem::myfs_file_t::id_size]{0};
+    const ::filesystem::myfs_config& config(fs.config);
     
     convert_filename_to_myfs_id(name, id);
     const auto size = myfs_file_get_size(fs, config, id);
@@ -221,7 +223,7 @@ result::Result get_file_info(::filesystem::myfs_t& fs,
     return result::Result::OK;
 }
 
-result::Result open_file(::filesystem::myfs_t& fs, const ::filesystem::myfs_config& config, const char* name, uint32_t& file_size_bytes)
+result::Result open_file(::filesystem::myfs_t& fs, const char* name, uint32_t& file_size_bytes)
 {
     if (nullptr == name)
     {
@@ -231,6 +233,8 @@ result::Result open_file(::filesystem::myfs_t& fs, const ::filesystem::myfs_conf
     {
         return result::Result::ERROR_GENERAL;
     }
+
+    const ::filesystem::myfs_config& config(fs.config);
 
     uint8_t id[::filesystem::myfs_file_t::id_size]{0};
     convert_filename_to_myfs_id(name, id);
@@ -254,7 +258,7 @@ result::Result open_file(::filesystem::myfs_t& fs, const ::filesystem::myfs_conf
 }
 
 result::Result
-get_file_data(::filesystem::myfs_t& fs, const ::filesystem::myfs_config& config, uint8_t* buffer, uint32_t& actual_size, uint32_t max_data_size)
+get_file_data(::filesystem::myfs_t& fs, uint8_t* buffer, uint32_t& actual_size, uint32_t max_data_size)
 {
     if(buffer == nullptr || max_data_size == 0)
     {
@@ -266,6 +270,8 @@ get_file_data(::filesystem::myfs_t& fs, const ::filesystem::myfs_config& config,
         return result::Result::ERROR_GENERAL;
     }
 
+    const ::filesystem::myfs_config& config(fs.config);
+
     const auto read_result = myfs_file_read(&fs, config, _active_file, buffer, max_data_size, actual_size);
     if(read_result < 0)
     {
@@ -276,12 +282,15 @@ get_file_data(::filesystem::myfs_t& fs, const ::filesystem::myfs_config& config,
     return result::Result::OK;
 }
 
-result::Result get_fs_stat(::filesystem::myfs_t& fs, const ::filesystem::myfs_config& config, uint8_t* buffer)
+result::Result get_fs_stat(::filesystem::myfs_t& fs, uint8_t* buffer)
 {
     if(buffer == nullptr)
     {
         return result::Result::ERROR_INVALID_PARAMETER;
     }
+
+    const ::filesystem::myfs_config& config(fs.config);
+
     ble::fts::FileSystemInterface::FSStatus fs_stat;
     uint32_t files_count{0};
     uint32_t occupied_space{0};
@@ -299,8 +308,13 @@ result::Result get_fs_stat(::filesystem::myfs_t& fs, const ::filesystem::myfs_co
     return result::Result::OK;
 }
 
-result::Result create_file(::filesystem::myfs_t& fs, const ::filesystem::myfs_config& config, uint8_t* file_id)
+result::Result create_file(::filesystem::myfs_t& fs, uint8_t* file_id)
 {
+    if (nullptr == file_id)
+    {
+        return result::Result::ERROR_GENERAL;
+    }
+    const ::filesystem::myfs_config& config(fs.config);
     const auto create_res = myfs_file_open(&fs, config, _active_file, file_id, ::filesystem::MYFS_CREATE_FLAG);
 
     if(create_res < 0)
@@ -312,8 +326,13 @@ result::Result create_file(::filesystem::myfs_t& fs, const ::filesystem::myfs_co
     return result::Result::OK;
 }
 
-result::Result write_data(::filesystem::myfs_t& fs, const ::filesystem::myfs_config& config, uint8_t* data, uint32_t data_size)
+result::Result write_data(::filesystem::myfs_t& fs, uint8_t* data, uint32_t data_size)
 {
+    const ::filesystem::myfs_config& config(fs.config);
+    if (nullptr == data)
+    {
+        return result::Result::ERROR_GENERAL;
+    }
     const auto write_result = myfs_file_write(&fs, config, _active_file, reinterpret_cast<void *>(data), data_size);
     if(write_result < 0)
     {
