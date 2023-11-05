@@ -196,7 +196,7 @@ void task_memory(void* context_ptr)
                     if(pdPASS == audio_data_receive_status)
                     {
                         const auto write_result = memory::filesystem::write_data(
-                            lfs, audio_data_queue_element.data, sizeof(audio_data_queue_element));
+                            myfs, myfs_configuration, audio_data_queue_element.data, sizeof(audio_data_queue_element));
 
                         if(result::Result::OK != write_result)
                         {
@@ -586,21 +586,8 @@ void generate_next_file_name_fallback(char* name)
         NRF_LOG_ERROR("File name generation error: nullptr");
         return;
     }
-
-    uint32_t tmp_length{0};
-    const auto name_read_result = memory::filesystem::get_latest_file_name(lfs, name, tmp_length);
-    if(result::Result::OK != name_read_result)
-    {
-        NRF_LOG_WARNING("Failed to read latest record name. Using the default name");
-        memset(name, '0', ble::fts::file_id_size);
-        return;
-    }
-
-    const auto last_id =
-        (name[ble::fts::file_id_size - 2] - '0') * 10 + (name[ble::fts::file_id_size - 1] - '0');
-    const auto next_id = last_id + 1;
-    name[ble::fts::file_id_size - 2] = ((next_id / 10) % 10) + '0';
-    name[ble::fts::file_id_size - 1] = (next_id % 10) + '0';
+    char fallback_name[16 + 1] = "0000000000000000";
+    memcpy(name, fallback_name, sizeof(fallback_name));
 }
 
 void convert_filename_to_myfs_id(char* name, uint8_t * file_id)
@@ -632,6 +619,7 @@ void generate_next_file_name(char* name, const Context& context)
         // Queue operation has failed
         NRF_LOG_WARNING("mem: get time request has failed. Using fallback generator");
         generate_next_file_name_fallback(name);
+
         return;
     }
 

@@ -37,8 +37,7 @@ result::Result get_fs_stat(lfs_t& lfs, uint8_t* buffer, const lfs_config& config
 
 // Following methods face into audio part of the system
 result::Result create_file(::filesystem::myfs_t& fs, const ::filesystem::myfs_config& config, uint8_t* file_id);
-result::Result get_latest_file_name(lfs_t& lfs, char* name, uint32_t& name_len);
-result::Result write_data(lfs_t& lfs, const uint8_t* data, uint32_t data_size);
+result::Result write_data(::filesystem::myfs_t& fs, const ::filesystem::myfs_config& config, uint8_t* data, uint32_t data_size);
 
 } // namespace filesystem
 } // namespace memory

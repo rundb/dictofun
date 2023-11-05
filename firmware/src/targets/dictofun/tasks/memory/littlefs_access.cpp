@@ -370,57 +370,6 @@ result::Result get_fs_stat(lfs_t& lfs, uint8_t* buffer, const lfs_config& config
     return result::Result::OK;
 }
 
-result::Result get_latest_file_name(lfs_t& lfs, char* name, uint32_t& name_len)
-{
-    if(name == nullptr)
-    {
-        return result::Result::ERROR_INVALID_PARAMETER;
-    }
-
-    lfs_info info;
-
-    const auto rewind_result = lfs_dir_rewind(&lfs, &_active_dir);
-    if(rewind_result < 0)
-    {
-        NRF_LOG_ERROR("rewind has failed (%d)", rewind_result);
-        return result::Result::ERROR_GENERAL;
-    }
-
-    static constexpr uint32_t single_entry_size{sizeof(ble::fts::file_id_type)};
-    char tmp[single_entry_size + 1] = "awesome_record00";
-    while(true)
-    {
-        const auto dir_read_res = lfs_dir_read(&lfs, &_active_dir, &info);
-        if(dir_read_res < 0)
-        {
-            NRF_LOG_ERROR("dir read operation failed (%d)", dir_read_res);
-            return result::Result::ERROR_GENERAL;
-        }
-        if(dir_read_res == 0)
-        {
-            break;
-        }
-        switch(info.type)
-        {
-        case LFS_TYPE_REG: {
-            const auto cmp_result = strcmp(info.name, tmp);
-            if(cmp_result > 0)
-            {
-                memcpy(tmp, info.name, single_entry_size);
-            }
-            break;
-        }
-        default: {
-            break;
-        }
-        }
-    }
-    memcpy(name, tmp, single_entry_size);
-    name_len = single_entry_size;
-
-    return result::Result::OK;
-}
-
 result::Result create_file(::filesystem::myfs_t& fs, const ::filesystem::myfs_config& config, uint8_t* file_id)
 {
     const auto create_res = myfs_file_open(&fs, config, _active_file, file_id, ::filesystem::MYFS_CREATE_FLAG);
@@ -434,9 +383,11 @@ result::Result create_file(::filesystem::myfs_t& fs, const ::filesystem::myfs_co
     return result::Result::OK;
 }
 
-result::Result write_data(lfs_t& lfs, const uint8_t* data, const uint32_t data_size)
+//result::Result write_data(lfs_t& lfs, const uint8_t* data, const uint32_t data_size)
+result::Result write_data(::filesystem::myfs_t& fs, const ::filesystem::myfs_config& config, uint8_t* data, uint32_t data_size)
 {
-    const auto write_result = -1;//lfs_file_write(&lfs, &_active_file, data, data_size);
+    // const auto write_result = -1;//lfs_file_write(&lfs, &_active_file, data, data_size);
+    const auto write_result = myfs_file_write(&fs, config, _active_file, reinterpret_cast<void *>(data), data_size);
     if(write_result < 0)
     {
         NRF_LOG_ERROR("failed to write data to the active file");
@@ -446,6 +397,7 @@ result::Result write_data(lfs_t& lfs, const uint8_t* data, const uint32_t data_s
     {
         NRF_LOG_WARNING("written and target sizes mismatch (%d != %d)", write_result, data_size);
     }
+
     return result::Result::OK;
 }
 
