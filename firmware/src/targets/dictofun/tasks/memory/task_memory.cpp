@@ -367,6 +367,7 @@ void process_request_from_ble(Context& context,
     {
         return;
     }
+    xQueueReset(context.data_to_ble_queue);
     const auto send_data_result =
         xQueueSend(context.data_to_ble_queue, &data_queue_elem, data_send_wait_ticks);
     if(pdTRUE != send_data_result)
@@ -498,7 +499,7 @@ void process_request_from_state(Context& context, const Command command_id, uint
             break;
         }
         case Command::PERFORM_MEMORY_CHECK: {
-            static constexpr uint32_t max_files_count{100};
+            static constexpr uint32_t max_files_count{126};
             static constexpr float formatting_trigger_level{0.8};
             const auto fs_stat_result =
                 memory::filesystem::get_fs_stat(myfs, data_queue_elem.data);

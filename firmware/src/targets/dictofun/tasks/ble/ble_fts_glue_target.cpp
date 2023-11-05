@@ -396,13 +396,13 @@ void receive_completed()
         return;
     }
     ble::CommandToMemoryQueueElement cmd{ble::CommandToMemory::ALLOW_MEMORY_FORMATTING, 0};
+    xQueueReset(_command_to_fs_queue);
 
     const auto cmd_result = xQueueSend(_command_to_fs_queue, &cmd, 0);
     if(pdTRUE != cmd_result)
     {
-        NRF_LOG_ERROR("fs stat: failed to send cmd to mem");
+        NRF_LOG_ERROR("receive completed: failed to send cmd to mem");
     }
-    
 }
 
 FileSystemInterface dictofun_fs_if{
