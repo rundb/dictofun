@@ -24,7 +24,6 @@
 
 #include "time_profiler.h"
 
-#include "lfs.h"
 #include "myfs.h"
 #include "block_api_myfs.h"
 
@@ -62,27 +61,7 @@ enum class MemoryOwner
 };
 static MemoryOwner _memory_owner{MemoryOwner::AUDIO};
 
-lfs_t lfs;
 ::filesystem::myfs_t myfs;
-
-const struct lfs_config lfs_configuration = {
-    .read = memory::block_device::read,
-    .prog = memory::block_device::program,
-    .erase = memory::block_device::erase,
-    .sync = memory::block_device::sync,
-
-    // block device configuration
-    .read_size = 16,
-    .prog_size = flash_page_size,
-    .block_size = flash_sector_size,
-    .block_count = flash_sectors_count,
-    .block_cycles = 500,
-    .cache_size = CACHE_SIZE,
-    .lookahead_size = LOOKAHEAD_BUFFER_SIZE,
-    .read_buffer = read_buffer,
-    .prog_buffer = prog_buffer,
-    .lookahead_buffer = lookahead_buffer,
-};
 
 struct ::filesystem::myfs_config myfs_configuration = {
     .read = memory::block_device::myfs_read,
@@ -283,9 +262,10 @@ void process_request_from_ble(Context& context,
         break;
     }
     case ble::CommandToMemory::GET_FILE_INFO: {
-        char target_file_name[max_file_name_size] = {0};
+        char target_file_name[max_file_name_size+1]{0};
         convert_file_id_to_string(file_id, target_file_name);
-        
+        target_file_name[max_file_name_size] = '\0';
+
         const auto file_info_result = memory::filesystem::get_file_info(
             myfs,
             myfs_configuration,
@@ -425,7 +405,7 @@ void process_request_from_state(Context& context, const Command command_id, uint
             const auto create_result = memory::filesystem::create_file(myfs, myfs_configuration, active_record_id);
             if(result::Result::OK != create_result)
             {
-                NRF_LOG_ERROR("lfs: failed to create a new rec");
+                NRF_LOG_ERROR("myfs: failed to create a new rec");
                 StatusQueueElement response{Command::CREATE_RECORD, Status::ERROR_GENERAL};
                 xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
                 return;
@@ -444,7 +424,7 @@ void process_request_from_state(Context& context, const Command command_id, uint
         const auto close_result = memory::filesystem::close_file(myfs, myfs_configuration);
         if(close_result != result::Result::OK)
         {
-            NRF_LOG_ERROR("lfs: failed to close file after writing");
+            NRF_LOG_ERROR("myfs: failed to close file after writing");
             StatusQueueElement response{Command::CLOSE_WRITTEN_FILE, Status::ERROR_GENERAL};
             xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
             return;
@@ -459,7 +439,7 @@ void process_request_from_state(Context& context, const Command command_id, uint
         const auto deinit_result = memory::filesystem::deinit_fs(myfs, myfs_configuration);
         if(result::Result::OK != deinit_result)
         {
-            NRF_LOG_ERROR("lfs: deinit failed");
+            NRF_LOG_ERROR("myfs: deinit failed");
             StatusQueueElement response{Command::SELECT_OWNER_BLE, Status::ERROR_GENERAL};
             xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
             break;
@@ -467,7 +447,7 @@ void process_request_from_state(Context& context, const Command command_id, uint
         const auto init_result = memory::filesystem::init_fs(myfs, myfs_configuration);
         if(result::Result::OK != init_result)
         {
-            NRF_LOG_ERROR("lfs: init failed");
+            NRF_LOG_ERROR("myfs: init failed");
             StatusQueueElement response{Command::SELECT_OWNER_BLE, Status::ERROR_GENERAL};
             xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
             break;
@@ -483,7 +463,7 @@ void process_request_from_state(Context& context, const Command command_id, uint
         const auto deinit_result = memory::filesystem::deinit_fs(myfs, myfs_configuration);
         if(result::Result::OK != deinit_result)
         {
-            NRF_LOG_ERROR("lfs: deinit failed");
+            NRF_LOG_ERROR("myfs: deinit failed");
             StatusQueueElement response{Command::SELECT_OWNER_AUDIO, Status::ERROR_GENERAL};
             xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
             break;
@@ -491,7 +471,7 @@ void process_request_from_state(Context& context, const Command command_id, uint
         const auto init_result = memory::filesystem::init_fs(myfs, myfs_configuration);
         if(result::Result::OK != init_result)
         {
-            NRF_LOG_ERROR("lfs: init failed");
+            NRF_LOG_ERROR("myfs: init failed");
             StatusQueueElement response{Command::SELECT_OWNER_AUDIO, Status::ERROR_GENERAL};
             xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
             break;
@@ -515,7 +495,7 @@ void process_request_from_state(Context& context, const Command command_id, uint
         break;
     }
     case Command::LAUNCH_TEST_4: {
-        launch_test_4(lfs);
+        // launch_test_4(lfs);
         break;
     }
     case Command::LAUNCH_TEST_5: {
@@ -523,7 +503,7 @@ void process_request_from_state(Context& context, const Command command_id, uint
         break;
     }
     case Command::UNMOUNT_FS: {
-        NRF_LOG_ERROR("mem: lfs unmount is not implemented");
+        NRF_LOG_ERROR("mem: myfs unmount is not implemented");
         break;
     }
     case Command::PERFORM_MEMORY_CHECK: {

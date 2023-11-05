@@ -456,6 +456,7 @@ int myfs_file_get_size(myfs_t& myfs, const myfs_config& config, uint8_t * file_i
     }
     bool is_file_found{false};
     uint32_t current_descriptor_address{myfs.fs_start_address + single_file_descriptor_size_bytes};
+
     while (!is_file_found)
     {
         myfs_file_descriptor d;
@@ -467,18 +468,22 @@ int myfs_file_get_size(myfs_t& myfs, const myfs_config& config, uint8_t * file_i
         }
         if (d.magic != file_magic_value)
         {
-            NRF_LOG_WARNING("file not found, reached the end of the FS");
+            NRF_LOG_WARNING("file [...%02x%02x%02x%02x] not found, reached the end of the FS",
+                file_id[4], file_id[5], file_id[6], file_id[7]
+            );
             return -1;
         }
+        
         if (memcmp(d.file_id, file_id, d.file_id_size) == 0)
         {
             is_file_found = true;
             if (d.file_size != empty_word_value)
             {
-                return d.file_id_size;
+                return d.file_size;
             }
             return -1;
         }
+        current_descriptor_address += single_file_descriptor_size_bytes;
     }
     return -1;
 }

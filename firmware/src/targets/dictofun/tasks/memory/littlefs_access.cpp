@@ -68,7 +68,7 @@ result::Result deinit_fs(::filesystem::myfs_t& fs, const ::filesystem::myfs_conf
         NRF_LOG_ERROR("failed to unmount MyFS (%d)", unmount_result);
         return result::Result::ERROR_GENERAL;
     }
-    return result::Result::ERROR_NOT_IMPLEMENTED;
+    return result::Result::OK;
 }
 
 result::Result close_file(::filesystem::myfs_t& fs, const ::filesystem::myfs_config& config)
@@ -207,6 +207,7 @@ result::Result get_file_info(::filesystem::myfs_t& fs,
         return result::Result::ERROR_INVALID_PARAMETER;
     }
     uint8_t id[::filesystem::myfs_file_t::id_size]{0};
+    
     convert_filename_to_myfs_id(name, id);
     const auto size = myfs_file_get_size(fs, config, id);
     if (size < 0)
@@ -216,7 +217,8 @@ result::Result get_file_info(::filesystem::myfs_t& fs,
     // At this point we know the file size - info.size
     data_size_bytes =
         snprintf(reinterpret_cast<char*>(buffer), max_data_size, "{\"s\":%lu}", size);
-
+    buffer[data_size_bytes] = 0;
+    NRF_LOG_INFO("get file info: %s", buffer);
     return result::Result::OK;
 }
 
@@ -349,14 +351,11 @@ void convert_myfs_id_to_filename(const uint8_t * file_id, char* name)
     }
 
     int pos{0};
-    static constexpr auto id_size = sizeof(ble::fts::file_id_type);
+    static constexpr auto id_size = sizeof(ble::fts::file_id_type) + 1;
     for (auto i = 0; i < ::filesystem::myfs_file_t::id_size; ++i)
     {
         pos += snprintf(&name[pos], id_size - pos, "%02d", file_id[i]);
     }
-    // snprintf(name, sizeof(ble::fts::file_id_type), "%02d%02d%02d%02d%02d%02d%02d%02d",
-
-    // )
 }
 
 
