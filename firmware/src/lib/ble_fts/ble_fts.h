@@ -72,6 +72,7 @@ struct FileSystemInterface
         uint32_t files_count{0};
     } __attribute__((packed));
     using fs_status_function_type = std::function<result::Result(FSStatus&)>;
+    using receive_completion_type = std::function<void()>;
 
     file_list_get_function_type file_list_get_function;
     file_info_get_function_type file_info_get_function;
@@ -80,6 +81,7 @@ struct FileSystemInterface
     file_data_get_function_type file_data_get_function;
     fs_status_function_type fs_status_function;
     file_list_get_next_function_type file_list_get_next_function;
+    receive_completion_type receive_completed_function;
 };
 
 // TODO: consider replacing the glue structures above with a template
@@ -167,6 +169,7 @@ private:
         REQ_FILE_DATA = 3,
         REQ_FS_STATUS = 4,
         REQ_FILES_LIST_NEXT = 5,
+        REQ_RECEIVE_COMPLETE = 6,
 
         GENERAL_STATUS = 240,
 
@@ -248,6 +251,7 @@ private:
     void on_req_file_info(uint32_t data_size, const uint8_t* file_id_data);
     void on_req_file_data(uint32_t data_size, const uint8_t* file_id_data);
     void on_req_fs_status(uint32_t size);
+    void on_req_receive_complete(uint32_t size);
 
     file_id_type get_file_id_from_raw(const uint8_t* data) const;
 
