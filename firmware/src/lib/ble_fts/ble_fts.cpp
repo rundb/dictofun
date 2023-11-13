@@ -558,7 +558,7 @@ void FtsService::process()
     else if(_context.pending_command != FtsService::ControlPointOpcode::IDLE &&
             is_command_a_request(_context.active_command))
     {
-        NRF_LOG_ERROR("ble::fts: command requested before previous command has been processed.");
+        NRF_LOG_ERROR("ble::fts: command requested before previous command has been processed (%d active, %d pending)", _context.active_command, _context.pending_command);
         _context.pending_command = FtsService::ControlPointOpcode::IDLE;
     }
     else
