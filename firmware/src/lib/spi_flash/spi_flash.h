@@ -44,6 +44,7 @@ public:
     // These 2 calls are asynchronous
     Result eraseSector(uint32_t address);
     void eraseChip();
+    SpiFlash::Result erase64KBlock(const uint32_t address);
 
     bool isBusy();
 
@@ -63,6 +64,7 @@ private:
     uint8_t _txBuffer[MAX_TRANSACTION_SIZE];
     uint8_t _rxBuffer[MAX_TRANSACTION_SIZE];
     static const uint32_t SECTOR_SIZE = 0x1000;
+    static const uint32_t B64K_SIZE = 0x10000;
     static const uint32_t PAGE_SIZE = 0x100;
     uint32_t _last_transaction_tick{0};
 
@@ -90,7 +92,7 @@ private:
     static constexpr uint32_t max_wait_time_ms{5};
     static constexpr uint32_t max_read_transaction_time_ms{5};
     static constexpr uint32_t max_program_transaction_time_ms{10};
-    static constexpr uint32_t max_erase_duration_time_ms{200};
+    static constexpr uint32_t max_erase_duration_time_ms{2000};
 
     Context _context;
     void writeEnable(bool shouldEnable);

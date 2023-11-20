@@ -41,7 +41,7 @@ static const spi::Spi::Configuration flash_spi_config{NRF_DRV_SPI_FREQ_8M,
 flash::SpiFlash flash{flash_spi, vTaskDelay, xTaskGetTickCount};
 constexpr uint32_t flash_page_size{256};
 constexpr uint32_t flash_sector_size{4096};
-constexpr uint32_t flash_total_size{16 * 1024 * 1024 - 4096};
+constexpr uint32_t flash_total_size{16 * 1024 * 1024};
 constexpr uint32_t flash_sectors_count{flash_total_size / flash_sector_size};
 
 constexpr size_t CACHE_SIZE{flash_page_size};
@@ -60,6 +60,7 @@ struct ::filesystem::myfs_config myfs_configuration = {
     .read = memory::block_device::myfs_read,
     .prog = memory::block_device::myfs_program,
     .erase = memory::block_device::myfs_erase,
+    .erase_multiple = memory::block_device::myfs_erase_multiple,
     .sync = memory::block_device::myfs_sync,
 
     // block device configuration
