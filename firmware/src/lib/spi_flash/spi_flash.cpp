@@ -191,8 +191,44 @@ SpiFlash::Result SpiFlash::eraseSector(const uint32_t address)
     return Result::OK;
 }
 
-SpiFlash::Result SpiFlash::erase(uint32_t address, uint32_t size)
+SpiFlash::Result SpiFlash::erase64KBlock(const uint32_t address)
 {
+    if (address % B64K_SIZE != 0)
+    {
+        return Result::ERROR_ALIGNMENT;
+    }
+    uint32_t timeout{max_wait_time_ms};
+    while(isBusy() && timeout > 0)
+    {
+        _delay(short_delay_duration_ms);
+        --timeout;
+    }
+    if(timeout == 0)
+    {
+        return Result::ERROR_TIMEOUT;
+    }
+
+    if(_get_ticks() - _last_transaction_tick == 0)
+    {
+        _delay(1);
+    }
+
+    writeEnable(true);
+    _isSpiOperationPending = true;
+    _txBuffer[0] = 0xD8;
+    _txBuffer[1] = static_cast<uint8_t>((address >> 16) & 0xFF);
+    _txBuffer[2] = static_cast<uint8_t>((address >> 8) & 0xFF);
+    _txBuffer[3] = static_cast<uint8_t>((address)&0xFF);
+
+    _spi.xfer(_txBuffer, _rxBuffer, 4, spiOperationCallback);
+    _context.operation = Operation::ERASE;
+    _last_transaction_tick = _get_ticks();
+    return Result::OK;
+}
+
+SpiFlash::Result SpiFlash::erase(const uint32_t address, const uint32_t size)
+{
+
     if((address % SECTOR_SIZE != 0) || (size % SECTOR_SIZE != 0))
     {
         return Result::ERROR_ALIGNMENT;
@@ -213,11 +249,24 @@ SpiFlash::Result SpiFlash::erase(uint32_t address, uint32_t size)
     {
         return Result::ERROR_ALIGNMENT;
     }
-    for(int i = 0; i < size / SECTOR_SIZE; ++i)
+    volatile int32_t position = static_cast<int32_t>(address);
+    volatile int32_t leftover = static_cast<int32_t>(size);
+    while (leftover > 0)
     {
-        uint32_t addr{address + i * SECTOR_SIZE};
-        const auto res = eraseSector(addr);
-        if(res != Result::OK)
+        Result res{Result::ERROR_GENERAL};
+        int32_t current_erase_size{0};
+        if (leftover >= static_cast<int32_t>(B64K_SIZE) && ((position % B64K_SIZE) == 0))
+        {
+            res = erase64KBlock(position);
+            current_erase_size = B64K_SIZE;
+        }
+        else 
+        {
+            res = eraseSector(position);
+            current_erase_size = SECTOR_SIZE;
+        }
+        NRF_LOG_INFO("erasing %d@%x, %d left, res=%d", current_erase_size, position, leftover);
+        if (res != Result::OK)
         {
             _context.operation = Operation::IDLE;
             return res;
@@ -232,7 +281,10 @@ SpiFlash::Result SpiFlash::erase(uint32_t address, uint32_t size)
         {
             return Result::ERROR_TIMEOUT;
         }
+        leftover = leftover - current_erase_size;
+        position += current_erase_size;
     }
+
     _context.operation = Operation::IDLE;
     return Result::OK;
 }

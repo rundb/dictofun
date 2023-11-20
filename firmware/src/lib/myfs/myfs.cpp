@@ -36,7 +36,13 @@ void print_flash_memory_area(const myfs_config& c, uint32_t start_address, uint3
 int myfs_format(myfs_t& myfs)
 {
     const myfs_config config(myfs.config);
-    // first erase the whole flash memory. At first should be done somewhere else, as SpiIf doesn't give this interface
+
+    const auto erase_result = config.erase_multiple(&config, 0, config.block_count);
+    if (erase_result != 0)
+    {
+        NRF_LOG_ERROR("failed to erase flash memory")
+        return erase_result;
+    }
 
     // propagate a magic value into the first 32 bytes
     uint8_t format_marker[myfs_format_marker_size];

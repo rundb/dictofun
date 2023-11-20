@@ -41,6 +41,7 @@ struct myfs_config
                 const void* buffer,
                 myfs_size_t size);
     int (*erase)(const struct myfs_config* c, myfs_block_t block);
+    int (*erase_multiple)(const struct myfs_config* c, myfs_block_t block, uint32_t blocks_count);
     int (*sync)(const struct myfs_config* c);
 
     myfs_size_t read_size;

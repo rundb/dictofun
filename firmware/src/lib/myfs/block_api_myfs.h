@@ -29,6 +29,7 @@ int myfs_program(const struct ::filesystem::myfs_config* c,
                  const void* buffer,
                  myfs_size_t size);
 int myfs_erase(const struct ::filesystem::myfs_config* c, myfs_block_t block);
+int myfs_erase_multiple(const struct ::filesystem::myfs_config* c, myfs_block_t block, uint32_t blocks_count);
 int myfs_sync(const struct ::filesystem::myfs_config* c);
 
 } // namespace block_device
