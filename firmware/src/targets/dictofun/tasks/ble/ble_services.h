@@ -42,5 +42,7 @@ result::Result get_current_time_update(time::DateTime& datetime);
 
 void set_bas_battery_level(uint8_t batt_level);
 
+void restart();
+
 } // namespace services
 } // namespace ble

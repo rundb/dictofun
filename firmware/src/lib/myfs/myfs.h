@@ -27,6 +27,11 @@ static constexpr uint32_t myfs_format_marker_size{single_file_descriptor_size_by
 static constexpr uint32_t first_file_start_location{4096};
 static constexpr uint32_t page_size{256};
 
+
+static constexpr int GENERIC_ERROR{-1};
+static constexpr int ERROR_FILE_NOT_FOUND{-3};
+static constexpr int REPAIR_HAS_BEEN_PERFORMED{-16};
+
 struct myfs_config
 {
     void* context;
@@ -116,6 +121,8 @@ int myfs_file_write(myfs_t& myfs, myfs_file_t& file, void* buffer, myfs_size_t s
 int myfs_file_read(
     myfs_t& myfs, myfs_file_t& file, void* buffer, myfs_size_t max_size, myfs_size_t& read_size);
 int myfs_unmount(myfs_t& myfs);
+
+int myfs_repair(myfs_t& myfs, myfs_file_descriptor& first_invalid_descriptor, uint32_t descriptor_address);
 
 // "dir"-related calls
 uint32_t myfs_get_files_count(myfs_t& myfs);

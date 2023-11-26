@@ -258,6 +258,12 @@ result::Result FtsService::init()
     return result::Result::OK;
 }
 
+void FtsService::reset_context()
+{
+    _context.pending_command = ControlPointOpcode::IDLE;
+    _context.active_command = ControlPointOpcode::IDLE;
+}
+
 void FtsService::on_write(ble_evt_t const* p_ble_evt, ClientContext& client_context)
 {
     ble_gatts_evt_write_t const* p_evt_write = &p_ble_evt->evt.gatts_evt.params.write;
@@ -785,7 +791,13 @@ result::Result FtsService::send_file_info()
                                       _transaction_ctx.size,
                                       TransactionContext::buffer_size);
 
-    if(result::Result::OK != file_info_call_result)
+    if (result::Result::ERROR_NOT_FOUND == file_info_call_result)
+    {
+        NRF_LOG_ERROR("ble::fts::send_info: file not found");
+        (void)update_general_status(GeneralStatus::FILE_NOT_FOUND, _transaction_ctx.file_id);
+        return file_info_call_result;
+    }
+    else if(result::Result::OK != file_info_call_result)
     {
         NRF_LOG_ERROR("ble::fts::send_info: error");
         (void)update_general_status(GeneralStatus::FS_CORRUPT, file_id_type());

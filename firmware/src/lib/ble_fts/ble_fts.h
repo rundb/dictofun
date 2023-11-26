@@ -97,6 +97,7 @@ public:
     ~FtsService() = default;
 
     result::Result init();
+    void reset_context();
     constexpr uint32_t get_service_uuid()
     {
         return service_uuid;
@@ -158,7 +159,7 @@ private:
     static constexpr uint32_t file_info_char_max_len{32};
     static constexpr uint32_t file_data_char_max_len{256};
     static constexpr uint32_t fs_status_char_max_len{14};
-    static constexpr uint32_t status_char_max_len{9};
+    static constexpr uint32_t status_char_max_len{17};
     static constexpr uint32_t pairing_char_max_len{1};
 
     // TODO: separate BLE commands from internal states

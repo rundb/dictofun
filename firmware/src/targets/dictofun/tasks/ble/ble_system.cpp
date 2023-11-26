@@ -152,6 +152,9 @@ result::Result BleSystem::stop()
             m_conn_handle = BLE_CONN_HANDLE_INVALID;
         }
     }
+    NRF_LOG_DEBUG("ble system: stopped");
+
+    services::restart();
 
     _is_active = false;
     nrf_sdh_freertos_task_pause();
@@ -161,10 +164,7 @@ result::Result BleSystem::stop()
 
 void BleSystem::process()
 {
-    if(_is_active)
-    {
-        services_process();
-    }
+    services_process();
 }
 
 void BleSystem::connect_fts_to_target_fs()
@@ -191,6 +191,7 @@ void BleSystem::ble_evt_handler(ble_evt_t const* p_ble_evt, void* p_context)
         break;
 
     case BLE_GAP_EVT_DISCONNECTED:
+    {
         NRF_LOG_INFO("Disconnected");
         //bsp_board_led_off(CONNECTED_LED);
         m_conn_handle = BLE_CONN_HANDLE_INVALID;
@@ -206,6 +207,7 @@ void BleSystem::ble_evt_handler(ble_evt_t const* p_ble_evt, void* p_context)
         }
         BleSystem::instance()._has_connect_happened = false;
         break;
+    }
 
     case BLE_GAP_EVT_SEC_PARAMS_REQUEST:
         NRF_LOG_INFO("BLE_GAP_EVT_SEC_PARAMS_REQUEST");

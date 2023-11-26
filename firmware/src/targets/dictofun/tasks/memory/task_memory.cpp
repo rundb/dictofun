@@ -145,6 +145,13 @@ void task_memory(void* context_ptr)
             NRF_LOG_INFO("mem: ready");
         }
     }
+    // it can happen, that a command has been issued to the memory, but there was a format operation.
+    // For this use-case clean command queue, if this point has been reached too late.
+    if (xTaskGetTickCount() > 2000)
+    {
+        NRF_LOG_WARNING("mem: init took a while, resetting commands queue (more-less just in case)");
+        xQueueReset(context.command_queue);
+    }
 
     while(1)
     {
@@ -280,8 +287,16 @@ void process_request_from_ble(Context& context,
 
         if(result::Result::OK != file_info_result)
         {
-            NRF_LOG_ERROR("mem: failed to fetch file info");
-            status.status = ble::StatusFromMemory::ERROR_OTHER;
+            static char filename_bytes[max_file_name_size*2+1]{0};
+            int id{0};
+            for (int i = 0; i < max_file_name_size; ++i) 
+            {
+                id += snprintf(&filename_bytes[id], sizeof(filename_bytes) - id, "%02x", file_id.data[i]);
+            }
+            NRF_LOG_ERROR("mem: failed to fetch file info [%s]", filename_bytes);
+            status.status = file_info_result == result::Result::ERROR_NOT_FOUND ? 
+                ble::StatusFromMemory::ERROR_FILE_NOT_FOUND : 
+                ble::StatusFromMemory::ERROR_OTHER;
             status.data_size = 0;
         }
         if(data_queue_elem.size == 0)

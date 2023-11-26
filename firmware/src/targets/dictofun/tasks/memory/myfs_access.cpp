@@ -26,6 +26,11 @@ static uint32_t _total_files_left{0};
 result::Result init_fs(::filesystem::myfs_t& fs)
 {
     auto err = myfs_mount(fs);
+    if (err == ::filesystem::REPAIR_HAS_BEEN_PERFORMED)
+    {
+        myfs_unmount(fs);
+        err = myfs_mount(fs);
+    }
     if(err != 0)
     {
         NRF_LOG_WARNING("mem: formatting FS");
@@ -199,16 +204,24 @@ result::Result get_file_info(::filesystem::myfs_t& fs,
 {
     if(buffer == nullptr || max_data_size < 8)
     {
+        NRF_LOG_ERROR("get_file_info: invalid parameters");
         return result::Result::ERROR_INVALID_PARAMETER;
     }
     uint8_t id[::filesystem::myfs_file_t::id_size]{0};
     
     convert_filename_to_myfs_id(name, id);
     const auto size = myfs_file_get_size(fs, id);
-    if (size < 0)
+    if (size == ::filesystem::ERROR_FILE_NOT_FOUND)
     {
+        NRF_LOG_INFO("file get size: file not found");
+        return result::Result::ERROR_NOT_FOUND;
+    }
+    else if (size < 0)
+    {
+        NRF_LOG_INFO("file get size: ret code %d", size);
         return result::Result::ERROR_GENERAL;
     }
+
     // At this point we know the file size - info.size
     data_size_bytes =
         snprintf(reinterpret_cast<char*>(buffer), max_data_size, "{\"s\":%lu}", static_cast<uint32_t>(size));

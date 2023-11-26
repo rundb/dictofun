@@ -222,6 +222,11 @@ void services::start_db_discovery(uint16_t conn_handle)
     }
 }
 
+void services::restart()
+{
+    fts_service.reset_context();
+}
+
 void set_fts_fs_handler(ble::fts::FileSystemInterface& fs_if)
 {
     fts_service.set_fs_interface(fs_if);
