@@ -371,6 +371,7 @@ void process_button_event(button::Event event, Context& context)
     case decltype(operation_mode)::FIELD: {
         if(event == decltype(event)::SINGLE_PRESS_ON)
         {
+            context.records_per_launch_counter++;
             if(context._is_ble_system_active)
             {
                 const auto ble_disable_status = disable_ble_subsystem(context);
@@ -447,6 +448,7 @@ void process_button_event(button::Event event, Context& context)
             NRF_LOG_INFO("state: stopped and saved record");
 
             switch_to_ble_mode(context);
+            context.timestamps.reset();
         }
         break;
     }
@@ -628,9 +630,16 @@ bool process_timeouts(Context& context)
         }
         else if(event == event_type::DISCONNECTED)
         {
-            context.timestamps.ble_disconnect_event_timestamp = xTaskGetTickCount();
-            led::CommandQueueElement led_command{led::Color::PURPLE, led::State::SLOW_GLOW};
-            xQueueSend(context.led_commands_handle, reinterpret_cast<void*>(&led_command), 0);
+            if (context.records_per_launch_counter <= 1)
+            {
+                // workaround: since BLE disconnect can happen waaay later than we expect, this timeout reason should be ignored, if more than one record has been made
+                context.timestamps.ble_disconnect_event_timestamp = xTaskGetTickCount();
+                led::CommandQueueElement led_command{led::Color::PURPLE, led::State::SLOW_GLOW};
+                xQueueSend(context.led_commands_handle, reinterpret_cast<void*>(&led_command), 0);
+            }
+            else {
+                context.timestamps.last_ble_activity_timestamp = xTaskGetTickCount();
+            }
         }
     }
 
@@ -648,7 +657,7 @@ bool process_timeouts(Context& context)
         // Record has never been launched.
         if(tick > norecord_launch_timeout)
         {
-            // shutdown_ldo();
+            NRF_LOG_DEBUG("shutdown: norecord timeout");
             return true;
         }
         return false;
@@ -662,7 +671,7 @@ bool process_timeouts(Context& context)
     if(!context.timestamps.has_ble_timestamp_been_updated() &&
        time_since_record_end > after_record_timeout)
     {
-        // shutdown_ldo();
+        NRF_LOG_DEBUG("shutdown: after record timeout");
         return true;
     }
 
@@ -674,7 +683,7 @@ bool process_timeouts(Context& context)
                 tick - context.timestamps.ble_disconnect_event_timestamp;
             if(time_since_disconnect > ble_after_disconnect_timeout)
             {
-                // shutdown_ldo();
+                NRF_LOG_DEBUG("shutdown: after disconnect timeout");
                 return true;
             }
         }
@@ -684,14 +693,14 @@ bool process_timeouts(Context& context)
                 tick - context.timestamps.last_ble_activity_timestamp;
             if(time_since_last_keepalive > ble_keepalive_timeout)
             {
-                // shutdown_ldo();
+                NRF_LOG_DEBUG("shutdown: after keepalive timeout");
                 return true;
             }
         }
     }
     if(tick > max_operation_duration)
     {
-        // shutdown_ldo();
+        NRF_LOG_DEBUG("shutdown: after max duration timeout");
         return true;
     }
     return false;

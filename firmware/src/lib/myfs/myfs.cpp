@@ -145,10 +145,25 @@ int myfs_mount(myfs_t& myfs)
                 NRF_LOG_INFO("mount: no files found, setting count to %d and start to %d",
                              myfs.files_count,
                              myfs.next_file_start_address);
+                myfs.is_mounted = true;
                 return 0;
             }
         }
-        else if(d.magic != file_magic_value)
+        else if (d.magic == file_magic_value)
+        {
+            if (d.file_size == empty_word_value)
+            {
+                NRF_LOG_ERROR("found an unclosed file. repairing is required");
+                const auto repair_result = myfs_repair(myfs, d, current_descriptor_address);
+                if (repair_result != 0)
+                {
+                    return repair_result;
+                }
+                NRF_LOG_INFO("repair was successful. Still we need to signal the user that there was a repair and mounting may need to be rerun");
+                return REPAIR_HAS_BEEN_PERFORMED;
+            }
+        }
+        else
         {
             // FS is corrupt and needs formatting
             NRF_LOG_ERROR("mount: file magic value is not found. is fs corrupt?");
@@ -474,6 +489,7 @@ int myfs_file_get_size(myfs_t& myfs, uint8_t* file_id)
     const myfs_config& config(myfs.config);
     if(nullptr == file_id)
     {
+        NRF_LOG_ERROR("myfs: get size - invalid input");
         return -1;
     }
     bool is_file_found{false};
@@ -490,12 +506,20 @@ int myfs_file_get_size(myfs_t& myfs, uint8_t* file_id)
         }
         if(d.magic != file_magic_value)
         {
-            NRF_LOG_WARNING("file [...%02x%02x%02x%02x] not found, reached the end of the FS",
-                            file_id[4],
-                            file_id[5],
-                            file_id[6],
-                            file_id[7]);
-            return -1;
+            char filename[17]{0};
+            snprintf(filename, sizeof(filename), "%02x%02x%02x%02x%02x%02x%02x%02x",
+                file_id[0],
+                file_id[1],
+                file_id[2],
+                file_id[3],
+                file_id[4],
+                file_id[5],
+                file_id[6],
+                file_id[7]
+                );
+            NRF_LOG_WARNING("file [%s] not found, reached the end of the FS",
+                            filename);
+            return ERROR_FILE_NOT_FOUND;
         }
 
         if(memcmp(d.file_id, file_id, d.file_id_size) == 0)
@@ -505,6 +529,7 @@ int myfs_file_get_size(myfs_t& myfs, uint8_t* file_id)
             {
                 return d.file_size;
             }
+            NRF_LOG_ERROR("myfs: file found, but file size is invalid");
             return -1;
         }
         current_descriptor_address += single_file_descriptor_size_bytes;
@@ -650,6 +675,43 @@ int read_myfs_descriptor(myfs_file_descriptor& d,
     }
 
     return 0;
+}
+
+int myfs_repair(myfs_t& myfs, myfs_file_descriptor& first_invalid_descriptor, uint32_t descriptor_address)
+{
+    bool is_file_end_found{false};
+    uint32_t file_size{0};
+    uint32_t written_address = first_invalid_descriptor.start_address;
+    const auto& c{myfs.config};
+    while (!is_file_end_found && written_address < (c.block_count * c.block_size))
+    {
+        const auto block_id = written_address / c.block_size;
+        const auto block_offset = written_address % c.block_size;
+        uint32_t buff{0xFFFFFFFFUL};
+        const auto read_res = c.read(&c, block_id, block_offset, &buff, sizeof(buff));
+        if (read_res != 0)
+        {
+            NRF_LOG_ERROR("myfs repair: read data failed");
+            return -1;
+        }
+        if (written_address == empty_word_value)
+        {
+            is_file_end_found = true;
+        }
+        else 
+        {
+            written_address += sizeof(buff);
+            file_size += sizeof(buff);
+        }
+    }
+    if (is_file_end_found)
+    {
+        first_invalid_descriptor.file_size = file_size;
+        const auto write_res = write_myfs_descriptor(first_invalid_descriptor, descriptor_address, c);
+        return write_res;
+    }
+    NRF_LOG_ERROR("myfs repair: file end not found. Fatal error");
+    return -1;
 }
 
 } // namespace filesystem

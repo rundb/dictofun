@@ -16,6 +16,7 @@ enum class Result
     ERROR_BUSY,
     ERROR_INVALID_PARAMETER,
     ERROR_TIMEOUT,
+    ERROR_NOT_FOUND,
 };
 
 }

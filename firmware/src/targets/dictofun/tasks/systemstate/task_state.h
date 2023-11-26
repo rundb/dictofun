@@ -47,6 +47,7 @@ struct Context
     bool _is_shutdown_demanded{false};
     bool _is_battery_low{false};
     bool is_memory_busy{false};
+    uint32_t records_per_launch_counter{0};
 
     struct Timestamps
     {
@@ -67,6 +68,12 @@ struct Context
         bool has_ble_timestamp_been_updated()
         {
             return last_ble_activity_timestamp != timestamp_uninitialized_value;
+        }
+        void reset()
+        {
+            last_ble_activity_timestamp = timestamp_uninitialized_value;
+            last_ble_activity_timestamp = timestamp_uninitialized_value;
+            ble_disconnect_event_timestamp = timestamp_uninitialized_value;
         }
 
     private:
