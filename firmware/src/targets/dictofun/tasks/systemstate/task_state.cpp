@@ -85,11 +85,45 @@ void task_system_state(void* context_ptr)
             led::CommandQueueElement led_command{led::Color::GREEN, led::State::SLOW_GLOW};
             xQueueSend(context->led_commands_handle, reinterpret_cast<void*>(&led_command), 0);
             // TODO: add BLE enable, if button was not pressed
+
+            // wait until a readiness confirmation from task_memory is received
+            memory::StatusQueueElement response;
+            response.status = memory::Status::ERROR_GENERAL;
+            int32_t timeout{1000};
+            context->is_memory_busy = true;
+            while (context->is_memory_busy && (--timeout) > 0)
+            {
+                const auto receiveResult = xQueueReceive(context->memory_status_handle, reinterpret_cast<void *>(&response), 1);
+                if (receiveResult == pdPASS) {
+                    if (response.status == memory::Status::IS_READY)
+                    {
+                        context->is_memory_busy = false;
+                    }
+                    else {
+                        NRF_LOG_ERROR("state: memory readyness is not confirmed");
+                        // System shall wait until memory is ready
+                    }
+                    break;
+                }
+            }
         }
     }
 
     while(1)
     {
+        if (context->is_memory_busy)
+        {
+            memory::StatusQueueElement response;
+            const auto memoryStatusResult = xQueueReceive(context->memory_status_handle, reinterpret_cast<void *>(&response), 100);
+            if (pdPASS == memoryStatusResult)
+            {
+                if (response.status == memory::Status::IS_READY)
+                {
+                    context->is_memory_busy = false;
+                }
+            }
+        }
+
         const auto button_event_receive_status = xQueueReceive(
             context->button_events_handle, &button_event_buffer, button_event_wait_ticks_type);
         if(pdPASS == button_event_receive_status)
@@ -216,7 +250,7 @@ void task_system_state(void* context_ptr)
             xQueueSend(context->led_commands_handle, reinterpret_cast<void*>(&led_command), 0);
 
             static constexpr uint32_t MEMCHECK_INITIAL_RESPONSE_TIMEOUT{15000};
-            static constexpr uint32_t MEMCHECK_FORMAT_TIMEOUT{45000};
+            static constexpr uint32_t MEMCHECK_FORMAT_TIMEOUT{50000};
             memory::StatusQueueElement response;
             xQueueReset(context->memory_status_handle);
             const auto memcheck_status = xQueueReceive(context->memory_status_handle, &response, MEMCHECK_INITIAL_RESPONSE_TIMEOUT);
@@ -234,6 +268,7 @@ void task_system_state(void* context_ptr)
 
                 led_command.state = led::State::FAST_GLOW;
                 xQueueSend(context->led_commands_handle, reinterpret_cast<void*>(&led_command), 0);
+                context->is_memory_busy = true;
 
                 const auto format_status = xQueueReceive(context->memory_status_handle, &response, MEMCHECK_FORMAT_TIMEOUT);
                 if (pdPASS != format_status)
@@ -597,6 +632,12 @@ bool process_timeouts(Context& context)
             led::CommandQueueElement led_command{led::Color::PURPLE, led::State::SLOW_GLOW};
             xQueueSend(context.led_commands_handle, reinterpret_cast<void*>(&led_command), 0);
         }
+    }
+
+    // Make sure that erase operation (if running) is for sure completed
+    if (context.is_memory_busy)
+    {
+        return false;
     }
 
     // At this stage depending on record state and presence of timestamps make decision

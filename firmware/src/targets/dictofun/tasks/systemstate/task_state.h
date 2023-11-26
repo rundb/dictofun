@@ -46,6 +46,7 @@ struct Context
     bool _is_ble_system_active{false};
     bool _is_shutdown_demanded{false};
     bool _is_battery_low{false};
+    bool is_memory_busy{false};
 
     struct Timestamps
     {

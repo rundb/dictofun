@@ -128,6 +128,22 @@ void task_memory(void* context_ptr)
     if(result::Result::OK != init_result)
     {
         NRF_LOG_ERROR("mem: failed to mount myfs");
+        StatusQueueElement response{Command::MOUNT_FS, Status::ERROR_BUSY};
+        xQueueSend(context.status_queue, reinterpret_cast<void *>(&response), 0);
+    }
+    else 
+    {
+        static constexpr uint32_t FIRST_READY_STATUS_WAIT_TICKS{500U};
+        // This element has to be sent in order for task state to get access to the memory
+        StatusQueueElement response{Command::MOUNT_FS, Status::IS_READY};
+        const auto res = xQueueSend(context.status_queue, reinterpret_cast<void *>(&response), FIRST_READY_STATUS_WAIT_TICKS);
+        if (res != pdPASS)
+        {
+            NRF_LOG_ERROR("mem: failed to inform state about readiness");
+        }
+        else {
+            NRF_LOG_INFO("mem: ready");
+        }
     }
 
     while(1)
@@ -524,25 +540,12 @@ void process_request_from_state(Context& context, const Command command_id, uint
         case Command::FORMAT_FS:
         {
             // erase the flash chip
-            NRF_LOG_INFO("task memory: launching chip erase. Memory task shall not accept commands during the execution of this command.");
+            NRF_LOG_INFO("task memory: launching memory formatting. Memory task shall not accept commands during the execution of this command.");
             const auto start_tick = xTaskGetTickCount();
-            flash.eraseChip();
-            static constexpr uint32_t max_chip_erase_duration{44000};
-            while(flash.isBusy() && (xTaskGetTickCount() - start_tick) < max_chip_erase_duration)
-            {
-                vTaskDelay(200);
-            }
-            const auto end_tick = xTaskGetTickCount();
+            
+            static constexpr uint32_t max_format_duration{50000};
+
             StatusQueueElement response{Command::FORMAT_FS, Status::OK};
-            if((end_tick - start_tick) > max_chip_erase_duration)
-            {
-                NRF_LOG_WARNING("task memory: chip erase timed out");
-                response.status = Status::ERROR_BUSY;
-            }
-            else
-            {
-                NRF_LOG_INFO("task memory: chip erase took %d ms", end_tick - start_tick);
-            }
             const auto init_result = memory::filesystem::init_fs(myfs);
             if(result::Result::OK != init_result)
             {
@@ -550,6 +553,17 @@ void process_request_from_state(Context& context, const Command command_id, uint
                 response.status = Status::ERROR_GENERAL;
             }
             
+            const auto end_tick = xTaskGetTickCount();
+
+            if((end_tick - start_tick) > max_format_duration)
+            {
+                NRF_LOG_WARNING("task memory: chip erase timed out");
+                response.status = Status::ERROR_BUSY;
+            }
+            else
+            {
+                NRF_LOG_INFO("task memory: FS format took %d ms", end_tick - start_tick);
+            }
 
             xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
             break;
