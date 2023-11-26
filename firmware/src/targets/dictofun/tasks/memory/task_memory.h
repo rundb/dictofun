@@ -48,6 +48,7 @@ enum class Command
 enum class Status
 {
     OK,
+    IS_READY,
     ERROR_BUSY,
     ERROR_GENERAL,
     FORMAT_REQUIRED,

@@ -265,7 +265,7 @@ SpiFlash::Result SpiFlash::erase(const uint32_t address, const uint32_t size)
             res = eraseSector(position);
             current_erase_size = SECTOR_SIZE;
         }
-        NRF_LOG_INFO("erasing %d@%x, %d left, res=%d", current_erase_size, position, leftover);
+        NRF_LOG_INFO("erasing %d@%x, %d left", current_erase_size, position, leftover);
         if (res != Result::OK)
         {
             _context.operation = Operation::IDLE;
@@ -310,9 +310,6 @@ void SpiFlash::reset()
     volatile uint32_t timeout = MAX_SPI_WAIT_TIMEOUT;
     while(_isSpiOperationPending && ((timeout--) > 0))
     { }
-
-    for(volatile int i = 0; i < 1000000; ++i)
-        ;
 }
 
 uint8_t SpiFlash::getSR1()
