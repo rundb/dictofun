@@ -167,7 +167,8 @@ result::Result FtsService::init()
                                                        control_point_char_uuid,
                                                        cp_char_max_len,
                                                        &_context.control_point_handles,
-                                                       CharacteristicInUseType::WRITE);
+                                                       CharacteristicInUseType::WRITE,
+                                                       true);
 
     if(result::Result::OK != cp_char_add_result)
     {
@@ -178,7 +179,8 @@ result::Result FtsService::init()
                                                               file_list_char_uuid,
                                                               file_list_char_max_len,
                                                               &_context.files_list,
-                                                              CharacteristicInUseType::READ_NOTIFY);
+                                                              CharacteristicInUseType::READ_NOTIFY,
+                                                              true);
 
     if(result::Result::OK != file_list_char_add_result)
     {
@@ -190,7 +192,8 @@ result::Result FtsService::init()
                            file_list_next_char_uuid,
                            file_list_next_char_max_len,
                            &_context.files_list_next,
-                           CharacteristicInUseType::READ_NOTIFY);
+                           CharacteristicInUseType::READ_NOTIFY,
+                           true);
 
     if(result::Result::OK != file_list_next_char_add_result)
     {
@@ -201,7 +204,8 @@ result::Result FtsService::init()
                                                               file_info_char_uuid,
                                                               file_info_char_max_len,
                                                               &_context.file_info,
-                                                              CharacteristicInUseType::READ_NOTIFY);
+                                                              CharacteristicInUseType::READ_NOTIFY,
+                                                              true);
 
     if(result::Result::OK != file_info_char_add_result)
     {
@@ -212,7 +216,8 @@ result::Result FtsService::init()
                                                               file_data_char_uuid,
                                                               file_data_char_max_len,
                                                               &_context.file_data,
-                                                              CharacteristicInUseType::READ_NOTIFY);
+                                                              CharacteristicInUseType::READ_NOTIFY,
+                                                              true);
 
     if(result::Result::OK != file_data_char_add_result)
     {
@@ -223,7 +228,8 @@ result::Result FtsService::init()
                                                               fs_status_char_uuid,
                                                               fs_status_char_max_len,
                                                               &_context.fs_status,
-                                                              CharacteristicInUseType::READ_NOTIFY);
+                                                              CharacteristicInUseType::READ_NOTIFY,
+                                                              true);
 
     if(result::Result::OK != fs_status_char_add_result)
     {
@@ -234,7 +240,8 @@ result::Result FtsService::init()
                                                            status_char_uuid,
                                                            status_char_max_len,
                                                            &_context.status,
-                                                           CharacteristicInUseType::READ_NOTIFY);
+                                                           CharacteristicInUseType::READ_NOTIFY,
+                                                           true);
 
     if(result::Result::OK != status_char_add_result)
     {
