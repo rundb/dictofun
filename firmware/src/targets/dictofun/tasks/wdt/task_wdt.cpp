@@ -21,21 +21,21 @@ void task_wdt(void* context)
     NRF_LOG_INFO("task wdg: initialized");
     // initialize watchdog
     nrf_drv_wdt_config_t config = NRF_DRV_WDT_DEAFULT_CONFIG;
-    auto err_code = nrf_drv_wdt_init(&config, wdt_event_handler);
-    if (NRF_SUCCESS != err_code)
-    {
-        NRF_LOG_ERROR("failed to initialize wdg");
-    }
-    err_code = nrf_drv_wdt_channel_alloc(&m_channel_id);
-    if (NRF_SUCCESS != err_code)
-    {
-        NRF_LOG_ERROR("failed to allocate channel for wdg");
-    }
-    nrf_drv_wdt_enable();
+    // auto err_code = nrf_drv_wdt_init(&config, wdt_event_handler);
+    // if (NRF_SUCCESS != err_code)
+    // {
+    //     NRF_LOG_ERROR("failed to initialize wdg");
+    // }
+    // err_code = nrf_drv_wdt_channel_alloc(&m_channel_id);
+    // if (NRF_SUCCESS != err_code)
+    // {
+    //     NRF_LOG_ERROR("failed to allocate channel for wdg");
+    // }
+    // nrf_drv_wdt_enable();
 
     while (1) {
         // feed watchdog once a second
-        nrf_drv_wdt_channel_feed(m_channel_id);
+        // nrf_drv_wdt_channel_feed(m_channel_id);
 
         vTaskDelay(1000);
     }

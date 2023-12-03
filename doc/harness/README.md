@@ -95,6 +95,13 @@ This command performs a reset:
 ```
 openocd -f interface/cmsis-dap.cfg -f target/nrf52.cfg -c "init ; reset run; exit" 
 ```
+
+This command flashes a Softdevice
+
+```
+openocd -f interface/cmsis-dap.cfg -f target/nrf52.cfg -c "program ../sdk/nRF5_SDK_17.1.0_ddde560/components/softdevice/s132/hex/s132_nrf52_7.2.0_softdevice.hex verify reset exit"
+```
+
 ## Flash mass erase command
 
 ```
