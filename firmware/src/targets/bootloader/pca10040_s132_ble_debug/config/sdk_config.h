@@ -90,7 +90,7 @@
 // <i> The bootloader will do its own postvalidation.
 
 #ifndef NRF_BL_DFU_ALLOW_UPDATE_FROM_APP
-#define NRF_BL_DFU_ALLOW_UPDATE_FROM_APP 0
+#define NRF_BL_DFU_ALLOW_UPDATE_FROM_APP 1
 #endif
 
 // </h> 
@@ -1863,7 +1863,7 @@
 // <i> Log data is buffered and can be processed in idle.
 
 #ifndef NRF_LOG_DEFERRED
-#define NRF_LOG_DEFERRED 1
+#define NRF_LOG_DEFERRED 0
 #endif
 
 // <q> NRF_LOG_FILTERS_ENABLED  - Enable dynamic filtering of logs.
