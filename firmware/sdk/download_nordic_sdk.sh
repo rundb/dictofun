@@ -19,13 +19,13 @@ patch "./nRF5_SDK_17.1.0_ddde560/components/ble/nrf_ble_gq/nrf_ble_gq.c" < "nrf_
 
 # # Step 2: install uECC (for the bootloader, uncomment when this functionality is enabled)
 
-# cd "${FOLDER_NAME}/external/micro-ecc/micro-ecc"
+cd "${FOLDER_NAME}/external/micro-ecc/micro-ecc"
 
-# git clone https://github.com/kmackay/micro-ecc
+git clone https://github.com/kmackay/micro-ecc
 
-# cd nrf52hf_armgcc/armgcc
+cd nrf52hf_armgcc/armgcc
 
-# make
+make
 
 # If at this stage you get an error - you have to go to the Makefile.posix file specified in the error and 
 # update armgcc paths for your system

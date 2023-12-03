@@ -2,7 +2,7 @@ PROJECT_NAME     := secure_bootloader_ble_s132_pca10040_debug
 TARGETS          := nrf52832_xxaa_s132
 OUTPUT_DIRECTORY := _build
 
-SDK_ROOT := ../../../../..
+SDK_ROOT := ../../../../../sdk/nRF5_SDK_17.1.0_ddde560
 PROJ_DIR := ../..
 
 $(OUTPUT_DIRECTORY)/nrf52832_xxaa_s132.out: \
@@ -51,7 +51,7 @@ SRC_FILES += \
   $(SDK_ROOT)/components/libraries/crypto/nrf_crypto_hash.c \
   $(SDK_ROOT)/components/libraries/crypto/nrf_crypto_init.c \
   $(SDK_ROOT)/components/libraries/crypto/nrf_crypto_shared.c \
-  $(PROJ_DIR)/../dfu_public_key.c \
+  $(PROJ_DIR)/dfu_public_key.c \
   $(PROJ_DIR)/main.c \
   $(SDK_ROOT)/external/segger_rtt/SEGGER_RTT.c \
   $(SDK_ROOT)/external/segger_rtt/SEGGER_RTT_Syscalls_GCC.c \

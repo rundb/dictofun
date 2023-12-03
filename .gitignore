@@ -3,6 +3,7 @@
 *.sch-bak
 .idea
 build
+_build
 .gradle
 local.properties
 *.log
