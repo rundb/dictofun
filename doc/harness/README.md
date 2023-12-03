@@ -89,36 +89,3 @@ Following script performs flashing of an appropriate HEX file (assuming that bui
 cd <PATH/TO/DICTOFUN/firmware/build>
 openocd -f interface/cmsis-dap.cfg -f target/nrf52.cfg -c "program ./src/targets/dictofun/Dictofun.hex verify reset exit"
 ```
-
-This command performs a reset:
-
-```
-openocd -f interface/cmsis-dap.cfg -f target/nrf52.cfg -c "init ; reset run; exit" 
-```
-
-This command flashes a Softdevice
-
-```
-openocd -f interface/cmsis-dap.cfg -f target/nrf52.cfg -c "program ../sdk/nRF5_SDK_17.1.0_ddde560/components/softdevice/s132/hex/s132_nrf52_7.2.0_softdevice.hex verify reset exit"
-```
-
-## Flash mass erase command
-
-```
-openocd -f interface/cmsis-dap.cfg -f target/nrf52.cfg -c "init; reset halt; nrf5 mass_erase; reset run; exit"
-```
-
-## Flashing Softdevice from bootloader working folder
-
-```
-openocd -f interface/cmsis-dap.cfg -f target/nrf52.cfg -c "program ../../../../../sdk/nRF5_SDK_17.1.0_ddde560/components/softdevice/s132/hex/s132_nrf52_7.2.0_softdevice.hex verify reset exit"
-```
-## Flashing Bootloader
-
-```
-openocd -f interface/cmsis-dap.cfg -f target/nrf52.cfg -c "program _build/nrf52832_xxaa_s132.hex verify reset exit"
-```
-From regular build folder:
-```
-openocd -f interface/cmsis-dap.cfg -f target/nrf52.cfg -c "program ../src/targets/bootloader/pca10040_s132_ble_debug/armgcc/_build/nrf52832_xxaa_s132.hex verify reset exit" 
-```
