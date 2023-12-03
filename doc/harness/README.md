@@ -111,3 +111,7 @@ openocd -f interface/cmsis-dap.cfg -f target/nrf52.cfg -c "program ../../../../.
 ```
 openocd -f interface/cmsis-dap.cfg -f target/nrf52.cfg -c "program _build/nrf52832_xxaa_s132.hex verify reset exit"
 ```
+From regular build folder:
+```
+openocd -f interface/cmsis-dap.cfg -f target/nrf52.cfg -c "program ../src/targets/bootloader/pca10040_s132_ble_debug/armgcc/_build/nrf52832_xxaa_s132.hex verify reset exit" 
+```

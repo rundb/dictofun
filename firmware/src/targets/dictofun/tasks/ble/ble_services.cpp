@@ -12,6 +12,7 @@
 #include "nrf_ble_gq.h"
 #include "nrf_log.h"
 #include "time.h"
+#include "nrf_sdh.h"
 
 namespace ble
 {
