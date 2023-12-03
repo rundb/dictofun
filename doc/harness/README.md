@@ -89,9 +89,3 @@ Following script performs flashing of an appropriate HEX file (assuming that bui
 cd <PATH/TO/DICTOFUN/firmware/build>
 openocd -f interface/cmsis-dap.cfg -f target/nrf52.cfg -c "program ./src/targets/dictofun/Dictofun.hex verify reset exit"
 ```
-
-This command performs a reset:
-
-```
-openocd -f interface/cmsis-dap.cfg -f target/nrf52.cfg -c "init ; reset run; exit" 
-```

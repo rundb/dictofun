@@ -3,6 +3,8 @@
 *.sch-bak
 .idea
 build
+_build
+micro-ecc
 .gradle
 local.properties
 *.log

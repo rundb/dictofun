@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ARG HOST_ARCHITECTURE
 
 RUN echo "deb http://archive.debian.org/debian stretch main contrib non-free" > /etc/apt/sources.list
-RUN apt update && apt install -f --no-install-recommends -y  wget bzip2 unzip make gcc g++ git libc6-arm64-cross python3 patch 
+RUN apt update && apt install -f --no-install-recommends -y  wget bzip2 unzip make gcc g++ git libc6-arm64-cross python3 patch ca-certificates
 
 ARG GCC_VERSION="gcc-arm-none-eabi-10.3-2021.10"
 ARG GCC_PATH="${GCC_VERSION}"
@@ -41,7 +41,15 @@ RUN ln -s /usr/aarch64-linux-gnu/lib/ld-linux-aarch64.so.1 /lib/ld-linux-aarch64
 
 # Set up Nordic instruments
 ARG SDK_FOLDER_NAME="nrf5_sdk_17.1.0_ddde560"
+ARG SDK_FOLDER_UNCOMPRESSED_NAME="nRF5_SDK_17.1.0_ddde560"
 ARG SDK_ZIP_FILE_NAME="${SDK_FOLDER_NAME}.zip"
 
 RUN mkdir -p /sdk && cd /sdk && wget https://nsscprodmedia.blob.core.windows.net/prod/software-and-other-downloads/sdks/nrf5/binaries/${SDK_ZIP_FILE_NAME} --no-check-certificate && \
   unzip ${SDK_ZIP_FILE_NAME} -d ./ && rm ${SDK_ZIP_FILE_NAME} 
+
+# Patch the Posix Makefile at this point
+# RUN patch "/sdk/${SDK_FOLDER_UNCOMPRESSED_NAME}/components/toolchain/gcc/Makefile.posix" < "/sdk/makefile_posix.patch"
+RUN rm "/sdk/${SDK_FOLDER_UNCOMPRESSED_NAME}/components/toolchain/gcc/Makefile.posix" && echo "GNU_INSTALL_ROOT ?= /tools/gcc-arm-none-eabi-10.3-2021.10/bin/\r\n GNU_VERSION ?= 10.3.1 \r\nGNU_PREFIX ?= arm-none-eabi" > "/sdk/${SDK_FOLDER_UNCOMPRESSED_NAME}/components/toolchain/gcc/Makefile.posix" 2>&1
+
+# Check out the micro-ecc repo and patch it
+RUN cd /sdk/${SDK_FOLDER_UNCOMPRESSED_NAME}/external/micro-ecc && git clone https://github.com/kmackay/micro-ecc && cd nrf52hf_armgcc/armgcc && make

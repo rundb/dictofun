@@ -7,6 +7,7 @@ fi
 
 rm -rf ./*
 
+
 # Apply patches on the SDK, if not done so yet
 patch "/sdk/nRF5_SDK_17.1.0_ddde560/components/softdevice/common/nrf_sdh_freertos.c" < "../sdk/sdh_stack_size_increase.patch" \
   && patch "/sdk/nRF5_SDK_17.1.0_ddde560/components/softdevice/common/nrf_sdh_freertos.c" < "../sdk/nrf_sdh_pause_resume_c.patch" \
