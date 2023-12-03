@@ -30,6 +30,7 @@
 #include "task_memory.h"
 #include "task_rtc.h"
 #include "task_state.h"
+#include "task_wdt.h"
 
 #include <stdint.h>
 
@@ -48,6 +49,7 @@ application::TaskDescriptor<96,   1>  led_task;
 application::TaskDescriptor<128,  2>  rtc_task;
 application::TaskDescriptor<96,   3>  button_task;
 application::TaskDescriptor<256,  2>  battery_task;
+application::TaskDescriptor<96,   1>  wdt_task;
 
 // ============================= Queues =====================================
 
@@ -368,6 +370,12 @@ int main()
         battery_task.init(battery::task_battery, "BAT", &battery_context);
 
     if(result::Result::OK != battery_task_init_result)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
+    const auto wdt_task_init_result = wdt_task.init(wdt::task_wdt, "WDT", nullptr);
+    if (result::Result::OK != wdt_task_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }

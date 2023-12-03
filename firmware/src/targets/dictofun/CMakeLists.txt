@@ -22,6 +22,7 @@ target_link_libraries(dictofun_main PRIVATE
     task_rtc
     task_button
     task_battery
+    task_wdt
     spi_flash
     boards
     nrf5_app_error
