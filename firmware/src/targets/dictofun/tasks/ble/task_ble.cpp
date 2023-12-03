@@ -13,6 +13,8 @@
 
 #include "ble_system.h"
 
+#include "ble_dfu.h"
+
 namespace ble
 {
 
@@ -40,6 +42,13 @@ void task_ble(void* context_ptr)
     //    after the config is loaded. I have chosen the first option, as it introduces less dependencies between tasks.
     static constexpr uint32_t ble_subsystem_startup_delay{100};
     vTaskDelay(ble_subsystem_startup_delay);
+
+    const auto dfu_enable_result = ble_dfu_buttonless_async_svci_init();
+    if (0 != dfu_enable_result)
+    {
+        NRF_LOG_ERROR("DFU init has failed");
+    }
+
     const auto configure_result = ble_system.configure();
     if(result::Result::OK != configure_result)
     {
