@@ -9,7 +9,7 @@ All build commands are launched from `<PROJECT_PATH>/firmware/build`
 #### Bootloader
 
 ```
-make -C ../src/targets/bootloader/pca10040_s132_ble_debug/armgcc
+make -C ../src/targets/bootloader/pca10040_s132_ble_debug/armgcc -j
 ```
 #### Application
 ```
@@ -18,7 +18,7 @@ cmake -S .. -B . -DCMAKE_BUILD_TYPE:STRING=Debug -DBUILD_TARGET:STRING=dictofun 
 
 #### Package Application
 ```
-nrfutil pkg generate  --hw-version 52 --sd-req 0x0101 --application-version 1 --application src/targets/dictofun/Dictofun.hex  --key-file ${DICTOFUN_PK_PATH} app_dfu_package.zip
+nrfutil pkg generate  --hw-version 52 --sd-req 0x0101 --application-version 2 --application src/targets/dictofun/Dictofun.hex  --key-file ${DICTOFUN_PK_PATH} app_dfu_package.zip
 ```
 
 ## Flash commands

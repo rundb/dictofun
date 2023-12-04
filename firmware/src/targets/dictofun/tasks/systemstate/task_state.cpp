@@ -600,12 +600,12 @@ bool process_timeouts(Context& context)
         return false;
     }
 
-    static constexpr uint32_t norecord_launch_timeout{15000};
-    static constexpr uint32_t after_record_timeout{15000};
-    static constexpr uint32_t ble_keepalive_timeout{10000};
-    static constexpr uint32_t ble_after_disconnect_timeout{5000};
-    // We should unconditionally shutdown after 5 minutes of operation
-    static constexpr uint32_t max_operation_duration{5 * 60 * 1000};
+    static constexpr uint32_t norecord_launch_timeout{20000};
+    static constexpr uint32_t after_record_timeout{25000};
+    static constexpr uint32_t ble_keepalive_timeout{15000};
+    static constexpr uint32_t ble_after_disconnect_timeout{10000};
+    // We should unconditionally shutdown after 8 minutes of operation
+    static constexpr uint32_t max_operation_duration{8 * 60 * 1000};
 
     // First update all relevant timeouts
     if(context.is_record_active)
