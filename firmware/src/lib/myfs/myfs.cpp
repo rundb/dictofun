@@ -682,8 +682,10 @@ int myfs_repair(myfs_t& myfs, myfs_file_descriptor& first_invalid_descriptor, ui
     bool is_file_end_found{false};
     uint32_t file_size{0};
     uint32_t written_address = first_invalid_descriptor.start_address;
+    static constexpr uint32_t max_files_count{256};
     const auto& c{myfs.config};
-    while (!is_file_end_found && written_address < (c.block_count * c.block_size))
+    uint32_t timeout{max_files_count};
+    while (!is_file_end_found && written_address < (c.block_count * c.block_size) && --timeout > 0)
     {
         const auto block_id = written_address / c.block_size;
         const auto block_offset = written_address % c.block_size;
@@ -703,6 +705,11 @@ int myfs_repair(myfs_t& myfs, myfs_file_descriptor& first_invalid_descriptor, ui
             written_address += sizeof(buff);
             file_size += sizeof(buff);
         }
+    }
+    if (timeout == 0)
+    {
+        NRF_LOG_ERROR("myfs repair: infinite loop found, exiting");
+        return -1;
     }
     if (is_file_end_found)
     {
