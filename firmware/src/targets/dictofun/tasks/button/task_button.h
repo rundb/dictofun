@@ -28,6 +28,7 @@ enum class Event
 {
     SINGLE_PRESS_ON,
     SINGLE_PRESS_OFF,
+    NONE,
 };
 
 struct EventQueueElement
