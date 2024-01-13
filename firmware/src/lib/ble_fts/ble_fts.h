@@ -162,6 +162,8 @@ private:
     static constexpr uint32_t status_char_max_len{17};
     static constexpr uint32_t pairing_char_max_len{1};
 
+    static constexpr uint8_t unpair_magic_value{0xAD};
+
     // TODO: separate BLE commands from internal states
     enum class ControlPointOpcode : uint8_t
     {
@@ -222,6 +224,8 @@ private:
         static constexpr uint32_t process_period{10};
         uint32_t last_connection_params_request_timestamp{0};
         static constexpr uint32_t min_connection_params_change_request_time{1000};
+        // FIXME: horrible way to implement request, should be moved to the system information provider module
+        bool is_unpair_requested{false};
     };
 
     static constexpr uint8_t _max_clients{1};
@@ -247,6 +251,7 @@ private:
     void on_connect(ble_evt_t const* p_ble_evt, ClientContext& client_context);
     void on_disconnect(ble_evt_t const* p_ble_evt, ClientContext& client_context);
     void on_control_point_write(uint32_t len, const uint8_t* data);
+    void on_pairer_write(uint32_t len, const uint8_t* data);
 
     void on_req_files_list(uint32_t size);
     void on_req_file_info(uint32_t data_size, const uint8_t* file_id_data);
@@ -305,6 +310,14 @@ private:
     void process_hvn_tx_callback();
 
 public:
+    bool is_unpair_requested() 
+    {
+        // tmp variable assures that we don't get stuck in infinite calls to peers manager
+        const auto value = _context.is_unpair_requested;
+        _context.is_unpair_requested = false;
+        return value; 
+    }
+
     static Context _context;
 };
 

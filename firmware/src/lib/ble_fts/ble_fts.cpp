@@ -306,10 +306,30 @@ void FtsService::on_write(ble_evt_t const* p_ble_evt, ClientContext& client_cont
         client_context.is_fs_status_notifications_enabled =
             ble_srv_is_notification_enabled(p_evt_write->data);
     }
+    else if (p_evt_write->handle == _context.pairer.value_handle)
+    {
+        on_pairer_write(p_evt_write->len, p_evt_write->data);
+    }
     else
     {
         //// Ignore, but it's kept here for the cases of debugging (in particular for porting to other client platforms)
         // NRF_LOG_WARNING("write to unknown char with len %d", p_evt_write->len);
+    }
+}
+
+void FtsService::on_pairer_write(uint32_t len, const uint8_t* data) 
+{
+    if(len == 0 || data == nullptr)
+    {
+        NRF_LOG_ERROR("pairer.write: wrong input");
+
+        return;
+    }
+    if (data[0] == unpair_magic_value) 
+    {
+        NRF_LOG_ERROR("pairer.write: unpair requested");
+        // Initiate an unpairing process
+        _context.is_unpair_requested = true;
     }
 }
 
