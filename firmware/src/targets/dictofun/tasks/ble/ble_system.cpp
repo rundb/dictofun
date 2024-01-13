@@ -424,7 +424,6 @@ void BleSystem::bonded_client_add(pm_evt_t const* /*p_evt*/)
 
 void BleSystem::bonded_client_remove_all()
 {
-    // TODO: implement
 }
 
 void BleSystem::pm_evt_handler(pm_evt_t const* p_evt)
@@ -436,23 +435,28 @@ void BleSystem::pm_evt_handler(pm_evt_t const* p_evt)
     switch(p_evt->evt_id)
     {
     case PM_EVT_BONDED_PEER_CONNECTED:
-        bonded_client_add(p_evt);
-        on_bonded_peer_reconnection_lvl_notify(p_evt);
-        break;
+        {
+            bonded_client_add(p_evt);
+            on_bonded_peer_reconnection_lvl_notify(p_evt);
+            break;
+        }
+        case PM_EVT_CONN_SEC_SUCCEEDED:
+        {
+            bonded_client_add(p_evt);
+            services::start_db_discovery(p_evt->conn_handle);
+            break;
+        }
+        case PM_EVT_PEERS_DELETE_SUCCEEDED: 
+        {
+            NRF_LOG_INFO("pm peers deleted");
+            bonded_client_remove_all();
 
-    case PM_EVT_CONN_SEC_SUCCEEDED:
-        bonded_client_add(p_evt);
-        services::start_db_discovery(p_evt->conn_handle);
-        break;
+            // Bonds are deleted. Start scanning.
+            break;
+        }
 
-    case PM_EVT_PEERS_DELETE_SUCCEEDED:
-        bonded_client_remove_all();
-
-        // Bonds are deleted. Start scanning.
-        break;
-
-    default:
-        break;
+        default:
+            break;
     }
 }
 

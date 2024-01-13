@@ -13,6 +13,7 @@
 #include "nrf_log.h"
 #include "time.h"
 #include "nrf_sdh.h"
+#include "peer_manager.h"
 
 namespace ble
 {
@@ -299,6 +300,15 @@ nrf_ble_qwr_t* get_qwr_handle()
 void services_process()
 {
     fts_service.process();
+    if (fts_service.is_unpair_requested())
+    {
+        // TODO: move it to system info provider, when it's available
+        const auto err_code = pm_peers_delete();
+        if (NRF_SUCCESS != err_code)
+        {
+            NRF_LOG_ERROR("pm peers deleted has failed");
+        }
+    }
 }
 
 } // namespace ble
