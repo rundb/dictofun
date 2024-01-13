@@ -371,7 +371,6 @@ void process_button_event(button::Event event, Context& context)
     case decltype(operation_mode)::FIELD: {
         if(event == decltype(event)::SINGLE_PRESS_ON)
         {
-            context.records_per_launch_counter++;
             if(context._is_ble_system_active)
             {
                 const auto ble_disable_status = disable_ble_subsystem(context);
@@ -405,6 +404,24 @@ void process_button_event(button::Event event, Context& context)
                 }
             }
 
+            const auto button_event_result = xQueueReceive(context.button_events_handle, &button_event_buffer, 0);
+            if (pdPASS == button_event_result)
+            {
+                // since there is a chance that last operation has taken a while, a new button event may have arrived.
+                // Making sure that we process the last button event (so if sequence was OFF-ON - we continue recording)
+                while (pdPASS == xQueueReceive(context.button_events_handle, &button_event_buffer, 0));
+                if (button_event_buffer.event == button::Event::SINGLE_PRESS_OFF)
+                {
+                    // enable BLE and don't create a new record
+                    context.is_record_active = false;
+                    NRF_LOG_INFO("detected a too-short press of the button. enabling BLE");
+                    switch_to_ble_mode(context);
+                    context.timestamps.reset();
+                    return;
+                }
+            }
+
+            context.records_per_launch_counter++;
             const auto creation_result = request_record_creation(context);
             if(decltype(creation_result)::OK != creation_result)
             {
