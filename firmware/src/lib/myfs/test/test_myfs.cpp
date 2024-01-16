@@ -7,6 +7,9 @@
 
 #include <gtest/gtest.h>
 
+#include <iostream>
+using namespace std;
+
 using namespace filesystem;
 
 int sim_read(const struct myfs_config* c, myfs_block_t block, myfs_off_t off, void* buffer, myfs_size_t size);
@@ -71,7 +74,7 @@ protected:
         for (uint32_t i = 0; i < filesCount; ++i) 
         {
             uint8_t file_id[myfs_file_descriptor::file_id_size + 1] {0};
-            snprintf(reinterpret_cast<char*>(file_id), 8, "%8d", i);
+            snprintf(reinterpret_cast<char*>(file_id), 9, "%08d", i);
             myfs_file_t file;
             const auto open_res = myfs_file_open(cut, file, file_id, MYFS_CREATE_FLAG);
             ASSERT_EQ(open_res, 0);
@@ -177,16 +180,28 @@ TEST_F(MyfsTest, FormatAndMount)
 TEST_F(MyfsTest, FileSearchTest) 
 {
     mountCut();
-    createFiles(10);
+    createFiles(14);
 
     // dump_memory(&memory_simulation[0], 1024);
     uint8_t target_file_id = 9;
-    uint8_t target_file_name[8]{0};
-    snprintf(reinterpret_cast<char *>(target_file_name), 8, "%8d", target_file_id);
+    uint8_t target_file_name[9]{0};
+    ASSERT_TRUE(myfs_file_descriptor::file_id_size == sizeof(target_file_name) - 1);
+    snprintf(reinterpret_cast<char *>(target_file_name), 9, "%08d", target_file_id);
 
     myfs_file_t file;
     const auto open_res = myfs_file_open(cut, file, target_file_name, MYFS_READ_FLAG);
     EXPECT_EQ(open_res, 0);
+
+    uint8_t tmp[4]{0};
+    uint32_t read_size{0};
+    const auto read_res = myfs_file_read(cut, file, tmp, sizeof(tmp), read_size);
+    EXPECT_EQ(read_res, 0);
+    EXPECT_EQ(read_size, sizeof(tmp));
+    uint32_t test_value;
+    memcpy(reinterpret_cast<void*>(&test_value), tmp, sizeof(test_value));
+    EXPECT_EQ(test_value, 512000);
+    const auto close_res = myfs_file_close(cut, file);
+    EXPECT_EQ(close_res, 0);
 }
 
 int sim_read(const struct myfs_config* c, myfs_block_t block, myfs_off_t off, void* buffer, myfs_size_t size) 
