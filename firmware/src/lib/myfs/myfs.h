@@ -24,7 +24,9 @@ static constexpr uint32_t file_magic_value{0xE9C864A7};
 static constexpr uint32_t empty_word_value{0xFFFFFFFFUL};
 static constexpr uint32_t single_file_descriptor_size_bytes{32};
 static constexpr uint32_t myfs_format_marker_size{single_file_descriptor_size_bytes};
-static constexpr uint32_t first_file_start_location{4096};
+static constexpr uint32_t legacy_first_file_start_location{4096};
+// TODO: derive this value from the memory size
+static constexpr uint32_t first_file_start_location{8192};
 static constexpr uint32_t page_size{256};
 
 
@@ -94,6 +96,8 @@ struct __attribute__((__packed__)) myfs_file_descriptor
     uint8_t file_id[file_id_size];
     uint32_t file_size;
     uint8_t reserved[12];
+
+    void size_assertion()  { static_assert(single_file_descriptor_size_bytes == sizeof(myfs_file_descriptor)); }
 };
 
 struct myfs_file_t

@@ -182,6 +182,12 @@ TEST_F(MyfsTest, FileSearchTest)
     mountCut();
     createFiles(14);
 
+    const auto unmount_res = myfs_unmount(cut);
+    EXPECT_EQ(unmount_res, 0);
+
+    const auto mount_res = myfs_mount(cut);
+    EXPECT_EQ(mount_res, 0);
+
     // dump_memory(&memory_simulation[0], 1024);
     uint8_t target_file_id = 9;
     uint8_t target_file_name[9]{0};

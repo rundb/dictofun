@@ -10,6 +10,9 @@
 #include <algorithm>
 #include <cstdio>
 
+#include <iostream>
+using namespace std;
+
 namespace filesystem
 {
 
@@ -29,6 +32,11 @@ int read_myfs_descriptor(myfs_file_descriptor& d,
                          const myfs_config& c);
 void print_flash_memory_area(const myfs_config& c, uint32_t start_address, uint32_t size);
 
+// This variable is set up at the mounting stage. It defines boundaries for the binary search algorithm.
+static uint32_t max_files_in_fs{legacy_first_file_start_location / single_file_descriptor_size_bytes};
+
+static uint32_t get_first_file_offset() { return max_files_in_fs * single_file_descriptor_size_bytes; }
+
 /// @brief erase the flash memory that belongs to the FS instance and introduce a FS marker at the first word.
 /// @return 0, if operation was successful, error code otherwise (TODO: change to optional/result type)
 int myfs_format(myfs_t& myfs)
@@ -44,8 +52,10 @@ int myfs_format(myfs_t& myfs)
 
     // propagate a magic value into the first 32 bytes
     uint8_t format_marker[myfs_format_marker_size];
+    uint32_t fs_size{first_file_start_location / single_file_descriptor_size_bytes};
     memset(format_marker, 0xFF, myfs_format_marker_size);
     memcpy(format_marker, &global_magic_value, sizeof(global_magic_value));
+    memcpy(&format_marker[4], &fs_size, sizeof(fs_size));
     const auto read_result = config.read(&config, 0, 0, config.read_buffer, config.prog_size);
     if(read_result != 0)
     {
@@ -98,61 +108,80 @@ int myfs_mount(myfs_t& myfs)
         return -1;
     }
 
+    uint32_t fs_size{0};
+    memcpy(&fs_size, &tmp[sizeof(marker)], sizeof(fs_size));
+
+    if (fs_size > 0 && fs_size < 4096) 
+    {
+        max_files_in_fs = fs_size;
+    }
+
     bool is_list_end_found{false};
     // offset is relative to the start of the read buffer
     uint32_t current_descriptor_address{myfs.fs_start_address + single_file_descriptor_size_bytes};
     myfs_file_descriptor prev_d;
     bool is_first_descriptor_processed{false};
-    while(!is_list_end_found)
+    uint32_t current_file_id{max_files_in_fs / 2};
+    uint32_t current_step_size{current_file_id / 2};
+    while (current_step_size > 0)
     {
+        cout << current_file_id << " " << current_step_size << endl;
         myfs_file_descriptor d;
+        uint32_t descriptor_address = current_file_id * single_file_descriptor_size_bytes;
 
-        const auto read_res = read_myfs_descriptor(d, current_descriptor_address, config);
+        const auto read_res = read_myfs_descriptor(d, descriptor_address, config);
         if(0 != read_res)
         {
             // NRF_LOG_ERROR("failed to read file descriptor at %x", current_descriptor_address);
             return read_res;
         }
+
+        uint32_t next_file_id{0xFFFFEEEE}; // intentionally invalid value
         // print_flash_memory_area(*config, current_descriptor_address, 16);
         if(d.magic == empty_word_value)
         {
-            // the next location for the new file has been discovered
-            // TODO: check if previous write has been completed.
-            if(is_first_descriptor_processed)
-            {
-                // NRF_LOG_DEBUG("prev d 0x%x %d", prev_d.start_address, prev_d.file_size);
-                const auto next_file_start_address =
-                    prev_d.start_address +
-                    ((prev_d.file_size / page_size) + 1) * page_size; // todo: pad it to the %256==0
-                myfs.files_count = ((current_descriptor_address - (myfs.fs_start_address))) /
-                                       single_file_descriptor_size_bytes -
-                                   1;
-                // TODO: it is set off by 1 or 2, check it at the first round of tests
-                // NRF_LOG_INFO("\tfiles_count=%d", myfs.files_count);
-                myfs.next_file_start_address = next_file_start_address;
-                myfs.next_file_descriptor_address = current_descriptor_address;
-                myfs.is_mounted = true;
-                return 0;
-            }
-            else
-            {
-                // case of the very first existing file
-                myfs.files_count = 0;
-                myfs.next_file_start_address = first_file_start_location;
-                myfs.next_file_descriptor_address = single_file_descriptor_size_bytes;
-                // NRF_LOG_INFO("mount: no files found, setting count to %d and start to %d",
-                //              myfs.files_count,
-                //              myfs.next_file_start_address);
-                myfs.is_mounted = true;
-                return 0;
-            }
+            next_file_id = current_file_id - current_step_size;
+            // // the next location for the new file has been discovered
+            // // TODO: check if previous write has been completed.
+            // if(is_first_descriptor_processed)
+            // {
+            //     // NRF_LOG_DEBUG("prev d 0x%x %d", prev_d.start_address, prev_d.file_size);
+            //     const auto next_file_start_address =
+            //         prev_d.start_address +
+            //         ((prev_d.file_size / page_size) + 1) * page_size; // todo: pad it to the %256==0
+            //     myfs.files_count = ((current_descriptor_address - (myfs.fs_start_address))) /
+            //                            single_file_descriptor_size_bytes -
+            //                        1;
+            //     // TODO: it is set off by 1 or 2, check it at the first round of tests
+            //     // NRF_LOG_INFO("\tfiles_count=%d", myfs.files_count);
+            //     myfs.next_file_start_address = next_file_start_address;
+            //     myfs.next_file_descriptor_address = current_descriptor_address;
+            //     myfs.is_mounted = true;
+            //     return 0;
+            // }
+            // else
+            // {
+                // // case of the very first existing file
+                // myfs.files_count = 0;
+                // myfs.next_file_start_address = first_file_start_location;
+                // myfs.next_file_descriptor_address = single_file_descriptor_size_bytes;
+                // // NRF_LOG_INFO("mount: no files found, setting count to %d and start to %d",
+                // //              myfs.files_count,
+                // //              myfs.next_file_start_address);
+                // myfs.is_mounted = true;
+                // return 0;
+            // }
         }
         else if (d.magic == file_magic_value)
         {
-            if (d.file_size == empty_word_value)
+            if (d.file_size != empty_word_value)
+            {
+                next_file_id = current_file_id + current_step_size;
+            }
+            else 
             {
                 // NRF_LOG_ERROR("found an unclosed file. repairing is required");
-                const auto repair_result = myfs_repair(myfs, d, current_descriptor_address);
+                const auto repair_result = myfs_repair(myfs, d, descriptor_address);
                 if (repair_result != 0)
                 {
                     return repair_result;
@@ -167,10 +196,138 @@ int myfs_mount(myfs_t& myfs)
             // NRF_LOG_ERROR("mount: file magic value is not found. is fs corrupt?");
             return -1;
         }
+        current_step_size /= 2;
+        if (current_step_size == 0)
+        {
+            cout << "binary search done " << current_file_id << endl;
+            // the last file has been found.
 
-        prev_d = d;
-        is_first_descriptor_processed = true;
-        current_descriptor_address += single_file_descriptor_size_bytes;
+            // special case of the first written file
+            if (current_file_id == 1 || current_file_id == 2)
+            {
+                myfs.files_count = 0;
+                myfs.next_file_start_address = get_first_file_offset();
+                myfs.next_file_descriptor_address = single_file_descriptor_size_bytes;
+                // NRF_LOG_INFO("mount: no files found, setting count to %d and start to %d",
+                //              myfs.files_count,
+                //              myfs.next_file_start_address);
+                myfs.is_mounted = true;
+                return 0;
+            }
+            else if (current_file_id == max_files_in_fs - 1) 
+            {
+                // file system is full, special case, tbd the next action
+                return -1;
+            }
+            else 
+            {
+                // read surrounding descriptors
+                myfs_file_descriptor prev_d;
+                myfs_file_descriptor next_d;
+                uint32_t prev_descriptor_address = (current_file_id - 1) * single_file_descriptor_size_bytes;
+                uint32_t next_descriptor_address = (current_file_id + 1) * single_file_descriptor_size_bytes;
+                [[maybe_unused]] const auto read_res_prev = read_myfs_descriptor(prev_d, prev_descriptor_address, config);
+                [[maybe_unused]] const auto read_res_next = read_myfs_descriptor(next_d, next_descriptor_address, config);
+                myfs_file_descriptor& last_written_descriptor = (next_d.magic == file_magic_value) ? next_d : 
+                                                                (d.magic == file_magic_value) ? d : prev_d;
+                uint32_t last_written_file_id = (next_d.magic == file_magic_value) ? (current_file_id + 1) : 
+                                                (d.magic == file_magic_value) ? current_file_id : (current_file_id - 1);
+                if (last_written_descriptor.file_size != empty_word_value)
+                {
+                    const auto last_written_file_size = last_written_descriptor.file_size;
+                    const auto next_descriptor_address = (last_written_file_id + 1) * single_file_descriptor_size_bytes;
+                    const auto next_file_start_address = last_written_descriptor.start_address + last_written_descriptor.file_size + ((last_written_descriptor.file_size / page_size) + 1) * page_size;
+                    
+                    myfs.files_count = last_written_file_id;
+                    myfs.next_file_start_address = next_file_start_address;
+                    myfs.next_file_descriptor_address = next_descriptor_address;
+
+                    cout << last_written_file_size << " " << last_written_file_id << " " << next_file_start_address << endl;
+                    return 0;
+                }
+                else 
+                {
+                    // probably a repair is required
+                    return -1;
+                }
+
+            }
+        }
+        else 
+        {
+            current_file_id = next_file_id;
+        }
+
+        // prev_d = d;
+        // is_first_descriptor_processed = true;
+        // current_descriptor_address += single_file_descriptor_size_bytes;
+
+        // myfs_file_descriptor d;
+
+        // const auto read_res = read_myfs_descriptor(d, current_descriptor_address, config);
+        // if(0 != read_res)
+        // {
+        //     // NRF_LOG_ERROR("failed to read file descriptor at %x", current_descriptor_address);
+        //     return read_res;
+        // }
+        // // print_flash_memory_area(*config, current_descriptor_address, 16);
+        // if(d.magic == empty_word_value)
+        // {
+        //     // the next location for the new file has been discovered
+        //     // TODO: check if previous write has been completed.
+        //     if(is_first_descriptor_processed)
+        //     {
+        //         // NRF_LOG_DEBUG("prev d 0x%x %d", prev_d.start_address, prev_d.file_size);
+        //         const auto next_file_start_address =
+        //             prev_d.start_address +
+        //             ((prev_d.file_size / page_size) + 1) * page_size; // todo: pad it to the %256==0
+        //         myfs.files_count = ((current_descriptor_address - (myfs.fs_start_address))) /
+        //                                single_file_descriptor_size_bytes -
+        //                            1;
+        //         // TODO: it is set off by 1 or 2, check it at the first round of tests
+        //         // NRF_LOG_INFO("\tfiles_count=%d", myfs.files_count);
+        //         myfs.next_file_start_address = next_file_start_address;
+        //         myfs.next_file_descriptor_address = current_descriptor_address;
+        //         myfs.is_mounted = true;
+        //         return 0;
+        //     }
+        //     else
+        //     {
+        //         // case of the very first existing file
+        //         myfs.files_count = 0;
+        //         myfs.next_file_start_address = first_file_start_location;
+        //         myfs.next_file_descriptor_address = single_file_descriptor_size_bytes;
+        //         // NRF_LOG_INFO("mount: no files found, setting count to %d and start to %d",
+        //         //              myfs.files_count,
+        //         //              myfs.next_file_start_address);
+        //         myfs.is_mounted = true;
+        //         return 0;
+        //     }
+        // }
+        // else if (d.magic == file_magic_value)
+        // {
+        //     if (d.file_size == empty_word_value)
+        //     {
+        //         // NRF_LOG_ERROR("found an unclosed file. repairing is required");
+        //         const auto repair_result = myfs_repair(myfs, d, current_descriptor_address);
+        //         if (repair_result != 0)
+        //         {
+        //             return repair_result;
+        //         }
+        //         // NRF_LOG_INFO("repair was successful. Still we need to signal the user that there was a repair and mounting may need to be rerun");
+        //         return REPAIR_HAS_BEEN_PERFORMED;
+        //     }
+        // }
+        // else
+        // {
+        //     // FS is corrupt and needs formatting
+        //     // NRF_LOG_ERROR("mount: file magic value is not found. is fs corrupt?");
+        //     return -1;
+        // }
+
+        // prev_d = d;
+        // is_first_descriptor_processed = true;
+        // current_descriptor_address += single_file_descriptor_size_bytes;
     }
 
     return -1;
