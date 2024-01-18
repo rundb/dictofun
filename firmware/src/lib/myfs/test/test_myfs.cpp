@@ -177,7 +177,7 @@ TEST_F(MyfsTest, FormatAndMount)
     }
 }
 
-TEST_F(MyfsTest, FileSearchTest) 
+TEST_F(MyfsTest, FileSearchTestMediumQuantity) 
 {
     mountCut();
     createFiles(14);
@@ -208,6 +208,69 @@ TEST_F(MyfsTest, FileSearchTest)
     EXPECT_EQ(test_value, 512000);
     const auto close_res = myfs_file_close(cut, file);
     EXPECT_EQ(close_res, 0);
+}
+
+TEST_F(MyfsTest, FileSearchTestOneFile) 
+{
+    mountCut();
+
+    auto unmount_res = myfs_unmount(cut);
+    EXPECT_EQ(unmount_res, 0);
+
+    auto mount_res = myfs_mount(cut);
+    EXPECT_EQ(mount_res, 0);
+
+    // create a single file
+    {
+        uint32_t file_size = 1000U;
+        static constexpr uint32_t tmp_buf_size{16};
+        uint8_t tmp[tmp_buf_size];
+        uint8_t file_id[myfs_file_descriptor::file_id_size + 1] {0};
+        snprintf(reinterpret_cast<char*>(file_id), 9, "%08d", 1);
+        myfs_file_t file;
+        const auto open_res = myfs_file_open(cut, file, file_id, MYFS_CREATE_FLAG);
+        ASSERT_EQ(open_res, 0);
+            
+        uint32_t written_size = 0;
+        for (auto i = 0; i < tmp_buf_size; i += sizeof(file_size)) 
+        {
+            memcpy(&tmp[i], &file_size, sizeof(file_size));
+        }
+        while (written_size < file_size)
+        {
+            const auto write_res = myfs_file_write(cut, file, tmp, tmp_buf_size);
+            ASSERT_EQ(write_res, 0);
+            written_size += tmp_buf_size;
+        }
+            
+        const auto close_res = myfs_file_close(cut, file);
+        ASSERT_EQ(close_res, 0);
+    }
+
+    unmount_res = myfs_unmount(cut);
+    EXPECT_EQ(unmount_res, 0);
+
+    mount_res = myfs_mount(cut);
+    EXPECT_EQ(mount_res, 0);
+
+    uint8_t target_file_id = 1;
+    uint8_t target_file_name[9]{0};
+    snprintf(reinterpret_cast<char *>(target_file_name), 9, "%08d", target_file_id);
+
+    myfs_file_t file;
+    const auto open_res = myfs_file_open(cut, file, target_file_name, MYFS_READ_FLAG);
+    EXPECT_EQ(open_res, 0);
+
+    uint8_t tmp[4]{0};
+    uint32_t read_size{0};
+    const auto read_res = myfs_file_read(cut, file, tmp, sizeof(tmp), read_size);
+    EXPECT_EQ(read_res, 0);
+    EXPECT_EQ(read_size, sizeof(tmp));
+    uint32_t test_value;
+    memcpy(reinterpret_cast<void*>(&test_value), tmp, sizeof(test_value));
+    EXPECT_EQ(test_value, 1000);
+    const auto close_res = myfs_file_close(cut, file);
+    EXPECT_EQ(close_res, 0);   
 }
 
 int sim_read(const struct myfs_config* c, myfs_block_t block, myfs_off_t off, void* buffer, myfs_size_t size) 
