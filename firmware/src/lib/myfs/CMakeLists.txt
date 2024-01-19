@@ -11,5 +11,18 @@ target_link_libraries(myfs PUBLIC
 )
 
 target_link_libraries(myfs PRIVATE
-    nrf5_log
+
 )
+
+if (${is_unit_test})
+    add_executable(test_myfs
+        test/test_myfs.cpp
+    )
+
+    target_link_libraries(test_myfs PUBLIC
+        myfs
+        GTest::gtest_main
+    )
+
+    gtest_discover_tests(test_myfs)
+endif()

@@ -24,12 +24,21 @@ static constexpr uint32_t file_magic_value{0xE9C864A7};
 static constexpr uint32_t empty_word_value{0xFFFFFFFFUL};
 static constexpr uint32_t single_file_descriptor_size_bytes{32};
 static constexpr uint32_t myfs_format_marker_size{single_file_descriptor_size_bytes};
-static constexpr uint32_t first_file_start_location{4096};
+static constexpr uint32_t legacy_first_file_start_location{4096};
+// TODO: derive this value from the memory size
+static constexpr uint32_t first_file_start_location{8192};
 static constexpr uint32_t page_size{256};
 
 
 static constexpr int GENERIC_ERROR{-1};
+static constexpr int INVALID_PARAMETERS{-2};
 static constexpr int ERROR_FILE_NOT_FOUND{-3};
+static constexpr int FS_CORRUPT{-4};
+static constexpr int FS_CORRUPT_REPAIRABLE{-5};
+static constexpr int NO_SPACE_LEFT{-6};
+static constexpr int ALIGNMENT_ERROR{-7};
+static constexpr int INTERNAL_ERROR{-8};
+static constexpr int IMPLEMENTATION_ERROR{-9};
 static constexpr int REPAIR_HAS_BEEN_PERFORMED{-16};
 
 struct myfs_config
@@ -72,7 +81,7 @@ struct myfs_t
 
     bool is_file_open{false};
 
-    uint32_t current_id_search_pos{0};
+    uint32_t current_id_search_pos{single_file_descriptor_size_bytes};
 
     myfs_config& config;
 
@@ -94,6 +103,8 @@ struct __attribute__((__packed__)) myfs_file_descriptor
     uint8_t file_id[file_id_size];
     uint32_t file_size;
     uint8_t reserved[12];
+
+    void size_assertion()  { static_assert(single_file_descriptor_size_bytes == sizeof(myfs_file_descriptor)); }
 };
 
 struct myfs_file_t
