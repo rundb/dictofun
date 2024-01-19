@@ -211,6 +211,7 @@ int myfs_mount(myfs_t& myfs)
                     myfs.files_count = last_written_file_idx;
                     myfs.next_file_start_address = next_file_start_address;
                     myfs.next_file_descriptor_address = next_descriptor_address;
+                    myfs.is_mounted = true;
                     return 0;
                 }
                 else 
@@ -567,12 +568,14 @@ int myfs_get_fs_stat(myfs_t& myfs, uint32_t& files_count, uint32_t& occupied_spa
     const myfs_config& config(myfs.config);
     if(!myfs.is_mounted)
     {
+        files_count = 0;
+        occupied_space = 0;
         return -1;
     }
 
     uint32_t current_descriptor_address{myfs.fs_start_address + single_file_descriptor_size_bytes};
     files_count = 0;
-    occupied_space = first_file_start_location;
+    occupied_space = get_first_file_offset();
     while(true)
     {
         myfs_file_descriptor d;
@@ -593,6 +596,7 @@ int myfs_get_fs_stat(myfs_t& myfs, uint32_t& files_count, uint32_t& occupied_spa
         else
         {
             // TODO: make a decision on proper handling
+            return -1;
         }
         current_descriptor_address += single_file_descriptor_size_bytes;
     }

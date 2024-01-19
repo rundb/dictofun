@@ -298,6 +298,7 @@ result::Result get_fs_stat(::filesystem::myfs_t& fs, uint8_t* buffer)
     {
         return result::Result::ERROR_INVALID_PARAMETER;
     }
+    memset(buffer, 0, sizeof(ble::fts::FileSystemInterface::FSStatus));
 
     ble::fts::FileSystemInterface::FSStatus fs_stat;
     uint32_t files_count{0};

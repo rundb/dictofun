@@ -541,15 +541,18 @@ void process_request_from_state(Context& context, const Command command_id, uint
                 StatusQueueElement response{Command::PERFORM_MEMORY_CHECK, Status::ERROR_GENERAL};
                 xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
             }
-            ble::fts::FileSystemInterface::FSStatus fsStatus;
-            memcpy(&fsStatus, &data_queue_elem.data, sizeof(fsStatus));
-            NRF_LOG_INFO("FS stats: %d/%d(%d)", fsStatus.occupied_space, fsStatus.free_space, fsStatus.files_count);
-            StatusQueueElement response{Command::PERFORM_MEMORY_CHECK, Status::OK};
-            if ((fsStatus.occupied_space > (flash_total_size * formatting_trigger_level)) || (fsStatus.files_count > max_files_count))
+            else 
             {
-                response.status = Status::FORMAT_REQUIRED;
+                ble::fts::FileSystemInterface::FSStatus fsStatus;
+                memcpy(&fsStatus, &data_queue_elem.data, sizeof(fsStatus));
+                NRF_LOG_INFO("FS stats: %d/%d(%d)", fsStatus.occupied_space, fsStatus.free_space, fsStatus.files_count);
+                StatusQueueElement response{Command::PERFORM_MEMORY_CHECK, Status::OK};
+                if ((fsStatus.occupied_space > (flash_total_size * formatting_trigger_level)) || (fsStatus.files_count > max_files_count))
+                {
+                    response.status = Status::FORMAT_REQUIRED;
+                }
+                xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
             }
-            xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
             break;
         }
         case Command::FORMAT_FS:
