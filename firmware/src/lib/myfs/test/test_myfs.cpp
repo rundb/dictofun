@@ -57,8 +57,17 @@ protected:
 
     void mountCut() 
     {
-        [[maybe_unused]] const auto err = myfs_format(cut);
-        [[maybe_unused]] const auto mount_err = myfs_mount(cut);
+        const auto mount_err = myfs_mount(cut);
+        if (mount_err != 0)
+        {
+            const auto err = myfs_format(cut);
+            if (err == 0)
+            {
+                const auto remount_err = myfs_mount(cut);
+                ASSERT_EQ(remount_err, 0);
+            }
+            ASSERT_EQ(err, 0);
+        }
     }
 
     // in the mounted system, create filesCount files with varying sizes and identifiers (content - file size in uint32_t, split to bytes)
@@ -95,6 +104,7 @@ protected:
             ASSERT_EQ(close_res, 0);
 
             file_size *= 2;
+            // dump_memory(&memory_simulation[0], 1024);
         }
 
     }
@@ -210,7 +220,7 @@ TEST_F(MyfsTest, FileSearchTestMediumQuantity)
     EXPECT_EQ(close_res, 0);
 }
 
-TEST_F(MyfsTest, FileSearchTestOneFile) 
+TEST_F(MyfsTest, FileSearchTestFirst2Files)
 {
     mountCut();
 
@@ -253,24 +263,183 @@ TEST_F(MyfsTest, FileSearchTestOneFile)
     mount_res = myfs_mount(cut);
     EXPECT_EQ(mount_res, 0);
 
-    uint8_t target_file_id = 1;
+    // open the just created file
+    {
+        uint8_t target_file_id = 1;
+        uint8_t target_file_name[9]{0};
+        snprintf(reinterpret_cast<char *>(target_file_name), 9, "%08d", target_file_id);
+
+        myfs_file_t file;
+        const auto open_res = myfs_file_open(cut, file, target_file_name, MYFS_READ_FLAG);
+        EXPECT_EQ(open_res, 0);
+
+        uint8_t tmp[4]{0};
+        uint32_t read_size{0};
+        const auto read_res = myfs_file_read(cut, file, tmp, sizeof(tmp), read_size);
+        EXPECT_EQ(read_res, 0);
+        EXPECT_EQ(read_size, sizeof(tmp));
+        uint32_t test_value;
+        memcpy(reinterpret_cast<void*>(&test_value), tmp, sizeof(test_value));
+        EXPECT_EQ(test_value, 1000);
+        const auto close_res = myfs_file_close(cut, file);
+        EXPECT_EQ(close_res, 0);
+    }
+
+    // run second iteration of opening and closing
+    unmount_res = myfs_unmount(cut);
+    EXPECT_EQ(unmount_res, 0);
+
+    mount_res = myfs_mount(cut);
+    EXPECT_EQ(mount_res, 0);
+
+    {
+        uint32_t file_size = 2000U;
+        static constexpr uint32_t tmp_buf_size{16};
+        uint8_t tmp[tmp_buf_size];
+        uint8_t file_id[myfs_file_descriptor::file_id_size + 1] {0};
+        snprintf(reinterpret_cast<char*>(file_id), 9, "%08d", 2);
+        myfs_file_t file;
+        const auto open_res = myfs_file_open(cut, file, file_id, MYFS_CREATE_FLAG);
+        ASSERT_EQ(open_res, 0);
+            
+        uint32_t written_size = 0;
+        for (auto i = 0; i < tmp_buf_size; i += sizeof(file_size)) 
+        {
+            memcpy(&tmp[i], &file_size, sizeof(file_size));
+        }
+        while (written_size < file_size)
+        {
+            const auto write_res = myfs_file_write(cut, file, tmp, tmp_buf_size);
+            ASSERT_EQ(write_res, 0);
+            written_size += tmp_buf_size;
+        }
+            
+        const auto close_res = myfs_file_close(cut, file);
+        ASSERT_EQ(close_res, 0);
+    }
+    unmount_res = myfs_unmount(cut);
+    EXPECT_EQ(unmount_res, 0);
+
+    mount_res = myfs_mount(cut);
+    EXPECT_EQ(mount_res, 0);
+
+    // open the just created file
+    {
+        uint8_t target_file_id = 2;
+        uint8_t target_file_name[9]{0};
+        snprintf(reinterpret_cast<char *>(target_file_name), 9, "%08d", target_file_id);
+
+        myfs_file_t file;
+        const auto open_res = myfs_file_open(cut, file, target_file_name, MYFS_READ_FLAG);
+        ASSERT_EQ(open_res, 0);
+
+        uint8_t tmp[4]{0};
+        uint32_t read_size{0};
+        const auto read_res = myfs_file_read(cut, file, tmp, sizeof(tmp), read_size);
+        EXPECT_EQ(read_res, 0);
+        EXPECT_EQ(read_size, sizeof(tmp));
+        uint32_t test_value;
+        memcpy(reinterpret_cast<void*>(&test_value), tmp, sizeof(test_value));
+        EXPECT_EQ(test_value, 2000);
+        const auto close_res = myfs_file_close(cut, file);
+        EXPECT_EQ(close_res, 0);
+    }
+    // open the first file
+    {
+        uint8_t target_file_id = 1;
+        uint8_t target_file_name[9]{0};
+        snprintf(reinterpret_cast<char *>(target_file_name), 9, "%08d", target_file_id);
+
+        myfs_file_t file;
+        const auto open_res = myfs_file_open(cut, file, target_file_name, MYFS_READ_FLAG);
+        ASSERT_EQ(open_res, 0);
+
+        uint8_t tmp[4]{0};
+        uint32_t read_size{0};
+        const auto read_res = myfs_file_read(cut, file, tmp, sizeof(tmp), read_size);
+        EXPECT_EQ(read_res, 0);
+        EXPECT_EQ(read_size, sizeof(tmp));
+        uint32_t test_value;
+        memcpy(reinterpret_cast<void*>(&test_value), tmp, sizeof(test_value));
+        EXPECT_EQ(test_value, 1000);
+        const auto close_res = myfs_file_close(cut, file);
+        EXPECT_EQ(close_res, 0);
+    }
+    unmount_res = myfs_unmount(cut);
+    EXPECT_EQ(unmount_res, 0);
+}
+
+TEST_F(MyfsTest, Create3rdFile) 
+{
+    mountCut();
+    createFiles(3);
+
+    const auto unmount_res = myfs_unmount(cut);
+    EXPECT_EQ(unmount_res, 0);
+
+    const auto mount_res = myfs_mount(cut);
+    EXPECT_EQ(mount_res, 0);
+
+    // create 3rd file
+    static constexpr uint32_t third_file_size = 5021U;    
+    {
+        static constexpr uint32_t tmp_buf_size{16};
+        uint8_t tmp[tmp_buf_size];
+        uint8_t file_id[myfs_file_descriptor::file_id_size + 1] {0};
+        snprintf(reinterpret_cast<char*>(file_id), 9, "%08d", 3);
+        myfs_file_t file;
+        const auto open_res = myfs_file_open(cut, file, file_id, MYFS_CREATE_FLAG);
+        ASSERT_EQ(open_res, 0);
+            
+        uint32_t written_size = 0;
+        uint32_t file_size = third_file_size;
+        for (auto i = 0; i < tmp_buf_size; i += sizeof(third_file_size)) 
+        {
+            memcpy(&tmp[i], &file_size, sizeof(file_size));
+        }
+        while (written_size < third_file_size)
+        {
+            const auto write_size = std::min(third_file_size - written_size, tmp_buf_size);
+            const auto write_res = myfs_file_write(cut, file, tmp, write_size);
+            ASSERT_EQ(write_res, 0);
+            written_size += write_size;
+        }
+            
+        const auto close_res = myfs_file_close(cut, file);
+        ASSERT_EQ(close_res, 0);
+        // dump_memory(&memory_simulation[0], 1024);
+        cout << endl;
+    }
+
+    // now open and close first 3 files
     uint8_t target_file_name[9]{0};
-    snprintf(reinterpret_cast<char *>(target_file_name), 9, "%08d", target_file_id);
-
     myfs_file_t file;
-    const auto open_res = myfs_file_open(cut, file, target_file_name, MYFS_READ_FLAG);
-    EXPECT_EQ(open_res, 0);
 
-    uint8_t tmp[4]{0};
-    uint32_t read_size{0};
-    const auto read_res = myfs_file_read(cut, file, tmp, sizeof(tmp), read_size);
-    EXPECT_EQ(read_res, 0);
-    EXPECT_EQ(read_size, sizeof(tmp));
-    uint32_t test_value;
-    memcpy(reinterpret_cast<void*>(&test_value), tmp, sizeof(test_value));
-    EXPECT_EQ(test_value, 1000);
-    const auto close_res = myfs_file_close(cut, file);
-    EXPECT_EQ(close_res, 0);   
+    dump_memory(&memory_simulation[0], 1024);
+
+    snprintf(reinterpret_cast<char *>(target_file_name), 9, "%08d", 0);
+    const auto open_res_1 = myfs_file_open(cut, file, target_file_name, MYFS_READ_FLAG);
+    ASSERT_EQ(open_res_1, 0);
+    const auto close_res_1 = myfs_file_close(cut, file);
+    EXPECT_EQ(close_res_1, 0);
+
+    snprintf(reinterpret_cast<char *>(target_file_name), 9, "%08d", 1);
+    const auto open_res_2 = myfs_file_open(cut, file, target_file_name, MYFS_READ_FLAG);
+    ASSERT_EQ(open_res_2, 0);
+    const auto close_res_2 = myfs_file_close(cut, file);
+    EXPECT_EQ(close_res_2, 0);
+
+    // now check that open() doesn't open non-existent files
+    snprintf(reinterpret_cast<char *>(target_file_name), 9, "%08d", 9);
+    const auto open_res_9 = myfs_file_open(cut, file, target_file_name, MYFS_READ_FLAG);
+    ASSERT_NE(open_res_9, 0);
+
+    // Open 3rd file, also make sure that it's size is equal to what was created above
+    snprintf(reinterpret_cast<char *>(target_file_name), 9, "%08d", 3);
+    const auto open_res_3 = myfs_file_open(cut, file, target_file_name, MYFS_READ_FLAG);
+    EXPECT_EQ(open_res_3, 0);
+    const auto close_res_3 = myfs_file_close(cut, file);
+    EXPECT_EQ(close_res_3, 0);
 }
 
 int sim_read(const struct myfs_config* c, myfs_block_t block, myfs_off_t off, void* buffer, myfs_size_t size) 

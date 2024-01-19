@@ -31,7 +31,14 @@ static constexpr uint32_t page_size{256};
 
 
 static constexpr int GENERIC_ERROR{-1};
+static constexpr int INVALID_PARAMETERS{-2};
 static constexpr int ERROR_FILE_NOT_FOUND{-3};
+static constexpr int FS_CORRUPT{-4};
+static constexpr int FS_CORRUPT_REPAIRABLE{-5};
+static constexpr int NO_SPACE_LEFT{-6};
+static constexpr int ALIGNMENT_ERROR{-7};
+static constexpr int INTERNAL_ERROR{-8};
+static constexpr int IMPLEMENTATION_ERROR{-9};
 static constexpr int REPAIR_HAS_BEEN_PERFORMED{-16};
 
 struct myfs_config
