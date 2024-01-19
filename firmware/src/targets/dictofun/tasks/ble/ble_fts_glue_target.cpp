@@ -95,16 +95,6 @@ result::Result get_file_list(uint32_t& files_count, file_id_type* files_list_ptr
     files_count = response.data_size / sizeof(file_id_type);
     memcpy(files_list_ptr, data.data, data.size);
 
-    for (auto i = 0; i < files_count; ++i)
-    {
-        NRF_LOG_DEBUG("file list, last 4 numbers %02x%02x%02x%02x", 
-            data.data[i * sizeof(file_id_type) + 12],
-            data.data[i * sizeof(file_id_type) + 13],
-            data.data[i * sizeof(file_id_type) + 14],
-            data.data[i * sizeof(file_id_type) + 15]
-        );
-    }
-
     ble::KeepaliveQueueElement keepalive{ble::KeepaliveEvent::FILESYSTEM_EVENT};
     xQueueSend(_keepalive_queue, &keepalive, 0);
 

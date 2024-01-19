@@ -107,10 +107,7 @@ int myfs_mount(myfs_t& myfs)
         max_files_in_fs = fs_size;
     }
 
-    bool is_list_end_found{false};
     // offset is relative to the start of the read buffer
-    uint32_t current_descriptor_address{myfs.fs_start_address + single_file_descriptor_size_bytes};
-
     uint32_t current_file_id{max_files_in_fs / 2};
     uint32_t current_step_size{current_file_id / 2};
     while (current_step_size > 0)
@@ -196,23 +193,24 @@ int myfs_mount(myfs_t& myfs)
                 myfs_file_descriptor prev_d;
                 myfs_file_descriptor next_d;
                 uint32_t prev_descriptor_address = (current_file_id - 1) * single_file_descriptor_size_bytes;
+                uint32_t current_descriptor_address = current_file_id * single_file_descriptor_size_bytes;
                 uint32_t next_descriptor_address = (current_file_id + 1) * single_file_descriptor_size_bytes;
                 [[maybe_unused]] const auto read_res_prev = read_myfs_descriptor(prev_d, prev_descriptor_address, config);
+                [[maybe_unused]] const auto read_res_curr = read_myfs_descriptor(d, current_descriptor_address, config);
                 [[maybe_unused]] const auto read_res_next = read_myfs_descriptor(next_d, next_descriptor_address, config);
                 myfs_file_descriptor& last_written_descriptor = (next_d.magic == file_magic_value) ? next_d : 
                                                                 (d.magic == file_magic_value) ? d : prev_d;
-                uint32_t last_written_file_id = (next_d.magic == file_magic_value) ? (current_file_id + 1) : 
+                uint32_t last_written_file_idx = (next_d.magic == file_magic_value) ? (current_file_id + 1) : 
                                                 (d.magic == file_magic_value) ? current_file_id : (current_file_id - 1);
+                
                 if (last_written_descriptor.file_size != empty_word_value)
                 {
-                    const auto last_written_file_size = last_written_descriptor.file_size;
-                    const auto next_descriptor_address = (last_written_file_id + 1) * single_file_descriptor_size_bytes;
+                    const auto next_descriptor_address = (last_written_file_idx + 1) * single_file_descriptor_size_bytes;
                     const auto next_file_start_address = last_written_descriptor.start_address + ((last_written_descriptor.file_size / page_size) + 1) * page_size;
                     
-                    myfs.files_count = last_written_file_id;
+                    myfs.files_count = last_written_file_idx;
                     myfs.next_file_start_address = next_file_start_address;
                     myfs.next_file_descriptor_address = next_descriptor_address;
-
                     return 0;
                 }
                 else 
@@ -221,10 +219,6 @@ int myfs_mount(myfs_t& myfs)
                     return FS_CORRUPT_REPAIRABLE;
                 }
             }
-        }
-        else 
-        {
-            current_file_id = next_file_id;
         }
     }
 

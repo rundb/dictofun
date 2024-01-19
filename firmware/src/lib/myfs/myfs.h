@@ -81,7 +81,7 @@ struct myfs_t
 
     bool is_file_open{false};
 
-    uint32_t current_id_search_pos{0};
+    uint32_t current_id_search_pos{single_file_descriptor_size_bytes};
 
     myfs_config& config;
 

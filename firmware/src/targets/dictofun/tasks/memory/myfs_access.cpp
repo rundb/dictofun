@@ -135,6 +135,13 @@ result::Result get_files_list(::filesystem::myfs_t& fs,
         buffer_pos += single_entry_size;
     }
 
+    NRF_LOG_INFO("\tids count: %d, total: %d", file_ids_count, total_files_count);
+    if (file_ids_count == 0 && total_files_count != 0)
+    {
+        NRF_LOG_ERROR("file system issue while fetching files list");
+        return result::Result::ERROR_GENERAL;
+    }
+
     NRF_LOG_DEBUG("req files list: ids %d, max %d", file_ids_count, total_files_count);
     if(file_ids_count < total_files_count)
     {
