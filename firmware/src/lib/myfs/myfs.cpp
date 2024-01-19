@@ -43,7 +43,6 @@ int myfs_format(myfs_t& myfs)
     const auto erase_result = config.erase_multiple(&config, 0, config.block_count);
     if (erase_result != 0)
     {
-        //NRF_LOG_ERROR("failed to erase flash memory")
         return erase_result;
     }
 
@@ -78,7 +77,6 @@ int myfs_mount(myfs_t& myfs)
 
     if(myfs.is_mounted)
     {
-        //NRF_LOG_ERROR("mount: already mounted");
         return -1;
     }
     // 0. get the FS start address from the config (TODO: place it into the config)
@@ -90,7 +88,6 @@ int myfs_mount(myfs_t& myfs)
     const auto read_result = config.read(&config, myfs.fs_start_address, 0, tmp, local_buffer_size);
     if(read_result != 0)
     {
-        //NRF_LOG_ERROR("mount: read operation has failed");
         return -1;
     }
 
@@ -99,9 +96,6 @@ int myfs_mount(myfs_t& myfs)
 
     if(marker != global_magic_value)
     {
-        // NRF_LOG_ERROR("mount: myfs marker is not found, formatting is required (0x%x != 0x%x)",
-        //               marker,
-        //               global_magic_value);
         return -1;
     }
 
@@ -116,7 +110,6 @@ int myfs_mount(myfs_t& myfs)
     bool is_list_end_found{false};
     // offset is relative to the start of the read buffer
     uint32_t current_descriptor_address{myfs.fs_start_address + single_file_descriptor_size_bytes};
-    // myfs_file_descriptor prev_d;
 
     uint32_t current_file_id{max_files_in_fs / 2};
     uint32_t current_step_size{current_file_id / 2};
@@ -128,12 +121,10 @@ int myfs_mount(myfs_t& myfs)
         const auto read_res = read_myfs_descriptor(d, descriptor_address, config);
         if(0 != read_res)
         {
-            // NRF_LOG_ERROR("failed to read file descriptor at %x", current_descriptor_address);
             return read_res;
         }
 
         uint32_t next_file_id{0xFFFFEEEE}; // intentionally invalid value
-        // print_flash_memory_area(*config, current_descriptor_address, 16);
         if(d.magic == empty_word_value)
         {
             next_file_id = current_file_id - current_step_size;
@@ -146,20 +137,17 @@ int myfs_mount(myfs_t& myfs)
             }
             else 
             {
-                // NRF_LOG_ERROR("found an unclosed file. repairing is required");
                 const auto repair_result = myfs_repair(myfs, d, descriptor_address);
                 if (repair_result != 0)
                 {
                     return repair_result;
                 }
-                // NRF_LOG_INFO("repair was successful. Still we need to signal the user that there was a repair and mounting may need to be rerun");
                 return REPAIR_HAS_BEEN_PERFORMED;
             }
         }
         else
         {
             // FS is corrupt and needs formatting
-            // NRF_LOG_ERROR("mount: file magic value is not found. is fs corrupt?");
             return -1;
         }
         current_file_id = next_file_id;
@@ -249,7 +237,6 @@ int myfs_file_open(myfs_t& myfs, myfs_file_t& file, uint8_t* file_id, uint8_t fl
 
     if(myfs.is_file_open)
     {
-        // NRF_LOG_ERROR("myfs open: file is open already");
         return -1;
     }
 
@@ -269,7 +256,6 @@ int myfs_file_open(myfs_t& myfs, myfs_file_t& file, uint8_t* file_id, uint8_t fl
             write_myfs_descriptor(d, myfs.next_file_descriptor_address, config);
         if(0 != descr_prog_result)
         {
-            // NRF_LOG_ERROR("myfs: descr prog failed");
             return -1;
         }
 
@@ -301,12 +287,10 @@ int myfs_file_open(myfs_t& myfs, myfs_file_t& file, uint8_t* file_id, uint8_t fl
                 read_myfs_descriptor(d, current_descriptor_address, config);
             if(0 != descr_read_result)
             {
-                // NRF_LOG_ERROR("myfs:descr read failed");
                 return -1;
             }
             if(d.magic != file_magic_value)
             {
-                // NRF_LOG_WARNING("file not found, reached the end of the FS");
                 return -1;
             }
             if(memcmp(d.file_id, file_id, d.file_id_size) == 0)
@@ -323,8 +307,6 @@ int myfs_file_open(myfs_t& myfs, myfs_file_t& file, uint8_t* file_id, uint8_t fl
                 myfs.buffer_size = config.prog_size;
                 myfs.buffer_position = 0;
                 is_file_found = true;
-                // NRF_LOG_DEBUG(
-                //     "myfs open, size %d, addr 0x%x", file.size, current_descriptor_address);
             }
             else
             {
@@ -366,7 +348,6 @@ int myfs_file_close(myfs_t& myfs, myfs_file_t& file)
         // should be page-aligned at this point
         if(prog_address % page_size != 0)
         {
-            // NRF_LOG_ERROR("myfs fatal error: prog address misaligned (0x%x)", prog_address);
             return -1;
         }
         const auto block = prog_address / config.block_size;
@@ -379,7 +360,7 @@ int myfs_file_close(myfs_t& myfs, myfs_file_t& file)
         if(prog_result != 0)
         {
             // it's not a critical error, we just lose data, but we still can proceed
-            // NRF_LOG_ERROR("myfs: failed to flash buffer");
+            // TODO: decide on a proper informing about this event
         }
         file.size += myfs.buffer_position;
 
@@ -394,14 +375,6 @@ int myfs_file_close(myfs_t& myfs, myfs_file_t& file)
             myfs.next_file_descriptor_address + single_file_descriptor_size_bytes;
         const uint32_t next_file_start_address =
             myfs.next_file_start_address + ((file.size / page_size) + 1) * page_size;
-        // NRF_LOG_DEBUG("closed file. next descr(0x%x), next addr (0x%x), size(%d)",
-        //               next_descriptor_position,
-        //               next_file_start_address,
-        //               file.size);
-        // NRF_LOG_DEBUG(
-        //     "cmd: memtest 5 %d %d", myfs.next_file_start_address, next_file_start_address);
-
-        //print_flash_memory_area(config, myfs.next_file_descriptor_address, single_file_descriptor_size_bytes);
 
         myfs.next_file_descriptor_address = next_descriptor_position;
         myfs.next_file_start_address = next_file_start_address;
@@ -442,7 +415,6 @@ int myfs_file_write(myfs_t& myfs, myfs_file_t& file, void* buffer, myfs_size_t s
     // should be page-aligned at this point
     if(prog_address % page_size != 0)
     {
-        // NRF_LOG_ERROR("myfs fatal error: prog address misaligned (0x%x)", prog_address);
         return ALIGNMENT_ERROR;
     }
     const auto block = prog_address / config.block_size;
@@ -452,7 +424,6 @@ int myfs_file_write(myfs_t& myfs, myfs_file_t& file, void* buffer, myfs_size_t s
     if(prog_result != 0)
     {
         // it's not a critical error, we just lose data, but we still can proceed
-        // NRF_LOG_ERROR("myfs: failed to flash buffer");
         return INTERNAL_ERROR;
     }
 
@@ -460,7 +431,6 @@ int myfs_file_write(myfs_t& myfs, myfs_file_t& file, void* buffer, myfs_size_t s
     const auto leftover_data_size = size - leftover_space;
     if(leftover_data_size > myfs.buffer_size)
     {
-        // NRF_LOG_ERROR("myfs write err: it's uncapable of writing >256 bytes per run");
         return INVALID_PARAMETERS;
     }
     memcpy(myfs.buffer_pointer,
@@ -537,7 +507,6 @@ int myfs_get_next_id(myfs_t& myfs, uint8_t* file_id)
     const auto read_res = read_myfs_descriptor(d, myfs.current_id_search_pos, config);
     if(0 != read_res)
     {
-        // NRF_LOG_ERROR("myfs: failed to read file descriptor @ %x", myfs.current_id_search_pos);
         return -1;
     }
     if(d.magic != file_magic_value)
@@ -550,12 +519,12 @@ int myfs_get_next_id(myfs_t& myfs, uint8_t* file_id)
     return 1;
 }
 
+// TODO: utilize binary search here
 int myfs_file_get_size(myfs_t& myfs, uint8_t* file_id)
 {
     const myfs_config& config(myfs.config);
     if(nullptr == file_id)
     {
-        // NRF_LOG_ERROR("myfs: get size - invalid input");
         return -1;
     }
     bool is_file_found{false};
@@ -567,7 +536,6 @@ int myfs_file_get_size(myfs_t& myfs, uint8_t* file_id)
         const auto descr_read_result = read_myfs_descriptor(d, current_descriptor_address, config);
         if(0 != descr_read_result)
         {
-            // NRF_LOG_ERROR("myfs:descr read failed");
             return -1;
         }
         if(d.magic != file_magic_value)
@@ -583,8 +551,6 @@ int myfs_file_get_size(myfs_t& myfs, uint8_t* file_id)
                 file_id[6],
                 file_id[7]
                 );
-            // NRF_LOG_WARNING("file [%s] not found, reached the end of the FS",
-            //                 filename);
             return ERROR_FILE_NOT_FOUND;
         }
 
@@ -595,7 +561,6 @@ int myfs_file_get_size(myfs_t& myfs, uint8_t* file_id)
             {
                 return d.file_size;
             }
-            // NRF_LOG_ERROR("myfs: file found, but file size is invalid");
             return -1;
         }
         current_descriptor_address += single_file_descriptor_size_bytes;
@@ -620,7 +585,6 @@ int myfs_get_fs_stat(myfs_t& myfs, uint32_t& files_count, uint32_t& occupied_spa
         const auto descr_read_result = read_myfs_descriptor(d, current_descriptor_address, config);
         if(0 != descr_read_result)
         {
-            // NRF_LOG_ERROR("myfs:descr read at fs stat failed");
             return -1;
         }
         if(d.magic != file_magic_value)
@@ -634,70 +598,12 @@ int myfs_get_fs_stat(myfs_t& myfs, uint32_t& files_count, uint32_t& occupied_spa
         }
         else
         {
-            // NRF_LOG_WARNING("get fs stat: discovered an not-closed file, might need a repair");
+            // TODO: make a decision on proper handling
         }
         current_descriptor_address += single_file_descriptor_size_bytes;
     }
     return 0;
 }
-
-// void print_buffer(uint8_t* buf, uint32_t size)
-// {
-//     NRF_LOG_DEBUG("memory dump (%lu bytes)", size);
-
-//     static constexpr uint32_t single_print_size{16};
-//     char str[9 + single_print_size * 3 + 2]{0};
-//     for(uint32_t i = 0; i < size; i += single_print_size)
-//     {
-//         snprintf(
-//             str,
-//             sizeof(str),
-//             "%08x: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
-//             static_cast<unsigned int>(i),
-//             buf[i + 0],
-//             buf[i + 1],
-//             buf[i + 2],
-//             buf[i + 3],
-//             buf[i + 4],
-//             buf[i + 5],
-//             buf[i + 6],
-//             buf[i + 7],
-//             buf[i + 8],
-//             buf[i + 9],
-//             buf[i + 10],
-//             buf[i + 11],
-//             buf[i + 12],
-//             buf[i + 13],
-//             buf[i + 14],
-//             buf[i + 15]);
-//         NRF_LOG_DEBUG("%s", str);
-//     }
-// }
-
-// void print_flash_memory_area(const myfs_config& c, uint32_t start_address, uint32_t size)
-// {
-//     // TODO: remove this function after maturing the file system
-//     static constexpr uint32_t bytes_per_read{16};
-//     static constexpr uint32_t single_line_length{12 /* hex addr + space */ + bytes_per_read * 3 +
-//                                                  1};
-//     static uint8_t tmp[bytes_per_read];
-//     static char tmp_str[single_line_length]{0};
-//     NRF_LOG_DEBUG("dump memory 0x%x:0x%x", start_address, start_address + size);
-//     for(auto i = start_address; i < start_address + size; i += bytes_per_read)
-//     {
-//         const auto block = i / c.block_size;
-//         const auto off = i % c.block_size;
-//         c.read(&c, block, off, tmp, size);
-//         int id = 0;
-//         id += snprintf(tmp_str, single_line_length - id, "0x%x:", static_cast<unsigned int>(i));
-//         for(uint32_t j = 0; j < bytes_per_read; ++j)
-//         {
-//             id += snprintf(&tmp_str[id], single_line_length - id, "%02x ", tmp[j]);
-//         }
-//         tmp_str[single_line_length - 1] = '\0';
-//         NRF_LOG_DEBUG("%s", tmp_str);
-//     }
-// }
 
 int write_myfs_descriptor(myfs_file_descriptor d,
                           const uint32_t descriptor_address,
@@ -711,7 +617,6 @@ int write_myfs_descriptor(myfs_file_descriptor d,
     const auto read_res = c.read(&c, block_id, block_offset, tmp, page_size);
     if(read_res != 0)
     {
-        // NRF_LOG_ERROR("myfs descr write: readback failed");
         return read_res;
     }
     const auto descriptor_offset_to_page = descriptor_address - page_address;
@@ -720,7 +625,6 @@ int write_myfs_descriptor(myfs_file_descriptor d,
 
     if(prog_res != 0)
     {
-        // NRF_LOG_ERROR("myfs descr write: program failed");
         return prog_res;
     }
     return 0;
@@ -736,7 +640,6 @@ int read_myfs_descriptor(myfs_file_descriptor& d,
     const auto read_res = c.read(&c, block_id, block_offset, &d, single_file_descriptor_size_bytes);
     if(read_res != 0)
     {
-        // NRF_LOG_ERROR("myfs descr read failed");
         return read_res;
     }
 
@@ -759,7 +662,6 @@ int myfs_repair(myfs_t& myfs, myfs_file_descriptor& first_invalid_descriptor, ui
         const auto read_res = c.read(&c, block_id, block_offset, &buff, sizeof(buff));
         if (read_res != 0)
         {
-            // NRF_LOG_ERROR("myfs repair: read data failed");
             return -1;
         }
         if (written_address == empty_word_value)
@@ -774,7 +676,6 @@ int myfs_repair(myfs_t& myfs, myfs_file_descriptor& first_invalid_descriptor, ui
     }
     if (timeout == 0)
     {
-        // NRF_LOG_ERROR("myfs repair: infinite loop found, exiting");
         return -1;
     }
     if (is_file_end_found)
@@ -783,7 +684,7 @@ int myfs_repair(myfs_t& myfs, myfs_file_descriptor& first_invalid_descriptor, ui
         const auto write_res = write_myfs_descriptor(first_invalid_descriptor, descriptor_address, c);
         return write_res;
     }
-    // NRF_LOG_ERROR("myfs repair: file end not found. Fatal error");
+
     return -1;
 }
 
