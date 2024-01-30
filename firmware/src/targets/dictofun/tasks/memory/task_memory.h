@@ -43,6 +43,7 @@ enum class Command
     FORMAT_FS,
 
     LAUNCH_TEST_5, // memory range print
+    NONE,
 };
 
 enum class Status
@@ -52,6 +53,8 @@ enum class Status
     ERROR_BUSY,
     ERROR_GENERAL,
     FORMAT_REQUIRED,
+    ERROR_OUT_OF_MEMORY,
+    ERROR_FATAL,
 };
 
 struct CommandQueueElement

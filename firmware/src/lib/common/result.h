@@ -17,6 +17,7 @@ enum class Result
     ERROR_INVALID_PARAMETER,
     ERROR_TIMEOUT,
     ERROR_NOT_FOUND,
+    ERROR_OUT_OF_MEMORY,
 };
 
 }

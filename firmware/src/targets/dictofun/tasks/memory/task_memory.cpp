@@ -194,6 +194,24 @@ void task_memory(void* context_ptr)
                         if(result::Result::OK != write_result)
                         {
                             NRF_LOG_ERROR("mem: data write failed");
+                            if (result::Result::ERROR_OUT_OF_MEMORY == write_result)
+                            {
+                                // close active file
+                                const auto close_result = memory::filesystem::close_file(myfs);
+                                if (result::Result::OK != close_result)
+                                {
+                                    NRF_LOG_ERROR("mem: file closure upon out of memory has failed");
+                                    // TODO: define action in this case
+                                    StatusQueueElement response{Command::NONE, Status::ERROR_FATAL};
+                                    xQueueSend(context.status_queue, reinterpret_cast<void *>(&response), 0);
+                                }
+                                else
+                                {
+                                    // signal task_state the error state
+                                    StatusQueueElement response{Command::NONE, Status::ERROR_OUT_OF_MEMORY};
+                                    xQueueSend(context.status_queue, reinterpret_cast<void *>(&response), 0);
+                                }
+                            }
                         }
                         else
                         {
@@ -430,7 +448,13 @@ void process_request_from_state(Context& context, const Command command_id, uint
                 if(result::Result::OK != create_result)
                 {
                     NRF_LOG_ERROR("myfs: failed to create a new rec");
-                    StatusQueueElement response{Command::CREATE_RECORD, Status::ERROR_GENERAL};
+                    StatusQueueElement response {
+                        Command::CREATE_RECORD, 
+                        (create_result == result::Result::ERROR_OUT_OF_MEMORY) ? 
+                            Status::ERROR_OUT_OF_MEMORY : 
+                            Status::ERROR_GENERAL
+                    };
+
                     xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
                     return;
                 }

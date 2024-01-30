@@ -327,7 +327,11 @@ result::Result create_file(::filesystem::myfs_t& fs, uint8_t* file_id)
 
     if(create_res < 0)
     {
-        NRF_LOG_ERROR("failed to create file");
+        NRF_LOG_ERROR("failed to create file(error %d)", create_res);
+        if (create_res == ::filesystem::NO_SPACE_LEFT)
+        {
+            return result::Result::ERROR_OUT_OF_MEMORY;
+        }
         return result::Result::ERROR_GENERAL;
     }
     _is_file_open = true;
@@ -344,6 +348,10 @@ result::Result write_data(::filesystem::myfs_t& fs, uint8_t* data, uint32_t data
     if(write_result < 0)
     {
         NRF_LOG_ERROR("failed to write data to the active file");
+        if (::filesystem::NO_SPACE_LEFT == write_result)
+        {
+            return result::Result::ERROR_OUT_OF_MEMORY;
+        }
         return result::Result::ERROR_GENERAL;
     }
 

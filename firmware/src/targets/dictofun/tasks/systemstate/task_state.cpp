@@ -33,6 +33,7 @@ logger::CliCommandQueueElement cli_command_buffer;
 ble::RequestQueueElement ble_requests_buffer;
 button::EventQueueElement button_event_buffer;
 battery::MeasurementsQueueElement battery_measurement_buffer;
+memory::StatusQueueElement memory_status_handle;
 
 application::NvConfig _nvconfig{vTaskDelay};
 application::NvConfig::Configuration _configuration;
@@ -132,6 +133,13 @@ void task_system_state(void* context_ptr)
             {
                 process_button_event(button_event_buffer.event, *context);
             }
+        }
+
+        // todo: consider just polling the memory, without popping the queue element
+        const auto memory_event_receive_status = xQueueReceive(context->memory_status_handle, &memory_status_handle, 0);
+        if (pdPASS != memory_event_receive_status)
+        {
+            // TODO: handle memory event
         }
 
         const auto cli_queue_receive_status =

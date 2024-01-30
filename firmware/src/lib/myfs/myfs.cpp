@@ -242,6 +242,11 @@ int myfs_file_open(myfs_t& myfs, myfs_file_t& file, uint8_t* file_id, uint8_t fl
         myfs_file_descriptor d;
         d.magic = file_magic_value;
         d.start_address = myfs.next_file_start_address;
+        if (myfs.next_file_start_address >= config.block_count * config.block_size)
+        {
+            return NO_SPACE_LEFT;
+        }
+
         memcpy(d.file_id, file_id, myfs_file_descriptor::file_id_size);
         d.file_size = empty_word_value;
         memset(d.reserved, 0xFF, sizeof(d.reserved));
@@ -407,6 +412,10 @@ int myfs_file_write(myfs_t& myfs, myfs_file_t& file, void* buffer, myfs_size_t s
     // fill in the buffer until full, then flush onto the disk
     memcpy(&myfs.buffer_pointer[myfs.buffer_position], buffer, leftover_space);
     const auto prog_address = myfs.next_file_start_address + file.size;
+    if (prog_address >= (config.block_count * config.block_size))
+    {
+        return NO_SPACE_LEFT;
+    }
     // should be page-aligned at this point
     if(prog_address % page_size != 0)
     {
