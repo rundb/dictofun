@@ -41,7 +41,7 @@ static const spi::Spi::Configuration flash_spi_config{NRF_DRV_SPI_FREQ_8M,
 flash::SpiFlash flash{flash_spi, vTaskDelay, xTaskGetTickCount};
 constexpr uint32_t flash_page_size{256};
 constexpr uint32_t flash_sector_size{4096};
-constexpr uint32_t flash_total_size{16 * 1024 * 1024};
+constexpr uint32_t flash_total_size{128 * 1024};
 constexpr uint32_t flash_sectors_count{flash_total_size / flash_sector_size};
 
 constexpr size_t CACHE_SIZE{flash_page_size};
@@ -211,6 +211,7 @@ void task_memory(void* context_ptr)
                                     StatusQueueElement response{Command::NONE, Status::ERROR_OUT_OF_MEMORY};
                                     xQueueSend(context.status_queue, reinterpret_cast<void *>(&response), 0);
                                 }
+                                _file_operation_context.is_file_open = false;
                             }
                         }
                         else

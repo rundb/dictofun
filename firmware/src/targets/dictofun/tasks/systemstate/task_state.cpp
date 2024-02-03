@@ -33,7 +33,7 @@ logger::CliCommandQueueElement cli_command_buffer;
 ble::RequestQueueElement ble_requests_buffer;
 button::EventQueueElement button_event_buffer;
 battery::MeasurementsQueueElement battery_measurement_buffer;
-memory::StatusQueueElement memory_status_handle;
+memory::StatusQueueElement memory_status_buffer;
 
 application::NvConfig _nvconfig{vTaskDelay};
 application::NvConfig::Configuration _configuration;
@@ -136,10 +136,21 @@ void task_system_state(void* context_ptr)
         }
 
         // todo: consider just polling the memory, without popping the queue element
-        const auto memory_event_receive_status = xQueueReceive(context->memory_status_handle, &memory_status_handle, 0);
-        if (pdPASS != memory_event_receive_status)
+        const auto memory_event_receive_status = xQueueReceive(context->memory_status_handle, &memory_status_buffer, 0);
+        if (pdPASS == memory_event_receive_status)
         {
+            // TODO: protect this area from concurrent access
             // TODO: handle memory event
+            // TODO: add a special signalling queue for this particular event
+            if (memory_status_buffer.status == memory::Status::ERROR_OUT_OF_MEMORY)
+            {
+                NRF_LOG_ERROR("state: out of mem detected");
+            }
+            else 
+            {
+                // push this value back to the queue
+                xQueueSend(context->memory_status_handle, &memory_status_buffer, 0);
+            }
         }
 
         const auto cli_queue_receive_status =
