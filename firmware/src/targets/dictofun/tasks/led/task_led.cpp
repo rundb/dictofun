@@ -8,6 +8,7 @@
 #include "nrf_gpio.h"
 #include "nrf_log.h"
 #include <stdint.h>
+#include <cmath>
 
 #include "FreeRTOS.h"
 #include "queue.h"
@@ -44,22 +45,20 @@ static nrf_drv_pwm_t m_pwm0 = NRF_DRV_PWM_INSTANCE(0);
 
 static void pwm0_handler(nrf_drv_pwm_evt_type_t event_type) { }
 
-// This code implements N levels of LED brightness (starting with 4)
-static constexpr uint16_t led_duty_cycles[] = {
-    0,
-    static_cast<uint16_t>(pwm_top_value * 0.05),
-    static_cast<uint16_t>(pwm_top_value * 0.08),
-    static_cast<uint16_t>(pwm_top_value * 0.15),
-    static_cast<uint16_t>(pwm_top_value * 0.3),
-    static_cast<uint16_t>(pwm_top_value * 0.35),
-    static_cast<uint16_t>(pwm_top_value * 0.3),
-    static_cast<uint16_t>(pwm_top_value * 0.15),
-    static_cast<uint16_t>(pwm_top_value * 0.08),
-    static_cast<uint16_t>(pwm_top_value * 0.05),
-    0,
-};
-static constexpr uint32_t duty_cycles_count{sizeof(led_duty_cycles) / sizeof(led_duty_cycles[0])};
-static constexpr uint16_t max_duty_cycle{led_duty_cycles[duty_cycles_count / 2]};
+static constexpr float sine_wave_10_values[] = 
+    {0.0000, 0.3090, 0.5878, 0.8090, 0.9511, 1.0000, 0.9511, 0.8090, 0.5878, 0.3090, 0.0000};
+
+static constexpr float sine_wave_20_values[] = 
+    {0.0000, 0.1564, 0.3090, 0.4540, 0.5878, 0.7071,
+     0.8090, 0.8910, 0.9511, 0.9877, 1.0000, 0.9877,
+     0.9511, 0.8910, 0.8090, 0.7071, 0.5878, 0.4540,
+     0.3090, 0.1564, 0.0000};
+
+static constexpr float red_color_amplitude = 0.2;
+static constexpr float green_color_amplitude = 0.1;
+static constexpr float blue_color_amplitude = 0.7;
+
+static constexpr uint32_t brightness_steps_count{sizeof(sine_wave_20_values) / sizeof(sine_wave_20_values[0])};
 
 bool is_red_active(const Color color)
 {
@@ -104,10 +103,10 @@ void task_led(void* context_ptr)
 
     nrfx_pwm_simple_playback(&m_pwm0, &seq, 1, NRFX_PWM_FLAG_LOOP);
 
-    static constexpr uint32_t slow_update_period{2000};
-    static constexpr uint32_t slow_pwm_change_period{slow_update_period / duty_cycles_count};
-    static constexpr uint32_t fast_update_period{500};
-    static constexpr uint32_t fast_pwm_change_period{fast_update_period / duty_cycles_count};
+    static constexpr uint32_t slow_update_period{1000};
+    static constexpr uint32_t slow_pwm_change_period{slow_update_period / brightness_steps_count};
+    static constexpr uint32_t fast_update_period{250};
+    static constexpr uint32_t fast_pwm_change_period{fast_update_period / brightness_steps_count};
 
     // since blue LED is known to be less bright, it's duty cycle should be multiplied (generally there should be a
     // calculated table of optimal intensities of all colors for all brightness levels)
@@ -146,18 +145,20 @@ void task_led(void* context_ptr)
             if((tick - last_update_tick) > pwm_change_period)
             {
                 const uint32_t pwm_values_index{((tick % update_period) / pwm_change_period) %
-                                                duty_cycles_count};
+                                                brightness_steps_count};
 
+                const auto sine_wave_value{sine_wave_20_values[pwm_values_index]};
+                const float base_pwm_value{sine_wave_value * pwm_top_value};
                 // configure red channel
                 seq_values.channel_0 =
-                    (is_red_active(active_color)) ? led_duty_cycles[pwm_values_index] : 0;
+                    (is_red_active(active_color)) ? static_cast<uint16_t>(base_pwm_value * red_color_amplitude) : 0;
                 // configure blue channel
                 seq_values.channel_1 =
-                    (is_green_active(active_color)) ? led_duty_cycles[pwm_values_index] : 0;
+                    (is_green_active(active_color)) ? static_cast<uint16_t>(base_pwm_value * green_color_amplitude)  : 0;
                 seq_values.channel_1 *= blue_dc_multiplier;
                 // configure green channel
                 seq_values.channel_2 =
-                    (is_blue_active(active_color)) ? led_duty_cycles[pwm_values_index] : 0;
+                    (is_blue_active(active_color)) ? static_cast<uint16_t>(base_pwm_value * blue_color_amplitude) : 0;
                 nrfx_pwm_stop(&m_pwm0, true);
                 nrfx_pwm_simple_playback(&m_pwm0, &seq, 1, NRFX_PWM_FLAG_LOOP);
 
@@ -169,12 +170,12 @@ void task_led(void* context_ptr)
         {
             NRF_LOG_INFO("detected on request");
             // configure red channel
-            seq_values.channel_0 = (is_red_active(active_color)) ? max_duty_cycle : 0;
-            // configure blue channel
-            seq_values.channel_1 = (is_green_active(active_color)) ? max_duty_cycle : 0;
-            seq_values.channel_1 *= blue_dc_multiplier;
+            seq_values.channel_0 = (is_red_active(active_color)) ? pwm_top_value * red_color_amplitude : 0;
             // configure green channel
-            seq_values.channel_2 = (is_blue_active(active_color)) ? max_duty_cycle : 0;
+            seq_values.channel_1 = (is_green_active(active_color)) ? pwm_top_value * green_color_amplitude : 0;
+            seq_values.channel_1 *= blue_dc_multiplier;
+            // configure blue channel
+            seq_values.channel_2 = (is_blue_active(active_color)) ? pwm_top_value * blue_color_amplitude : 0;
             nrfx_pwm_stop(&m_pwm0, true);
             nrfx_pwm_simple_playback(&m_pwm0, &seq, 1, NRFX_PWM_FLAG_LOOP);
         }
