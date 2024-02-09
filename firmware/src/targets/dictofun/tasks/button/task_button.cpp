@@ -16,6 +16,7 @@ namespace button
 {
 
 static ButtonState button_state{ButtonState::RELEASED};
+static RequestQueueElement request_buffer;
 
 ButtonState get_button_state()
 {
@@ -29,6 +30,7 @@ void task_button(void* context_ptr)
     NRF_LOG_DEBUG("task button: initialized");
     Context& context = *(reinterpret_cast<Context*>(context_ptr));
 
+    static constexpr uint32_t button_request_wait_time_ms{10};
     while(1)
     {
         const auto new_state = get_button_state();
@@ -46,7 +48,14 @@ void task_button(void* context_ptr)
 
             button_state = new_state;
         }
-        vTaskDelay(10);
+
+        const auto req_rx_result = xQueueReceive(context.commands_handle, &request_buffer, button_request_wait_time_ms);
+        if (pdPASS == req_rx_result)
+        {
+            ResponseQueueElement response;
+            response.state = get_button_state();
+            xQueueSend(context.response_handle, &response, 0);
+        }
     }
 }
 

@@ -51,6 +51,8 @@ struct Context
     QueueHandle_t led_commands_handle{nullptr};
 
     QueueHandle_t button_events_handle{nullptr};
+    QueueHandle_t button_requests_handle{nullptr};
+    QueueHandle_t button_response_handle{nullptr};
 
     QueueHandle_t battery_measurements_handle{nullptr};
     QueueHandle_t battery_level_to_ble_handle{nullptr};

@@ -79,6 +79,9 @@ application::QueueDescriptor<rtc::CommandQueueElement, 1>            rtc_command
 application::QueueDescriptor<rtc::ResponseQueueElement, 1>           rtc_response_queue;
 
 application::QueueDescriptor<button::EventQueueElement, 1>           button_event_queue;
+application::QueueDescriptor<button::RequestQueueElement, 1>         button_requests_queue;
+application::QueueDescriptor<button::ResponseQueueElement, 1>        button_response_queue;
+
 application::QueueDescriptor<battery::MeasurementsQueueElement, 1>   battery_measurements_queue;
 
 // ============================= Timers =====================================
@@ -241,6 +244,18 @@ int main()
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
+    const auto button_requests_queue_init_result = button_requests_queue.init();
+    if(result::Result::OK != button_requests_queue_init_result)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
+    const auto button_response_queue_init_result = button_response_queue.init();
+    if(result::Result::OK != button_response_queue_init_result)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
     const auto battery_measurements_queue_init_result = battery_measurements_queue.init();
     if(result::Result::OK != battery_measurements_queue_init_result)
     {
@@ -298,6 +313,8 @@ int main()
     systemstate_context.ble_keepalive_handle = ble_keepalive_queue.handle;
     systemstate_context.led_commands_handle = led_commands_queue.handle;
     systemstate_context.button_events_handle = button_event_queue.handle;
+    systemstate_context.button_requests_handle = button_requests_queue.handle;
+    systemstate_context.button_response_handle = button_response_queue.handle;
     systemstate_context.battery_measurements_handle = battery_measurements_queue.handle;
     systemstate_context.battery_level_to_ble_handle = ble_batt_info_queue.handle;
 
@@ -357,6 +374,8 @@ int main()
     }
 
     button_context.events_handle = button_event_queue.handle;
+    button_context.response_handle = button_response_queue.handle;
+    button_context.commands_handle = button_requests_queue.handle;
     const auto button_task_init_result =
         button_task.init(button::task_button, "BTN", &button_context);
 

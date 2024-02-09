@@ -52,6 +52,7 @@ void process_button_event(button::Event event, Context& context);
 void print_battery_voltage(float voltage);
 void switch_to_ble_mode(Context& context);
 static void process_cli_command(logger::CliCommand cliCommand, uint32_t* args, Context& context, application::NvConfig& nvConfig);
+static button::ButtonState fetch_button_state(Context& context);
 
 void task_system_state(void* context_ptr)
 {
@@ -90,6 +91,24 @@ void task_system_state(void* context_ptr)
         }
         else
         {
+            // figure out the current button state
+            const auto button_state = fetch_button_state(*context);
+            switch (button_state)
+            {
+                case button::ButtonState::PRESSED: 
+                {
+                    // start preparing record
+                    NRF_LOG_DEBUG("state: fetched button state, pressed");
+                    break;
+                }
+                case button::ButtonState::RELEASED: default:
+                {
+                    // switch to BLE operation
+                    NRF_LOG_DEBUG("state: fetched button state, released");
+                    break;
+                }
+            }
+
             led::CommandQueueElement led_command{led::Color::GREEN, led::State::SLOW_GLOW};
             xQueueSend(context->led_commands_handle, reinterpret_cast<void*>(&led_command), 0);
             // TODO: add BLE enable, if button was not pressed
@@ -810,6 +829,32 @@ void process_cli_command(logger::CliCommand cliCommand, uint32_t* args, Context&
             break;
         }
     }
+}
+
+static button::ButtonState fetch_button_state(Context& context)
+{
+    static constexpr uint32_t max_response_wait_time{50};
+    button::ButtonState result = button::ButtonState::UNKNOWN;
+
+    xQueueReset(context.button_requests_handle);
+    button::RequestQueueElement cmd{button::Command::REQUEST_STATE};
+    const auto send_result = xQueueSend(context.button_requests_handle, reinterpret_cast<void*>(&cmd), 0);
+
+    if (pdPASS != send_result)
+    {
+        NRF_LOG_ERROR("state: failed to request button state");
+        return result;
+    }
+
+    button::ResponseQueueElement response;
+    const auto receive_result = xQueueReceive(context.button_response_handle, &response, max_response_wait_time);
+    if (pdPASS == receive_result)
+    {
+        return response.state;
+    }
+
+    NRF_LOG_WARNING("state: failed to receive button state");
+    return result;
 }
 
 } // namespace systemstate
