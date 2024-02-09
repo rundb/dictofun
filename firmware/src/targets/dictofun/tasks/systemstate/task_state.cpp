@@ -50,8 +50,8 @@ Context* context{nullptr};
 void analyze_reset_reason(Context& context);
 void process_button_event(button::Event event, Context& context);
 void print_battery_voltage(float voltage);
-
 void switch_to_ble_mode(Context& context);
+static void process_cli_command(logger::CliCommand cliCommand, uint32_t* args, Context& context, application::NvConfig& nvConfig);
 
 void task_system_state(void* context_ptr)
 {
@@ -59,7 +59,11 @@ void task_system_state(void* context_ptr)
     NRF_LOG_DEBUG("task state: initialized");
     context = reinterpret_cast<Context*>(context_ptr);
 
+    context->system_state = SystemState::INIT;
+
     analyze_reset_reason(*context);
+
+    // TODO: add battery level at this point
     
     // Process NV configuration. If it doesn't exist - memory operation should be scheduled.
     const auto nvconfig_load_result = _nvconfig.load_early(_configuration);
@@ -80,6 +84,9 @@ void task_system_state(void* context_ptr)
         {
             led::CommandQueueElement led_command{led::Color::WHITE, led::State::SLOW_GLOW};
             xQueueSend(context->led_commands_handle, reinterpret_cast<void*>(&led_command), 0);
+
+            context->system_state = SystemState::DEVELOPMENT_MODE;
+
         }
         else
         {
@@ -159,35 +166,7 @@ void task_system_state(void* context_ptr)
                           cli_command_wait_ticks_type);
         if(pdPASS == cli_queue_receive_status)
         {
-            switch(cli_command_buffer.command_id)
-            {
-            case logger::CliCommand::RECORD: {
-                launch_cli_command_record(
-                    *context, cli_command_buffer.args[0], cli_command_buffer.args[1] > 0);
-                break;
-            }
-            case logger::CliCommand::MEMORY_TEST: {
-                launch_cli_command_memory_test(*context, cli_command_buffer.args[0], cli_command_buffer.args[1], cli_command_buffer.args[2]);
-                break;
-            }
-            case logger::CliCommand::BLE_COMMAND: {
-                launch_cli_command_ble_operation(*context, cli_command_buffer.args[0]);
-                break;
-            }
-            case logger::CliCommand::SYSTEM: {
-                launch_cli_command_system(*context, cli_command_buffer.args[0]);
-                break;
-            }
-            case logger::CliCommand::OPMODE: {
-                launch_cli_command_opmode(*context, cli_command_buffer.args[0], _nvconfig);
-                break;
-            }
-            case logger::CliCommand::LED: {
-                launch_cli_command_led(
-                    *context, cli_command_buffer.args[0], cli_command_buffer.args[1]);
-                break;
-            }
-            }
+            process_cli_command(cli_command_buffer.command_id, cli_command_buffer.args, *context, _nvconfig);
         }
 
         const auto battery_measurement_receive_status =
@@ -799,6 +778,37 @@ void analyze_reset_reason(Context& context)
     {
         NRF_LOG_WARNING("state: FS error during BLE has been detected. Enabling BLE immediately");
         switch_to_ble_mode(context);
+    }
+}
+
+void process_cli_command(logger::CliCommand cliCommand, uint32_t* args, Context& context, application::NvConfig& nvConfig)
+{
+    switch(cliCommand)
+    {
+        case logger::CliCommand::RECORD: {
+            launch_cli_command_record(context, args[0], args[1] > 0);
+            break;
+        }
+        case logger::CliCommand::MEMORY_TEST: {
+            launch_cli_command_memory_test(context, args[0], args[1], args[2]);
+            break;
+        }
+        case logger::CliCommand::BLE_COMMAND: {
+            launch_cli_command_ble_operation(context, args[0]);
+            break;
+        }
+        case logger::CliCommand::SYSTEM: {
+            launch_cli_command_system(context, args[0]);
+            break;
+        }
+        case logger::CliCommand::OPMODE: {
+            launch_cli_command_opmode(context, args[0], nvConfig);
+            break;
+        }
+        case logger::CliCommand::LED: {
+            launch_cli_command_led(context, args[0], args[1]);
+            break;
+        }
     }
 }
 

@@ -15,6 +15,22 @@ namespace systemstate
 {
 void task_system_state(void* context);
 
+// Set of states that define high-level behavior of the system. 
+// Basically corresponds to the particular indication colors.
+enum class SystemState: uint8_t
+{
+    INIT,
+    BATTERY_LOW,
+    DEVELOPMENT_MODE,
+    RECORD_PREPARE,
+    RECORDING,
+    RECORD_END,
+    BLE_OPERATION,
+    OUT_OF_MEMORY,
+    MEMORY_IS_CORRUPT,
+    SHUTDOWN
+};
+
 struct Context
 {
     QueueHandle_t cli_commands_handle{nullptr};
@@ -48,6 +64,8 @@ struct Context
     bool _is_battery_low{false};
     bool is_memory_busy{false};
     uint32_t records_per_launch_counter{0};
+
+    SystemState system_state;
 
     struct Timestamps
     {
