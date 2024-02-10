@@ -212,6 +212,7 @@ void task_memory(void* context_ptr)
                                     xQueueSend(context.event_queue, reinterpret_cast<void *>(&response), 0);
                                 }
                                 _file_operation_context.is_file_open = false;
+                                myfs.is_full = true;
                             }
                         }
                         else
@@ -586,6 +587,11 @@ void process_request_from_state(Context& context, const Command command_id, uint
             {
                 ble::fts::FileSystemInterface::FSStatus fsStatus;
                 memcpy(&fsStatus, &data_queue_elem.data, sizeof(fsStatus));
+                if (myfs.is_full)
+                {
+                    fsStatus.free_space = 0;
+                    fsStatus.occupied_space = flash_total_size;
+                }
                 NRF_LOG_INFO("FS stats: %d/%d(%d)", fsStatus.occupied_space, fsStatus.free_space, fsStatus.files_count);
                 StatusQueueElement response{Command::PERFORM_MEMORY_CHECK, Status::OK};
                 if ((fsStatus.occupied_space > (flash_total_size * formatting_trigger_level)) || (fsStatus.files_count > max_files_count))

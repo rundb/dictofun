@@ -66,6 +66,10 @@ int myfs_format(myfs_t& myfs)
         return program_result;
     }
     myfs.files_count = 0;
+    myfs.is_full = false;
+    myfs.is_corrupt = false;
+    myfs.is_file_open = false;
+    myfs.is_mounted = false;
     return 0;
 }
 
@@ -77,7 +81,7 @@ int myfs_mount(myfs_t& myfs)
 
     if(myfs.is_mounted)
     {
-        return -1;
+        return REMOUNT_ATTEMPTED;
     }
     // 0. get the FS start address from the config (TODO: place it into the config)
     myfs.fs_start_address = 0;
@@ -88,7 +92,7 @@ int myfs_mount(myfs_t& myfs)
     const auto read_result = config.read(&config, myfs.fs_start_address, 0, tmp, local_buffer_size);
     if(read_result != 0)
     {
-        return -1;
+        return INTERNAL_ERROR;
     }
 
     uint32_t marker{0};
@@ -96,7 +100,7 @@ int myfs_mount(myfs_t& myfs)
 
     if(marker != global_magic_value)
     {
-        return -1;
+        return INTERNAL_ERROR;
     }
 
     uint32_t fs_size{0};
@@ -145,7 +149,7 @@ int myfs_mount(myfs_t& myfs)
         else
         {
             // FS is corrupt and needs formatting
-            return -1;
+            return FS_CORRUPT;
         }
         current_file_id = next_file_id;
         current_step_size /= 2;

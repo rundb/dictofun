@@ -39,6 +39,7 @@ static constexpr int NO_SPACE_LEFT{-6};
 static constexpr int ALIGNMENT_ERROR{-7};
 static constexpr int INTERNAL_ERROR{-8};
 static constexpr int IMPLEMENTATION_ERROR{-9};
+static constexpr int REMOUNT_ATTEMPTED{-10};
 static constexpr int REPAIR_HAS_BEEN_PERFORMED{-16};
 
 struct myfs_config

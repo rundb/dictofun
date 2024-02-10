@@ -46,9 +46,9 @@ result::Result init_fs(::filesystem::myfs_t& fs)
             return result::Result::ERROR_GENERAL;
         }
         err = myfs_mount(fs);
-        if(err != 0)
+        if (err != 0)
         {
-            NRF_LOG_ERROR("mem: failed to mount MyFS after formatting");
+            NRF_LOG_ERROR("mem: failed to mount MyFS after formatting (%d)", err);
             return result::Result::ERROR_GENERAL;
         }
     }
@@ -83,6 +83,7 @@ result::Result close_file(::filesystem::myfs_t& fs)
 {
     if (!_active_file.is_open)
     {
+        NRF_LOG_WARNING("myfs: attempt to close unopened file");
         return result::Result::OK;
     }
     const auto close_result = myfs_file_close(fs, _active_file);
@@ -357,7 +358,7 @@ result::Result write_data(::filesystem::myfs_t& fs, uint8_t* data, uint32_t data
     {
         return result::Result::ERROR_GENERAL;
     }
-    if (!fs.is_full)
+    if (fs.is_full)
     {
         return result::Result::ERROR_OUT_OF_MEMORY;
     }
