@@ -70,11 +70,17 @@ struct StatusQueueElement
     Status status;
 };
 
+struct EventQueueElement
+{
+    Status status;
+};
+
 struct Context
 {
     QueueHandle_t audio_data_queue{nullptr};
     QueueHandle_t command_queue{nullptr};
     QueueHandle_t status_queue{nullptr};
+    QueueHandle_t event_queue{nullptr};
     QueueHandle_t command_from_ble_queue{nullptr};
     QueueHandle_t status_to_ble_queue{nullptr};
     QueueHandle_t data_to_ble_queue{nullptr};

@@ -41,6 +41,7 @@ struct Context
 
     QueueHandle_t memory_commands_handle{nullptr};
     QueueHandle_t memory_status_handle{nullptr};
+    QueueHandle_t memory_event_handle{nullptr};
 
     QueueHandle_t audio_tester_commands_handle{nullptr};
 
@@ -60,11 +61,22 @@ struct Context
     TimerHandle_t record_timer_handle{nullptr};
 
     bool is_record_active{false};
-    bool _should_record_be_stored{false};
-    bool _is_ble_system_active{false};
-    bool _is_shutdown_demanded{false};
-    bool _is_battery_low{false};
-    bool is_memory_busy{false};
+    bool should_record_be_stored{false};
+    bool is_ble_system_active{false};
+    bool is_shutdown_demanded{false};
+    bool is_battery_low{false};
+
+    // bool is_memory_busy{false};
+    enum class MemoryStatus
+    {
+        BUSY,
+        READY,
+        OUT_OF_MEMORY,
+        CORRUPT,
+    };
+    MemoryStatus memory_status{MemoryStatus::BUSY};
+
+    // This variable tracks the use-case of a record restart before the session end
     uint32_t records_per_launch_counter{0};
 
     SystemState system_state;

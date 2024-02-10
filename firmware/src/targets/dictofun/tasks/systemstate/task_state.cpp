@@ -34,11 +34,12 @@ ble::RequestQueueElement ble_requests_buffer;
 button::EventQueueElement button_event_buffer;
 battery::MeasurementsQueueElement battery_measurement_buffer;
 memory::StatusQueueElement memory_status_buffer;
+memory::EventQueueElement memory_event_buffer;
 
 application::NvConfig _nvconfig{vTaskDelay};
 application::NvConfig::Configuration _configuration;
 
-constexpr TickType_t cli_command_wait_ticks_type{10};
+constexpr TickType_t cli_command_wait_ticks_type{2};
 constexpr TickType_t ble_request_wait_ticks_type{1};
 constexpr TickType_t button_event_wait_ticks_type{1};
 constexpr TickType_t battery_request_wait_ticks_type{0};
@@ -49,11 +50,14 @@ Context* context{nullptr};
 
 void analyze_reset_reason(Context& context);
 void process_button_event(button::Event event, Context& context);
+void process_battery_event(battery::MeasurementsQueueElement measurement, Context& context);
 void print_battery_voltage(float voltage);
 void switch_to_ble_mode(Context& context);
 static void process_cli_command(logger::CliCommand cliCommand, uint32_t* args, Context& context, application::NvConfig& nvConfig);
 static button::ButtonState fetch_button_state(Context& context);
 
+
+// Implements state machine, described in the diagram `df-states.drawio.png`
 void task_system_state(void* context_ptr)
 {
     configure_power_latch();
@@ -64,7 +68,7 @@ void task_system_state(void* context_ptr)
 
     analyze_reset_reason(*context);
 
-    // TODO: add battery level at this point
+    // TODO: add battery level evalutation at this point
     
     // Process NV configuration. If it doesn't exist - memory operation should be scheduled.
     const auto nvconfig_load_result = _nvconfig.load_early(_configuration);
@@ -87,7 +91,6 @@ void task_system_state(void* context_ptr)
             xQueueSend(context->led_commands_handle, reinterpret_cast<void*>(&led_command), 0);
 
             context->system_state = SystemState::DEVELOPMENT_MODE;
-
         }
         else
         {
@@ -98,47 +101,172 @@ void task_system_state(void* context_ptr)
                 case button::ButtonState::PRESSED: 
                 {
                     // start preparing record
-                    NRF_LOG_DEBUG("state: fetched button state, pressed");
+                    context->system_state = SystemState::RECORD_PREPARE;
                     break;
                 }
                 case button::ButtonState::RELEASED: default:
                 {
                     // switch to BLE operation
-                    NRF_LOG_DEBUG("state: fetched button state, released");
+                    context->system_state = SystemState::BLE_OPERATION;
                     break;
                 }
             }
 
-            led::CommandQueueElement led_command{led::Color::GREEN, led::State::SLOW_GLOW};
-            xQueueSend(context->led_commands_handle, reinterpret_cast<void*>(&led_command), 0);
+            // led::CommandQueueElement led_command{led::Color::GREEN, led::State::SLOW_GLOW};
+            // xQueueSend(context->led_commands_handle, reinterpret_cast<void*>(&led_command), 0);
             // TODO: add BLE enable, if button was not pressed
-
-            // wait until a readiness confirmation from task_memory is received
-            memory::StatusQueueElement response;
-            response.status = memory::Status::ERROR_GENERAL;
-            int32_t timeout{1000};
-            context->is_memory_busy = true;
-            while (context->is_memory_busy && (--timeout) > 0)
-            {
-                const auto receiveResult = xQueueReceive(context->memory_status_handle, reinterpret_cast<void *>(&response), 1);
-                if (receiveResult == pdPASS) {
-                    if (response.status == memory::Status::IS_READY)
-                    {
-                        context->is_memory_busy = false;
-                    }
-                    else {
-                        NRF_LOG_ERROR("state: memory readyness is not confirmed");
-                        // System shall wait until memory is ready
-                    }
-                    break;
-                }
-            }
         }
     }
 
+    // wait until a readiness confirmation from task_memory is received
+    // memory::StatusQueueElement response;
+    // response.status = memory::Status::ERROR_GENERAL;
+    // int32_t timeout{100};
+    // context->is_memory_busy = true;
+    // while (context->is_memory_busy && (--timeout) > 0)
+    // {
+    //     const auto receiveResult = xQueueReceive(context->memory_status_handle, reinterpret_cast<void *>(&response), 10);
+    //     if (receiveResult == pdPASS) {
+    //         if (response.status == memory::Status::IS_READY)
+    //         {
+    //             context->is_memory_busy = false;
+    //             NRF_LOG_INFO("state: memory has reported readiness");
+    //         }
+    //         else {
+    //             NRF_LOG_ERROR("state: memory readyness is not confirmed");
+    //             // System shall wait until memory is ready
+    //         }
+    //         break;
+    //     }
+    // }
+
+    SystemState next_state{context->system_state};
+
     while(1)
     {
-        if (context->is_memory_busy)
+        switch (context->system_state)
+        {
+            case SystemState::RECORD_PREPARE:
+            {
+                // prepare record - prepare filesystem, wait for the signal from FS
+                if (context->memory_status == Context::MemoryStatus::BUSY)
+                {
+                    continue;
+                }
+                
+                if (context->memory_status == Context::MemoryStatus::READY)
+                {
+                    // if ready - create the file and switch to recording state
+                    NRF_LOG_DEBUG("state: memory has reported readiness");
+                    const auto create_result = request_record_creation(*context);
+                    if (result::Result::OK != create_result)
+                    {
+                        NRF_LOG_ERROR("state: record creation reqeuest has failed");
+                        // TODO: apply a correct state transition
+                        // Technically - this should never happen.
+                        next_state = SystemState::MEMORY_IS_CORRUPT;
+                    }
+                    const auto record_start_result = request_record_start(*context);
+                    if (result::Result::OK != create_result)
+                    {
+                        NRF_LOG_ERROR("state: record start request has failed");
+                        // TODO: apply a correct state transition
+                        // Technically - this should never happen.
+                        next_state = SystemState::MEMORY_IS_CORRUPT;
+                    }
+                    else 
+                    {
+                        next_state = SystemState::RECORDING;
+                    }
+                }
+                else if (context->memory_status == Context::MemoryStatus::OUT_OF_MEMORY) 
+                {
+                    // otherwise switch to out of memory or corrupt state
+                    next_state = SystemState::OUT_OF_MEMORY;
+                }
+                else if (context->memory_status == Context::MemoryStatus::CORRUPT)
+                {
+                    next_state = SystemState::MEMORY_IS_CORRUPT;
+                }
+                break;
+            }
+            case SystemState::RECORDING:
+            {
+                // check status from memory
+                if (context->memory_status == Context::MemoryStatus::OUT_OF_MEMORY || 
+                    context->memory_status == Context::MemoryStatus::CORRUPT)
+                {
+                    next_state = SystemState::RECORD_END;
+                    continue;
+                }
+
+                // check events from the button.
+                const auto button_state = fetch_button_state(*context);
+                if (button_state == button::ButtonState::RELEASED)
+                {
+                    next_state = SystemState::RECORD_END;
+                    continue;
+                }
+
+
+                // in both cases proceed eventually to record end state
+                break;
+            }
+            case SystemState::RECORD_END:
+            {
+                // close the record file
+
+                // check that memory has not sent "corrupt"/"out of memory" statuses
+
+                // proceed to BLE operation
+                break;
+            }
+            case SystemState::BLE_OPERATION:
+            {
+                // Process timeouts and events from the buttons
+
+                // Also change the BLE indication depending on the status change
+                // - slow glow - before and after connection, fast - during the connection, extra fast - during file transactions
+                break;
+            }
+            case SystemState::BATTERY_LOW:
+            {
+                // indicate with color, after several seconds - shutdown (before shutdown make sure button is not pressed)
+                break;
+            }
+            case SystemState::OUT_OF_MEMORY:
+            {
+                // Indicate with color, after several seconds (and if the button is not pressed) - switch to BLE operation
+                break;
+            }
+            case SystemState::DEVELOPMENT_MODE:
+            {
+                // basically do nothing, CLI processing should be done at separate cycle element
+                break;
+            }
+            case SystemState::MEMORY_IS_CORRUPT:
+            {
+                // issue repair command, stay in this state until memory reports readyness, then shutdown
+                break;
+            }
+            case SystemState::SHUTDOWN:
+            {
+                break;
+            }
+        }
+        if (context->system_state != next_state)
+        {
+            NRF_LOG_INFO("state: transition %d->%d", (int)context->system_state, (int)next_state);
+            context->system_state = next_state;
+        }
+
+        vTaskDelay(100);
+        
+        // This section runs through the relevant event queues and updates respective context fields. State machine then makes decisions based on the 
+        // events, if it effects the execution.
+
+        // At the beginning of the execution, wait for the readiness flag from the memory
+        if (context->memory_status == Context::MemoryStatus::BUSY)
         {
             memory::StatusQueueElement response;
             const auto memoryStatusResult = xQueueReceive(context->memory_status_handle, reinterpret_cast<void *>(&response), 100);
@@ -146,162 +274,117 @@ void task_system_state(void* context_ptr)
             {
                 if (response.status == memory::Status::IS_READY)
                 {
-                    context->is_memory_busy = false;
+                    context->memory_status = Context::MemoryStatus::READY;
+                }
+                else if (response.status == memory::Status::ERROR_OUT_OF_MEMORY)
+                {
+                    context->memory_status = Context::MemoryStatus::OUT_OF_MEMORY;
+                }
+                else if (response.status == memory::Status::ERROR_FATAL || response.status == memory::Status::ERROR_GENERAL)
+                {
+                    context->memory_status = Context::MemoryStatus::CORRUPT;
+                }
+                else
+                {
+                    context->memory_status = Context::MemoryStatus::BUSY;
                 }
             }
         }
 
-        const auto button_event_receive_status = xQueueReceive(
-            context->button_events_handle, &button_event_buffer, button_event_wait_ticks_type);
-        if(pdPASS == button_event_receive_status)
-        {
-            if (!context->_is_shutdown_demanded && !context->_is_battery_low)
-            {
-                process_button_event(button_event_buffer.event, *context);
-            }
-        }
-
-        // todo: consider just polling the memory, without popping the queue element
-        const auto memory_event_receive_status = xQueueReceive(context->memory_status_handle, &memory_status_buffer, 0);
-        if (pdPASS == memory_event_receive_status)
-        {
-            // TODO: protect this area from concurrent access
-            // TODO: handle memory event
-            // TODO: add a special signalling queue for this particular event
-            if (memory_status_buffer.status == memory::Status::ERROR_OUT_OF_MEMORY)
-            {
-                NRF_LOG_ERROR("state: out of mem detected");
-            }
-            else 
-            {
-                // push this value back to the queue
-                xQueueSend(context->memory_status_handle, &memory_status_buffer, 0);
-            }
-        }
-
-        const auto cli_queue_receive_status =
-            xQueueReceive(context->cli_commands_handle,
-                          reinterpret_cast<void*>(&cli_command_buffer),
-                          cli_command_wait_ticks_type);
+        // Process CLI commands
+        const auto cli_queue_receive_status = xQueueReceive(context->cli_commands_handle, reinterpret_cast<void*>(&cli_command_buffer), 0);
         if(pdPASS == cli_queue_receive_status)
         {
             process_cli_command(cli_command_buffer.command_id, cli_command_buffer.args, *context, _nvconfig);
         }
 
-        const auto battery_measurement_receive_status =
-            xQueueReceive(context->battery_measurements_handle,
-                          reinterpret_cast<void*>(&battery_measurement_buffer),
-                          battery_request_wait_ticks_type);
-        if(pdPASS == battery_measurement_receive_status)
+        // Process button events. Only for the case of sophisticated button events (like a sequence for a factory reset)
+        // Generally now buttons work in a polling mode
+        const auto button_event_receive_status = xQueueReceive(context->button_events_handle, &button_event_buffer, 0);
+        if(pdPASS == button_event_receive_status)
         {
-            // TODO: make decisions based on battery level
-            ble::BatteryDataElement battery_level_msg{
-                battery_measurement_buffer.battery_percentage,
-                battery_measurement_buffer.battery_voltage_level};
-            if (context->_is_ble_system_active)
-            {
-                xQueueReset(context->battery_level_to_ble_handle);
-                const auto batt_info_send_result =
-                    xQueueSend(context->battery_level_to_ble_handle,
-                            reinterpret_cast<void*>(&battery_level_msg),
-                            0);
-                if(pdPASS != batt_info_send_result)
-                {
-                    NRF_LOG_WARNING("state: failed to send batt level to ble");
-                }
-            }
-            // print battery voltage every 10 seconds.
-            print_battery_voltage(battery_measurement_buffer.battery_voltage_level);
-            if (battery_measurement_buffer.battery_voltage_level< 3.1)
-            {
-                const int v_x_10 = static_cast<int>(10.0 * battery_measurement_buffer.battery_voltage_level);
-                NRF_LOG_ERROR("Battery is low (%d.%dv). No operations permitted.", v_x_10 / 10, v_x_10%10);
-                context->_is_battery_low = true;
-                led::CommandQueueElement led_command{led::Color::GREEN, led::State::FAST_GLOW};
-                xQueueSend(context->led_commands_handle, reinterpret_cast<void*>(&led_command), 0);
-
-                if (context->is_record_active)
-                {
-                    NRF_LOG_ERROR("Closing the record due to battery level");
-                    const auto record_stop_result = request_record_stop(*context);
-                    if(decltype(record_stop_result)::OK != record_stop_result)
-                    {
-                        NRF_LOG_ERROR("state: failed to stop record (battery low)");
-                    }
-                    else 
-                    {
-                        const auto closure_result = request_record_closure(*context);
-                        if(decltype(closure_result)::OK != closure_result)
-                        {
-                            NRF_LOG_ERROR("state: failed to close record upon button release");
-
-                        }
-                    }
-                    context->is_record_active = false;
-                }
-            }
+            process_button_event(button_event_buffer.event, *context);
         }
 
+        // Process battery events
+        const auto battery_measurement_receive_status = xQueueReceive(context->battery_measurements_handle, reinterpret_cast<void*>(&battery_measurement_buffer), 0);
+        if(pdPASS == battery_measurement_receive_status)
+        {
+            process_battery_event(battery_measurement_buffer, *context);
+        }
+
+        const auto memory_event_receive_status = xQueueReceive(context->memory_event_handle, &memory_event_buffer, 0);
+        if (pdPASS == memory_event_receive_status)
+        {
+            if (memory_status_buffer.status == memory::Status::ERROR_OUT_OF_MEMORY)
+            {
+                context->memory_status = Context::MemoryStatus::OUT_OF_MEMORY;
+                NRF_LOG_ERROR("state: mem reported out of memory error");
+            }
+        }
+            
+
+        // Handle the deferred NVM initiation 
         if(!is_operation_mode_defined && xTaskGetTickCount() > nvconfig_definition_timestamp)
         {
             is_operation_mode_defined = true;
             load_nvconfig(*context);
         }
 
-        const auto is_timeout_expired = process_timeouts(*context);
-        if (is_timeout_expired && !context->_is_shutdown_demanded)
-        {
-            context->_is_shutdown_demanded = true;
-            context->timestamps.shutdown_procedure_start_timestamp = xTaskGetTickCount();
-            NRF_LOG_INFO("ready for shutdown. Checking memory");
-            // At this point request a memory check from the task_memory
-            memory::CommandQueueElement cmd{memory::Command::PERFORM_MEMORY_CHECK, {0, 0}};
-            const auto memcheck_res =
-                xQueueSend(context->memory_commands_handle, reinterpret_cast<void*>(&cmd), 0);
-            if (pdPASS != memcheck_res)
-            {
-                // Failed to send the memcheck command => shut the system down.
-                shutdown_ldo();
-            }
-            led::CommandQueueElement led_command{led::Color::PURPLE, led::State::SLOW_GLOW};
-            xQueueSend(context->led_commands_handle, reinterpret_cast<void*>(&led_command), 0);
+        // const auto is_timeout_expired = process_timeouts(*context);
+        // if (is_timeout_expired && !context->_is_shutdown_demanded)
+        // {
+        //     context->_is_shutdown_demanded = true;
+        //     context->timestamps.shutdown_procedure_start_timestamp = xTaskGetTickCount();
+        //     NRF_LOG_INFO("ready for shutdown. Checking memory");
+        //     // At this point request a memory check from the task_memory
+        //     memory::CommandQueueElement cmd{memory::Command::PERFORM_MEMORY_CHECK, {0, 0}};
+        //     const auto memcheck_res =
+        //         xQueueSend(context->memory_commands_handle, reinterpret_cast<void*>(&cmd), 0);
+        //     if (pdPASS != memcheck_res)
+        //     {
+        //         // Failed to send the memcheck command => shut the system down.
+        //         shutdown_ldo();
+        //     }
+        //     led::CommandQueueElement led_command{led::Color::PURPLE, led::State::SLOW_GLOW};
+        //     xQueueSend(context->led_commands_handle, reinterpret_cast<void*>(&led_command), 0);
 
-            static constexpr uint32_t MEMCHECK_INITIAL_RESPONSE_TIMEOUT{15000};
-            static constexpr uint32_t MEMCHECK_FORMAT_TIMEOUT{50000};
-            memory::StatusQueueElement response;
-            xQueueReset(context->memory_status_handle);
-            const auto memcheck_status = xQueueReceive(context->memory_status_handle, &response, MEMCHECK_INITIAL_RESPONSE_TIMEOUT);
-            NRF_LOG_INFO("memcheck completed.");
-            if (pdPASS != memcheck_status || response.status == memory::Status::FORMAT_REQUIRED)
-            {
-                cmd.command_id = memory::Command::FORMAT_FS;
-                const auto format_res =
-                    xQueueSend(context->memory_commands_handle, reinterpret_cast<void*>(&cmd), 0);
-                if (pdPASS != format_res)
-                {
-                    // Failed to send the memcheck command => shut the system down.
-                    shutdown_ldo();
-                }
+        //     static constexpr uint32_t MEMCHECK_INITIAL_RESPONSE_TIMEOUT{15000};
+        //     static constexpr uint32_t MEMCHECK_FORMAT_TIMEOUT{50000};
+        //     memory::StatusQueueElement response;
+        //     xQueueReset(context->memory_status_handle);
+        //     const auto memcheck_status = xQueueReceive(context->memory_status_handle, &response, MEMCHECK_INITIAL_RESPONSE_TIMEOUT);
+        //     NRF_LOG_INFO("memcheck completed.");
+        //     if (pdPASS != memcheck_status || response.status == memory::Status::FORMAT_REQUIRED)
+        //     {
+        //         cmd.command_id = memory::Command::FORMAT_FS;
+        //         const auto format_res =
+        //             xQueueSend(context->memory_commands_handle, reinterpret_cast<void*>(&cmd), 0);
+        //         if (pdPASS != format_res)
+        //         {
+        //             // Failed to send the memcheck command => shut the system down.
+        //             shutdown_ldo();
+        //         }
 
-                led_command.state = led::State::FAST_GLOW;
-                xQueueSend(context->led_commands_handle, reinterpret_cast<void*>(&led_command), 0);
-                context->is_memory_busy = true;
+        //         led_command.state = led::State::FAST_GLOW;
+        //         xQueueSend(context->led_commands_handle, reinterpret_cast<void*>(&led_command), 0);
+        //         context->is_memory_busy = true;
 
-                const auto format_status = xQueueReceive(context->memory_status_handle, &response, MEMCHECK_FORMAT_TIMEOUT);
-                if (pdPASS != format_status)
-                {
-                    NRF_LOG_ERROR("FS format has failed");
-                }
-                shutdown_ldo();
-            }
-            else 
-            {
-                // a small delay to flush the logs
-                vTaskDelay(100);
-                shutdown_ldo();
-            }
+        //         const auto format_status = xQueueReceive(context->memory_status_handle, &response, MEMCHECK_FORMAT_TIMEOUT);
+        //         if (pdPASS != format_status)
+        //         {
+        //             NRF_LOG_ERROR("FS format has failed");
+        //         }
+        //         shutdown_ldo();
+        //     }
+        //     else 
+        //     {
+        //         // a small delay to flush the logs
+        //         vTaskDelay(100);
+        //         shutdown_ldo();
+        //     }
 
-        }
+        // }
     }
 }
 
@@ -388,7 +471,7 @@ void process_button_event(button::Event event, Context& context)
     case decltype(operation_mode)::FIELD: {
         if(event == decltype(event)::SINGLE_PRESS_ON)
         {
-            if(context._is_ble_system_active)
+            if(context.is_ble_system_active)
             {
                 const auto ble_disable_status = disable_ble_subsystem(context);
                 if(result::Result::OK != ble_disable_status)
@@ -496,14 +579,14 @@ void process_button_event(button::Event event, Context& context)
 void load_nvconfig(Context& context)
 {
     bool need_to_disable_ble_subsystem{false};
-    if(!context._is_ble_system_active)
+    if(!context.is_ble_system_active)
     {
         if(result::Result::OK != enable_ble_subsystem(context))
         {
             return;
         }
         need_to_disable_ble_subsystem = true;
-        context._is_ble_system_active = true;
+        context.is_ble_system_active = true;
         // Wait to make sure BLE task has been started
         static constexpr uint32_t ble_start_wait_ticks{10};
         vTaskDelay(ble_start_wait_ticks);
@@ -526,7 +609,7 @@ void load_nvconfig(Context& context)
             return;
         }
         // FIXME: so far BLE subsystem can't be stopped/suspended due to how freertos SDH task API is implemented.
-        //context._is_ble_system_active = false;
+        //context.is_ble_system_active = false;
     }
 }
 
@@ -547,7 +630,7 @@ bool is_record_start_by_cli_allowed(Context& context)
 
 result::Result enable_ble_subsystem(Context& context)
 {
-    if(!context._is_ble_system_active)
+    if(!context.is_ble_system_active)
     {
         ble::CommandQueueElement cmd{ble::Command::START};
         const auto ble_start_status =
@@ -557,7 +640,7 @@ result::Result enable_ble_subsystem(Context& context)
             NRF_LOG_ERROR("failed to queue BLE start operation");
             return result::Result::ERROR_GENERAL;
         }
-        context._is_ble_system_active = true;
+        context.is_ble_system_active = true;
     }
 
     return result::Result::OK;
@@ -565,7 +648,7 @@ result::Result enable_ble_subsystem(Context& context)
 
 result::Result disable_ble_subsystem(Context& context)
 {
-    if(context._is_ble_system_active)
+    if(context.is_ble_system_active)
     {
         ble::CommandQueueElement cmd{ble::Command::STOP};
         const auto ble_stop_status =
@@ -575,7 +658,7 @@ result::Result disable_ble_subsystem(Context& context)
             NRF_LOG_ERROR("failed to queue BLE stop operation");
             return result::Result::ERROR_GENERAL;
         }
-        context._is_ble_system_active = false;
+        context.is_ble_system_active = false;
     }
     return result::Result::OK;
 }
@@ -588,7 +671,7 @@ void record_end_callback(TimerHandle_t timer)
         NRF_LOG_ERROR("state: failed to request audio record stop");
     }
 
-    if(context->_should_record_be_stored)
+    if(context->should_record_be_stored)
     {
         const auto closure_result = request_record_closure(*context);
         if(decltype(closure_result)::OK != closure_result)
@@ -678,7 +761,7 @@ bool process_timeouts(Context& context)
     }
 
     // Make sure that erase operation (if running) is for sure completed
-    if (context.is_memory_busy)
+    if (context.memory_status != Context::MemoryStatus::READY)
     {
         return false;
     }
@@ -831,7 +914,7 @@ void process_cli_command(logger::CliCommand cliCommand, uint32_t* args, Context&
     }
 }
 
-static button::ButtonState fetch_button_state(Context& context)
+button::ButtonState fetch_button_state(Context& context)
 {
     static constexpr uint32_t max_response_wait_time{50};
     button::ButtonState result = button::ButtonState::UNKNOWN;
@@ -855,6 +938,54 @@ static button::ButtonState fetch_button_state(Context& context)
 
     NRF_LOG_WARNING("state: failed to receive button state");
     return result;
+}
+
+void process_battery_event(battery::MeasurementsQueueElement measurement, Context& context)
+{
+    // TODO: make decisions based on battery level
+    ble::BatteryDataElement battery_level_msg{ measurement.battery_percentage, measurement.battery_voltage_level};
+    if (context.is_ble_system_active)
+    {
+        xQueueReset(context.battery_level_to_ble_handle);
+        const auto batt_info_send_result =
+            xQueueSend(context.battery_level_to_ble_handle, reinterpret_cast<void*>(&battery_level_msg), 0);
+        if(pdPASS != batt_info_send_result)
+        {
+            NRF_LOG_WARNING("state: failed to send batt level to ble");
+        }
+    }
+    // print battery voltage every 10 seconds.
+    print_battery_voltage(battery_measurement_buffer.battery_voltage_level);
+    if (measurement.battery_voltage_level< 3.1)
+    {
+        const int v_x_10 = static_cast<int>(10.0 * battery_measurement_buffer.battery_voltage_level);
+        NRF_LOG_ERROR("Battery is low (%d.%dv). No operations permitted.", v_x_10 / 10, v_x_10%10);
+
+        // next iteration of FSM processing will make a decision based on this flag
+        context.is_battery_low = true;
+
+        // xQueueSend(context->led_commands_handle, reinterpret_cast<void*>(&led_command), 0);
+
+        // if (context->is_record_active)
+        // {
+        //     NRF_LOG_ERROR("Closing the record due to battery level");
+        //     const auto record_stop_result = request_record_stop(*context);
+        //     if(decltype(record_stop_result)::OK != record_stop_result)
+        //     {
+        //         NRF_LOG_ERROR("state: failed to stop record (battery low)");
+        //     }
+        //     else 
+        //     {
+        //         const auto closure_result = request_record_closure(*context);
+        //         if(decltype(closure_result)::OK != closure_result)
+        //         {
+        //             NRF_LOG_ERROR("state: failed to close record upon button release");
+
+        //         }
+        //     }
+        //     context->is_record_active = false;
+        // }
+    }
 }
 
 } // namespace systemstate

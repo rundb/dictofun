@@ -63,6 +63,7 @@ application::QueueDescriptor<audio::CodecOutputType, 4>              audio_data_
 
 application::QueueDescriptor<memory::CommandQueueElement, 1>         memory_commands_queue;
 application::QueueDescriptor<memory::StatusQueueElement, 1>          memory_status_queue; 
+application::QueueDescriptor<memory::EventQueueElement, 1>           memory_event_queue; 
 
 application::QueueDescriptor<ble::CommandQueueElement, 2>            ble_commands_queue;
 application::QueueDescriptor<ble::RequestQueueElement, 1>            ble_requests_queue;
@@ -174,6 +175,12 @@ int main()
 
     const auto memory_status_queue_init_result = memory_status_queue.init();
     if(result::Result::OK != memory_status_queue_init_result)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
+    const auto memory_event_queue_init_result = memory_event_queue.init();
+    if(result::Result::OK != memory_event_queue_init_result)
     {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
@@ -308,6 +315,7 @@ int main()
     systemstate_context.audio_tester_commands_handle = audio_tester_commands_queue.handle;
     systemstate_context.memory_commands_handle = memory_commands_queue.handle;
     systemstate_context.memory_status_handle = memory_status_queue.handle;
+    systemstate_context.memory_event_handle = memory_event_queue.handle;
     systemstate_context.ble_commands_handle = ble_commands_queue.handle;
     systemstate_context.ble_requests_handle = ble_requests_queue.handle;
     systemstate_context.ble_keepalive_handle = ble_keepalive_queue.handle;
@@ -327,6 +335,7 @@ int main()
 
     memory_context.command_queue = memory_commands_queue.handle;
     memory_context.status_queue = memory_status_queue.handle;
+    memory_context.event_queue = memory_event_queue.handle;
     memory_context.command_from_ble_queue = ble_to_mem_commands_queue.handle;
     memory_context.status_to_ble_queue = ble_from_mem_status_queue.handle;
     memory_context.data_to_ble_queue = ble_from_mem_data_queue.handle;
