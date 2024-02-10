@@ -80,6 +80,8 @@ struct myfs_t
     uint32_t buffer_position{0};
 
     bool is_file_open{false};
+    bool is_full{false};
+    bool is_corrupt{false};
 
     uint32_t current_id_search_pos{single_file_descriptor_size_bytes};
 

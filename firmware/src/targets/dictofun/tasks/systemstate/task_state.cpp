@@ -243,20 +243,23 @@ void task_system_state(void* context_ptr)
             }
             case SystemState::BLE_OPERATION:
             {
-                // Process timeouts and events from the buttons
-                const auto button_state = fetch_button_state(*context);
-                if (button::ButtonState::PRESSED == button_state)
+                // Process timeouts and events from the buttons (but only if we still have memory)
+                if (context->memory_status != Context::MemoryStatus::OUT_OF_MEMORY)
                 {
-                    // stop BLE subsystem
-                    const auto disabling_result = disable_ble_subsystem(*context);
-                    if (result::Result::OK != disabling_result)
+                    const auto button_state = fetch_button_state(*context);
+                    if (button::ButtonState::PRESSED == button_state)
                     {
-                        NRF_LOG_ERROR("state: ble disable request has failed");
-                        // TODO: define appropriate action
-                    }
+                        // stop BLE subsystem
+                        const auto disabling_result = disable_ble_subsystem(*context);
+                        if (result::Result::OK != disabling_result)
+                        {
+                            NRF_LOG_ERROR("state: ble disable request has failed");
+                            // TODO: define appropriate action
+                        }
 
-                    // set back the record prepare state
-                    next_state = SystemState::RECORD_PREPARE;
+                        // set back the record prepare state
+                        next_state = SystemState::RECORD_PREPARE;
+                    }
                 }
 
                 if (context->is_battery_low)
@@ -323,8 +326,18 @@ void task_system_state(void* context_ptr)
             case SystemState::MEMORY_IS_CORRUPT:
             {
                 // issue repair command, stay in this state until memory reports readyness, then shutdown
-                NRF_LOG_ERROR("memory is corrupt");
-                vTaskDelay(1000);
+                if (!context->timestamps.has_memory_issue_detection_timestamp_been_updated())
+                {
+                    context->timestamps.memory_issue_detected_timestamp = xTaskGetTickCount();
+                }
+                else 
+                {
+                    static constexpr uint32_t memory_issue_indication_timeout{5000};
+                    if ((xTaskGetTickCount() - context->timestamps.memory_issue_detected_timestamp) >= memory_issue_indication_timeout)
+                    {
+                        next_state = SystemState::SHUTDOWN;
+                    }
+                }
                 break;
             }
             case SystemState::SHUTDOWN:
@@ -362,7 +375,6 @@ void task_system_state(void* context_ptr)
 
             context->system_state = next_state;
             handle_led_indication(context->system_state);
-            
         }
 
         vTaskDelay(10);
@@ -911,28 +923,6 @@ void process_battery_event(battery::MeasurementsQueueElement measurement, Contex
 
         // next iteration of FSM processing will make a decision based on this flag
         context.is_battery_low = true;
-
-        // xQueueSend(context->led_commands_handle, reinterpret_cast<void*>(&led_command), 0);
-
-        // if (context->is_record_active)
-        // {
-        //     NRF_LOG_ERROR("Closing the record due to battery level");
-        //     const auto record_stop_result = request_record_stop(*context);
-        //     if(decltype(record_stop_result)::OK != record_stop_result)
-        //     {
-        //         NRF_LOG_ERROR("state: failed to stop record (battery low)");
-        //     }
-        //     else 
-        //     {
-        //         const auto closure_result = request_record_closure(*context);
-        //         if(decltype(closure_result)::OK != closure_result)
-        //         {
-        //             NRF_LOG_ERROR("state: failed to close record upon button release");
-
-        //         }
-        //     }
-        //     context->is_record_active = false;
-        // }
     }
 }
 

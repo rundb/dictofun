@@ -181,6 +181,8 @@ int myfs_mount(myfs_t& myfs)
                 }
                 if (myfs.next_file_start_address >= (config.block_count * config.block_size - 1024))
                 {
+                    myfs.is_mounted = true;
+                    myfs.is_full = true;
                     return NO_SPACE_LEFT;
                 }
 
@@ -224,6 +226,8 @@ int myfs_mount(myfs_t& myfs)
                     }
                     else 
                     {
+                        myfs.is_mounted = true;
+                        myfs.is_full = true;
                         return NO_SPACE_LEFT;
                     }
                 }

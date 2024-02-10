@@ -18,7 +18,6 @@ namespace filesystem
 
 static ::filesystem::myfs_file_t _active_file;
 
-static bool _is_file_open{false};
 static bool _is_files_list_next_needed{false};
 static constexpr uint32_t invalid_files_count{0xFEFEFEFDUL};
 static uint32_t _total_files_left{0};
@@ -33,6 +32,12 @@ result::Result init_fs(::filesystem::myfs_t& fs)
     }
     if(err != 0)
     {
+        if (err == ::filesystem::NO_SPACE_LEFT)
+        {
+            // Full filesystem is discovered. System has to first assure that formatting is allowed
+            NRF_LOG_ERROR("mem: full FS discovered. First make sure we can format it");
+            return result::Result::ERROR_OUT_OF_MEMORY;
+        }
         NRF_LOG_WARNING("mem: formatting FS");
         err = myfs_format(fs);
         if(err != 0)
@@ -49,7 +54,7 @@ result::Result init_fs(::filesystem::myfs_t& fs)
     }
 
     _is_files_list_next_needed = false;
-    _is_file_open = false;
+    _active_file.is_open = false;
 
     return result::Result::OK;
 }
@@ -63,7 +68,7 @@ result::Result deinit_fs(::filesystem::myfs_t& fs)
         {
             NRF_LOG_ERROR("failed to close active file at deinit stage");
         }
-        _is_file_open = false;
+        _active_file.is_open = false;
     }
     const auto unmount_result = myfs_unmount(fs);
     if(unmount_result < 0)
@@ -76,15 +81,18 @@ result::Result deinit_fs(::filesystem::myfs_t& fs)
 
 result::Result close_file(::filesystem::myfs_t& fs)
 {
-    // TODO: add comparison of the name to the name of an active file
+    if (!_active_file.is_open)
+    {
+        return result::Result::OK;
+    }
     const auto close_result = myfs_file_close(fs, _active_file);
     if(close_result < 0)
     {
         NRF_LOG_ERROR("failed to close active file");
         return result::Result::ERROR_GENERAL;
     }
-    // todo: consider removing this var, as it exists within the _active_file
-    _is_file_open = false;
+
+    _active_file.is_open = false;
     return result::Result::OK;
 }
 
@@ -265,7 +273,7 @@ result::Result open_file(::filesystem::myfs_t& fs, const char* name, uint32_t& f
     }
     file_size_bytes = get_size_result;
     
-    _is_file_open = true;
+    _active_file.is_open = true;
     return result::Result::OK;
 }
 
@@ -323,6 +331,11 @@ result::Result create_file(::filesystem::myfs_t& fs, uint8_t* file_id)
     {
         return result::Result::ERROR_GENERAL;
     }
+
+    if (fs.is_full)
+    {
+        return result::Result::ERROR_OUT_OF_MEMORY;
+    }
     const auto create_res = myfs_file_open(fs, _active_file, file_id, ::filesystem::MYFS_CREATE_FLAG);
 
     if(create_res < 0)
@@ -334,7 +347,7 @@ result::Result create_file(::filesystem::myfs_t& fs, uint8_t* file_id)
         }
         return result::Result::ERROR_GENERAL;
     }
-    _is_file_open = true;
+    _active_file.is_open = true;
     return result::Result::OK;
 }
 
@@ -343,6 +356,10 @@ result::Result write_data(::filesystem::myfs_t& fs, uint8_t* data, uint32_t data
     if (nullptr == data)
     {
         return result::Result::ERROR_GENERAL;
+    }
+    if (!fs.is_full)
+    {
+        return result::Result::ERROR_OUT_OF_MEMORY;
     }
     const auto write_result = myfs_file_write(fs, _active_file, reinterpret_cast<void *>(data), data_size);
     if(write_result < 0)

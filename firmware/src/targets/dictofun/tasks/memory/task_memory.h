@@ -86,6 +86,8 @@ struct Context
     QueueHandle_t data_to_ble_queue{nullptr};
     QueueHandle_t commands_to_rtc_queue{nullptr};
     QueueHandle_t response_from_rtc_queue{nullptr};
+
+    bool is_out_of_memory_detected{false};
 };
 
 } // namespace memory
