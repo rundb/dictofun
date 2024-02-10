@@ -62,6 +62,7 @@ void handle_led_indication(const SystemState system_state);
 
 enum class MemoryOwner{BLE, AUDIO};
 void set_memory_ownership(const MemoryOwner owner, Context& context);
+void perform_pre_shutdown_check(Context& context);
 
 // Implements state machine, described in the diagram `df-states.drawio.png`
 void task_system_state(void* context_ptr)
@@ -210,7 +211,6 @@ void task_system_state(void* context_ptr)
                     break;
                 }
 
-                // in both cases proceed eventually to record end state
                 break;
             }
             case SystemState::RECORD_END:
@@ -259,19 +259,60 @@ void task_system_state(void* context_ptr)
                     next_state = SystemState::RECORD_PREPARE;
                 }
 
+                if (context->is_battery_low)
+                {
+                    const auto disabling_result = disable_ble_subsystem(*context);
+                    if (result::Result::OK != disabling_result)
+                    {
+                        NRF_LOG_ERROR("state: ble disable request has failed");
+                    }
+                    next_state = SystemState::BATTERY_LOW;
+                }
+
+                if (context->has_operation_timeout_expired)
+                {
+                    NRF_LOG_INFO("state: operation timeout has expired");
+                    const auto disabling_result = disable_ble_subsystem(*context);
+                    if (result::Result::OK != disabling_result)
+                    {
+                        NRF_LOG_ERROR("state: ble disable request has failed");
+                    }
+                    next_state = SystemState::SHUTDOWN;
+                }
+
                 break;
             }
             case SystemState::BATTERY_LOW:
             {
                 // indicate with color, after several seconds - shutdown (before shutdown make sure button is not pressed)
+                if (!context->timestamps.has_low_batt_detection_timestamp_been_updated())
+                {
+                    context->timestamps.low_battery_detected_timestamp = xTaskGetTickCount();
+                }
+                else 
+                {
+                    static constexpr uint32_t low_battery_indication_timeout{5000};
+                    if ((xTaskGetTickCount() - context->timestamps.low_battery_detected_timestamp) >= low_battery_indication_timeout)
+                    {
+                        next_state = SystemState::SHUTDOWN;
+                    }
+                }
                 break;
             }
             case SystemState::OUT_OF_MEMORY:
             {
-                // Indicate with color, after several seconds (and if the button is not pressed) - switch to BLE operation
-                NRF_LOG_ERROR("out of memory");
-                
-                vTaskDelay(1000);
+                if (!context->timestamps.has_memory_issue_detection_timestamp_been_updated())
+                {
+                    context->timestamps.memory_issue_detected_timestamp = xTaskGetTickCount();
+                }
+                else 
+                {
+                    static constexpr uint32_t memory_issue_indication_timeout{5000};
+                    if ((xTaskGetTickCount() - context->timestamps.memory_issue_detected_timestamp) >= memory_issue_indication_timeout)
+                    {
+                        next_state = SystemState::BLE_OPERATION;
+                    }
+                }
                 break;
             }
             case SystemState::DEVELOPMENT_MODE:
@@ -288,8 +329,19 @@ void task_system_state(void* context_ptr)
             }
             case SystemState::SHUTDOWN:
             {
-                NRF_LOG_ERROR("shutdown state");
-                vTaskDelay(1000);
+                if (!context->is_battery_low)
+                {
+                    perform_pre_shutdown_check(*context);
+                    vTaskDelay(50);
+                }
+                // TODO: at this point add a check that button is not pressed
+                bool is_button_pressed = true;
+                while (is_button_pressed)
+                {
+                    vTaskDelay(1);
+                    const auto button_state = fetch_button_state(*context);
+                    is_button_pressed = !(button::ButtonState::RELEASED == button_state);
+                }
                 shutdown_ldo();
                 break;
             }
@@ -378,9 +430,13 @@ void task_system_state(void* context_ptr)
                 context->memory_status = Context::MemoryStatus::OUT_OF_MEMORY;
                 NRF_LOG_ERROR("state: mem reported out of memory error");
             }
+            else if (memory_event_buffer.status == memory::Status::ERROR_GENERAL || memory_event_buffer.status == memory::Status::ERROR_FATAL)
+            {
+                context->memory_status = Context::MemoryStatus::CORRUPT;
+                NRF_LOG_ERROR("state: mem reported memory corruption error");
+            }
         }
             
-
         // Handle the deferred NVM initiation 
         if(!is_operation_mode_defined && xTaskGetTickCount() > nvconfig_definition_timestamp)
         {
@@ -388,60 +444,7 @@ void task_system_state(void* context_ptr)
             load_nvconfig(*context);
         }
 
-        // const auto is_timeout_expired = process_timeouts(*context);
-        // if (is_timeout_expired && !context->_is_shutdown_demanded)
-        // {
-        //     context->_is_shutdown_demanded = true;
-        //     context->timestamps.shutdown_procedure_start_timestamp = xTaskGetTickCount();
-        //     NRF_LOG_INFO("ready for shutdown. Checking memory");
-        //     // At this point request a memory check from the task_memory
-        //     memory::CommandQueueElement cmd{memory::Command::PERFORM_MEMORY_CHECK, {0, 0}};
-        //     const auto memcheck_res =
-        //         xQueueSend(context->memory_commands_handle, reinterpret_cast<void*>(&cmd), 0);
-        //     if (pdPASS != memcheck_res)
-        //     {
-        //         // Failed to send the memcheck command => shut the system down.
-        //         shutdown_ldo();
-        //     }
-        //     led::CommandQueueElement led_command{led::Color::PURPLE, led::State::SLOW_GLOW};
-        //     xQueueSend(context->led_commands_handle, reinterpret_cast<void*>(&led_command), 0);
-
-        //     static constexpr uint32_t MEMCHECK_INITIAL_RESPONSE_TIMEOUT{15000};
-        //     static constexpr uint32_t MEMCHECK_FORMAT_TIMEOUT{50000};
-        //     memory::StatusQueueElement response;
-        //     xQueueReset(context->memory_status_handle);
-        //     const auto memcheck_status = xQueueReceive(context->memory_status_handle, &response, MEMCHECK_INITIAL_RESPONSE_TIMEOUT);
-        //     NRF_LOG_INFO("memcheck completed.");
-        //     if (pdPASS != memcheck_status || response.status == memory::Status::FORMAT_REQUIRED)
-        //     {
-        //         cmd.command_id = memory::Command::FORMAT_FS;
-        //         const auto format_res =
-        //             xQueueSend(context->memory_commands_handle, reinterpret_cast<void*>(&cmd), 0);
-        //         if (pdPASS != format_res)
-        //         {
-        //             // Failed to send the memcheck command => shut the system down.
-        //             shutdown_ldo();
-        //         }
-
-        //         led_command.state = led::State::FAST_GLOW;
-        //         xQueueSend(context->led_commands_handle, reinterpret_cast<void*>(&led_command), 0);
-        //         context->is_memory_busy = true;
-
-        //         const auto format_status = xQueueReceive(context->memory_status_handle, &response, MEMCHECK_FORMAT_TIMEOUT);
-        //         if (pdPASS != format_status)
-        //         {
-        //             NRF_LOG_ERROR("FS format has failed");
-        //         }
-        //         shutdown_ldo();
-        //     }
-        //     else 
-        //     {
-        //         // a small delay to flush the logs
-        //         vTaskDelay(100);
-        //         shutdown_ldo();
-        //     }
-
-        // }
+        context->has_operation_timeout_expired = process_timeouts(*context);
     }
 }
 
@@ -556,7 +559,7 @@ void load_nvconfig(Context& context)
             return;
         }
         // FIXME: so far BLE subsystem can't be stopped/suspended due to how freertos SDH task API is implemented.
-        //context.is_ble_system_active = false;
+        // context.is_ble_system_active = false;
     }
 }
 
@@ -709,12 +712,6 @@ bool process_timeouts(Context& context)
                 context.timestamps.last_ble_activity_timestamp = xTaskGetTickCount();
             }
         }
-    }
-
-    // Make sure that erase operation (if running) is for sure completed
-    if (context.memory_status != Context::MemoryStatus::READY)
-    {
-        return false;
     }
 
     // At this stage depending on record state and presence of timestamps make decision
@@ -1040,6 +1037,51 @@ void set_memory_ownership(const MemoryOwner owner, Context& context)
     {
         NRF_LOG_ERROR(
             "state: memory ownership switch ->%s has failed", (owner == MemoryOwner::AUDIO) ? "audio" : "BLE");
+    }
+}
+
+void perform_pre_shutdown_check(Context& context)
+{
+    context.timestamps.shutdown_procedure_start_timestamp = xTaskGetTickCount();
+    NRF_LOG_INFO("ready for shutdown. Checking memory");
+    // At this point request a memory check from the task_memory
+    memory::CommandQueueElement cmd{memory::Command::PERFORM_MEMORY_CHECK, {0, 0}};
+    const auto memcheck_res =
+        xQueueSend(context.memory_commands_handle, reinterpret_cast<void*>(&cmd), 0);
+    if (pdPASS != memcheck_res)
+    {
+        // Failed to send the memcheck command => shut the system down.
+        return;
+    }
+
+    static constexpr uint32_t MEMCHECK_INITIAL_RESPONSE_TIMEOUT{5000};
+    static constexpr uint32_t MEMCHECK_FORMAT_TIMEOUT{50000};
+    memory::StatusQueueElement response;
+    xQueueReset(context.memory_status_handle);
+    const auto memcheck_status = xQueueReceive(context.memory_status_handle, &response, MEMCHECK_INITIAL_RESPONSE_TIMEOUT);
+    NRF_LOG_INFO("memcheck completed.");
+    if (pdPASS != memcheck_status || response.status == memory::Status::FORMAT_REQUIRED)
+    {
+        cmd.command_id = memory::Command::FORMAT_FS;
+        const auto format_res =
+            xQueueSend(context.memory_commands_handle, reinterpret_cast<void*>(&cmd), 0);
+        if (pdPASS != format_res)
+        {
+            NRF_LOG_ERROR("state: memory format request during pre-shutdown check has failed");
+            return;
+        }
+
+        context.memory_status = Context::MemoryStatus::BUSY;
+
+        const auto format_status = xQueueReceive(context.memory_status_handle, &response, MEMCHECK_FORMAT_TIMEOUT);
+        if (pdPASS != format_status)
+        {
+            NRF_LOG_ERROR("FS format has failed");
+        }
+    }
+    else 
+    {
+        NRF_LOG_INFO("system ok. can shutdown");
     }
 }
 

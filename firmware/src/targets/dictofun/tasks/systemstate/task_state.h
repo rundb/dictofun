@@ -65,6 +65,7 @@ struct Context
     bool is_ble_system_active{false};
     bool is_shutdown_demanded{false};
     bool is_battery_low{false};
+    bool has_operation_timeout_expired{false};
 
     // bool is_memory_busy{false};
     enum class MemoryStatus
@@ -88,6 +89,8 @@ struct Context
         uint32_t last_ble_activity_timestamp{timestamp_uninitialized_value};
         uint32_t ble_disconnect_event_timestamp{timestamp_uninitialized_value};
         uint32_t shutdown_procedure_start_timestamp{timestamp_uninitialized_value};
+        uint32_t low_battery_detected_timestamp{timestamp_uninitialized_value};
+        uint32_t memory_issue_detected_timestamp{timestamp_uninitialized_value};
 
         bool has_start_timestamp_been_updated()
         {
@@ -100,6 +103,14 @@ struct Context
         bool has_ble_timestamp_been_updated()
         {
             return last_ble_activity_timestamp != timestamp_uninitialized_value;
+        }
+        bool has_low_batt_detection_timestamp_been_updated()
+        {
+            return low_battery_detected_timestamp != timestamp_uninitialized_value;
+        }
+        bool has_memory_issue_detection_timestamp_been_updated()
+        {
+            return memory_issue_detected_timestamp != timestamp_uninitialized_value;
         }
         void reset()
         {
@@ -131,6 +142,7 @@ void load_nvconfig(Context& context);
 application::Mode get_operation_mode();
 bool is_record_start_by_cli_allowed(Context& context);
 result::Result launch_record_timer(const TickType_t record_duration, Context& context);
+
 void shutdown_ldo();
 void configure_power_latch();
 bool process_timeouts(Context& context);
