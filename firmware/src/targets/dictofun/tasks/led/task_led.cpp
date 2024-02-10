@@ -78,6 +78,7 @@ bool is_blue_active(const Color color)
            Color::WHITE == color;
 }
 
+// This task receives commands from the currently active control system: either task_state or task_ble
 void task_led(void* context_ptr)
 {
     Context& context{*(reinterpret_cast<Context*>(context_ptr))};

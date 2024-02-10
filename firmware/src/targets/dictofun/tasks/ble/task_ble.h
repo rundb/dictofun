@@ -24,6 +24,7 @@ struct Context
     QueueHandle_t data_from_mem_queue{nullptr};
     QueueHandle_t commands_to_rtc_queue{nullptr};
     QueueHandle_t battery_to_ble_queue{nullptr};
+    QueueHandle_t ble_to_led_queue{nullptr};
 };
 
 enum class Command

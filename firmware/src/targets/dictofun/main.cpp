@@ -358,6 +358,7 @@ int main()
     ble_context.data_from_mem_queue = ble_from_mem_data_queue.handle;
     ble_context.commands_to_rtc_queue = rtc_commands_queue.handle;
     ble_context.battery_to_ble_queue = ble_batt_info_queue.handle;
+    ble_context.ble_to_led_queue = led_commands_queue.handle;
     const auto ble_task_init_result = ble_task.init(ble::task_ble, "BLE", &ble_context);
 
     if(result::Result::OK != ble_task_init_result)

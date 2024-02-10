@@ -19,7 +19,8 @@ enum class State
     OFF = 0,
     SLOW_GLOW = 1,
     FAST_GLOW = 2,
-    ON = 3,
+    FAST_GLOW_ALT = 3, // Intention: make a saw-signal
+    ON = 4,
 
     COUNT,
 };

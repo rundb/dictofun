@@ -46,6 +46,8 @@ constexpr TickType_t battery_request_wait_ticks_type{0};
 
 constexpr TickType_t battery_print_period{10000};
 
+constexpr TickType_t idle_ble_start_delay{800};
+
 Context* context{nullptr};
 
 void analyze_reset_reason(Context& context);
@@ -56,6 +58,10 @@ void switch_to_ble_mode(Context& context);
 static void process_cli_command(logger::CliCommand cliCommand, uint32_t* args, Context& context, application::NvConfig& nvConfig);
 static button::ButtonState fetch_button_state(Context& context);
 
+void handle_led_indication(const SystemState system_state);
+
+enum class MemoryOwner{BLE, AUDIO};
+void set_memory_ownership(const MemoryOwner owner, Context& context);
 
 // Implements state machine, described in the diagram `df-states.drawio.png`
 void task_system_state(void* context_ptr)
@@ -107,41 +113,17 @@ void task_system_state(void* context_ptr)
                 case button::ButtonState::RELEASED: default:
                 {
                     // switch to BLE operation
-                    context->system_state = SystemState::BLE_OPERATION;
+                    context->system_state = SystemState::INIT;
                     break;
                 }
             }
-
-            // led::CommandQueueElement led_command{led::Color::GREEN, led::State::SLOW_GLOW};
-            // xQueueSend(context->led_commands_handle, reinterpret_cast<void*>(&led_command), 0);
-            // TODO: add BLE enable, if button was not pressed
         }
     }
 
-    // wait until a readiness confirmation from task_memory is received
-    // memory::StatusQueueElement response;
-    // response.status = memory::Status::ERROR_GENERAL;
-    // int32_t timeout{100};
-    // context->is_memory_busy = true;
-    // while (context->is_memory_busy && (--timeout) > 0)
-    // {
-    //     const auto receiveResult = xQueueReceive(context->memory_status_handle, reinterpret_cast<void *>(&response), 10);
-    //     if (receiveResult == pdPASS) {
-    //         if (response.status == memory::Status::IS_READY)
-    //         {
-    //             context->is_memory_busy = false;
-    //             NRF_LOG_INFO("state: memory has reported readiness");
-    //         }
-    //         else {
-    //             NRF_LOG_ERROR("state: memory readyness is not confirmed");
-    //             // System shall wait until memory is ready
-    //         }
-    //         break;
-    //     }
-    // }
-
     SystemState next_state{context->system_state};
     NRF_LOG_INFO("state: starting main with state %d", context->system_state);
+
+    handle_led_indication(context->system_state);
 
     while(1)
     {
@@ -149,6 +131,18 @@ void task_system_state(void* context_ptr)
         {
             case SystemState::INIT:
             {
+                // check the button
+                // if it is still released - wait until BLE is ready
+                const auto button_state = fetch_button_state(*context);
+                if (button_state == button::ButtonState::PRESSED)
+                {
+                    next_state = SystemState::RECORD_PREPARE;
+                }
+                if (xTaskGetTickCount() >= idle_ble_start_delay)
+                {
+                    next_state = SystemState::BLE_OPERATION;
+                }
+
                 break;
             }
             case SystemState::RECORD_PREPARE:
@@ -161,7 +155,9 @@ void task_system_state(void* context_ptr)
                 
                 if (context->memory_status == Context::MemoryStatus::READY)
                 {
-                    // if ready - create the file and switch to recording state
+                    set_memory_ownership(MemoryOwner::AUDIO, *context);
+
+
                     const auto create_result = request_record_creation(*context);
                     if (result::Result::OK != create_result)
                     {
@@ -214,7 +210,6 @@ void task_system_state(void* context_ptr)
                     break;
                 }
 
-
                 // in both cases proceed eventually to record end state
                 break;
             }
@@ -249,16 +244,21 @@ void task_system_state(void* context_ptr)
             case SystemState::BLE_OPERATION:
             {
                 // Process timeouts and events from the buttons
-                
-                static uint32_t BLE_counter_printout = 0;
-                ++BLE_counter_printout;
-                if (BLE_counter_printout % 500 == 0)
+                const auto button_state = fetch_button_state(*context);
+                if (button::ButtonState::PRESSED == button_state)
                 {
-                    NRF_LOG_ERROR("ble operation");
+                    // stop BLE subsystem
+                    const auto disabling_result = disable_ble_subsystem(*context);
+                    if (result::Result::OK != disabling_result)
+                    {
+                        NRF_LOG_ERROR("state: ble disable request has failed");
+                        // TODO: define appropriate action
+                    }
+
+                    // set back the record prepare state
+                    next_state = SystemState::RECORD_PREPARE;
                 }
 
-                // Also change the BLE indication depending on the status change
-                // - slow glow - before and after connection, fast - during the connection, extra fast - during file transactions
                 break;
             }
             case SystemState::BATTERY_LOW:
@@ -297,7 +297,20 @@ void task_system_state(void* context_ptr)
         if (context->system_state != next_state)
         {
             NRF_LOG_INFO("state: transition %d->%d", (int)context->system_state, (int)next_state);
+            // change state from another state to BLE state needs additional processing (to avoid adding extra context variable)
+            if (next_state == SystemState::BLE_OPERATION)
+            {
+                const auto ble_start_result = enable_ble_subsystem(*context);
+                if (result::Result::OK != ble_start_result)
+                {
+                    NRF_LOG_ERROR("state: ble enablement has failed");
+                    // TODO: define appropriate actions
+                }
+            }
+
             context->system_state = next_state;
+            handle_led_indication(context->system_state);
+            
         }
 
         vTaskDelay(10);
@@ -504,116 +517,6 @@ result::Result request_record_closure(const Context& context)
 
 void process_button_event(button::Event event, Context& context)
 {
-    // const auto operation_mode = get_operation_mode();
-    // switch(operation_mode)
-    // {
-    // case decltype(operation_mode)::DEVELOPMENT: {
-    //     // There is no reaction required in this case
-    //     break;
-    // }
-    // case decltype(operation_mode)::ENGINEERING:
-    // case decltype(operation_mode)::FIELD: {
-    //     if(event == decltype(event)::SINGLE_PRESS_ON)
-    //     {
-    //         if(context.is_ble_system_active)
-    //         {
-    //             const auto ble_disable_status = disable_ble_subsystem(context);
-    //             if(result::Result::OK != ble_disable_status)
-    //             {
-    //                 NRF_LOG_ERROR("state: failed to request BLE disable");
-    //             }
-
-    //             xQueueReset(context.memory_status_handle);
-    //             memory::CommandQueueElement command_to_memory{memory::Command::SELECT_OWNER_AUDIO,
-    //                                                           {0, 0}};
-    //             const auto owner_switch_result = xQueueSend(
-    //                 context.memory_commands_handle, reinterpret_cast<void*>(&command_to_memory), 0);
-    //             if(pdPASS != owner_switch_result)
-    //             {
-    //                 NRF_LOG_ERROR("state: failed to request owner switch to audio. Record might "
-    //                               "not be saved");
-    //             }
-    //             memory::StatusQueueElement response;
-    //             static constexpr uint32_t memory_ownership_switch_timeout{1000};
-    //             const auto memory_response_result =
-    //                 xQueueReceive(context.memory_status_handle,
-    //                               reinterpret_cast<void*>(&response),
-    //                               memory_ownership_switch_timeout);
-    //             if(pdPASS != memory_response_result ||
-    //                response.status != decltype(response.status)::OK)
-    //             {
-    //                 NRF_LOG_ERROR(
-    //                     "state: memory ownership switch has failed. Record won't be launched");
-    //                 return;
-    //             }
-    //         }
-
-    //         const auto button_event_result = xQueueReceive(context.button_events_handle, &button_event_buffer, 0);
-    //         if (pdPASS == button_event_result)
-    //         {
-    //             // since there is a chance that last operation has taken a while, a new button event may have arrived.
-    //             // Making sure that we process the last button event (so if sequence was OFF-ON - we continue recording)
-    //             while (pdPASS == xQueueReceive(context.button_events_handle, &button_event_buffer, 0));
-    //             if (button_event_buffer.event == button::Event::SINGLE_PRESS_OFF)
-    //             {
-    //                 // enable BLE and don't create a new record
-    //                 context.is_record_active = false;
-    //                 NRF_LOG_INFO("detected a too-short press of the button. enabling BLE");
-    //                 switch_to_ble_mode(context);
-    //                 context.timestamps.reset();
-    //                 return;
-    //             }
-    //         }
-
-    //         context.records_per_launch_counter++;
-    //         const auto creation_result = request_record_creation(context);
-    //         if(decltype(creation_result)::OK != creation_result)
-    //         {
-    //             NRF_LOG_ERROR("state: failed to create record upon button press");
-    //             return;
-    //         }
-    //         context.is_record_active = true;
-    //         const auto record_start_result = request_record_start(context);
-    //         if(decltype(record_start_result)::OK != record_start_result)
-    //         {
-    //             NRF_LOG_ERROR("state: failed to launch record upon button press");
-    //             return;
-    //         }
-    //         NRF_LOG_INFO("state: launched record start");
-    //         context.timestamps.last_record_start_timestamp = xTaskGetTickCount();
-
-    //         // This is the point where LED indication should be changed
-    //         led::CommandQueueElement led_command{led::Color::RED, led::State::FAST_GLOW};
-    //         xQueueSend(context.led_commands_handle, reinterpret_cast<void*>(&led_command), 0);
-
-    //         // Also at this point we should tell BLE to switch to access the real FS (not the simulated one). Operation result in this case doesn't really matter.
-    //         ble::CommandQueueElement cmd{ble::Command::CONNECT_FS};
-    //         xQueueSend(context.ble_commands_handle, reinterpret_cast<void*>(&cmd), 0);
-    //     }
-    //     else
-    //     {
-    //         const auto record_stop_result = request_record_stop(context);
-    //         if(decltype(record_stop_result)::OK != record_stop_result)
-    //         {
-    //             NRF_LOG_ERROR("state: failed to stop record upon button release");
-    //             context.is_record_active = false;
-    //             return;
-    //         }
-    //         const auto closure_result = request_record_closure(context);
-    //         if(decltype(closure_result)::OK != closure_result)
-    //         {
-    //             NRF_LOG_ERROR("state: failed to close record upon button release");
-
-    //         }
-    //         context.is_record_active = false;
-    //         NRF_LOG_INFO("state: stopped and saved record");
-
-    //         switch_to_ble_mode(context);
-    //         context.timestamps.reset();
-    //     }
-    //     break;
-    // }
-    // }
 }
 
 /// @brief Unfortunately, nvconfig can't contain all dependencies within the module.
@@ -674,11 +577,14 @@ bool is_record_start_by_cli_allowed(Context& context)
 
 result::Result enable_ble_subsystem(Context& context)
 {
+    set_memory_ownership(MemoryOwner::BLE, context);
+    static constexpr uint32_t ble_activation_wait_ticks{200};
+
     if(!context.is_ble_system_active)
     {
         ble::CommandQueueElement cmd{ble::Command::START};
         const auto ble_start_status =
-            xQueueSend(context.ble_commands_handle, reinterpret_cast<void*>(&cmd), 0);
+            xQueueSend(context.ble_commands_handle, reinterpret_cast<void*>(&cmd), ble_activation_wait_ticks);
         if(ble_start_status != pdPASS)
         {
             NRF_LOG_ERROR("failed to queue BLE start operation");
@@ -686,6 +592,7 @@ result::Result enable_ble_subsystem(Context& context)
         }
         context.is_ble_system_active = true;
     }
+    NRF_LOG_INFO("BLE start command has been sent");
 
     return result::Result::OK;
 }
@@ -1029,6 +936,110 @@ void process_battery_event(battery::MeasurementsQueueElement measurement, Contex
         //     }
         //     context->is_record_active = false;
         // }
+    }
+}
+
+void handle_led_indication(const SystemState system_state)
+{
+    led::CommandQueueElement cmd{led::Color::GREEN, led::State::OFF};
+    
+    switch (system_state) 
+    {
+        case SystemState::INIT:
+        {
+            cmd.color = led::Color::GREEN;
+            cmd.state = led::State::SLOW_GLOW;
+            break;
+        }
+        case SystemState::BATTERY_LOW:
+        {
+            cmd.color = led::Color::YELLOW;
+            cmd.state = led::State::FAST_GLOW;
+            break;
+        }
+        case SystemState::DEVELOPMENT_MODE:
+        {
+            cmd.color = led::Color::WHITE;
+            cmd.state = led::State::SLOW_GLOW;
+            break;
+        }
+        case SystemState::RECORD_PREPARE:
+        {
+            cmd.color = led::Color::GREEN;
+            cmd.state = led::State::FAST_GLOW;
+            break;
+        }
+        case SystemState::RECORDING:
+        {
+            cmd.color = led::Color::RED;
+            cmd.state = led::State::SLOW_GLOW;
+            break;
+        }
+        case SystemState::RECORD_END:
+        {
+            cmd.color = led::Color::RED;
+            cmd.state = led::State::SLOW_GLOW;
+            break;
+        }
+        case SystemState::BLE_OPERATION:
+        {
+            // Only the initial state, afterwards BLE sybsystem controls LED
+            cmd.color = led::Color::DARK_BLUE;
+            cmd.state = led::State::SLOW_GLOW;
+            break;
+        }
+        case SystemState::OUT_OF_MEMORY:
+        {
+            cmd.color = led::Color::PURPLE;
+            cmd.state = led::State::SLOW_GLOW;
+            break;
+        }
+        case SystemState::MEMORY_IS_CORRUPT:
+        {
+            cmd.color = led::Color::PURPLE;
+            cmd.state = led::State::FAST_GLOW;
+            break;
+        }
+        case SystemState::SHUTDOWN:
+        {
+            cmd.color = led::Color::WHITE;
+            cmd.state = led::State::FAST_GLOW;
+            break;
+        }
+    }
+
+    xQueueSend(context->led_commands_handle, reinterpret_cast<void*>(&cmd), 0);
+}
+
+void set_memory_ownership(const MemoryOwner owner, Context& context)
+{
+    // At this point we should tell BLE to switch to access the real FS (not the simulated one). 
+    // Operation result in this case doesn't really matter.
+    ble::CommandQueueElement cmd{ble::Command::CONNECT_FS};
+    xQueueSend(context.ble_commands_handle, reinterpret_cast<void*>(&cmd), 0);
+
+    xQueueReset(context.memory_status_handle);
+    memory::CommandQueueElement command_to_memory{
+        (owner == MemoryOwner::AUDIO) ? 
+            memory::Command::SELECT_OWNER_AUDIO : 
+            memory::Command::SELECT_OWNER_BLE,
+        {0, 0}
+    };
+    const auto owner_switch_result = xQueueSend(
+        context.memory_commands_handle, reinterpret_cast<void*>(&command_to_memory), 0);
+    if(pdPASS != owner_switch_result)
+    {
+        NRF_LOG_ERROR("state: failed to request owner switch to %s", (owner == MemoryOwner::AUDIO) ? "audio" : "BLE");
+    }
+    memory::StatusQueueElement response;
+    static constexpr uint32_t memory_ownership_switch_timeout{1000};
+    const auto memory_response_result =
+        xQueueReceive(context.memory_status_handle, reinterpret_cast<void*>(&response), memory_ownership_switch_timeout);
+    if(pdPASS != memory_response_result ||
+        response.status != decltype(response.status)::OK)
+    {
+        NRF_LOG_ERROR(
+            "state: memory ownership switch ->%s has failed", (owner == MemoryOwner::AUDIO) ? "audio" : "BLE");
     }
 }
 

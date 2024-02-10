@@ -159,10 +159,12 @@ result::Result get_file_info(file_id_type file_id,
 {
     if(!is_fs_communication_valid())
     {
+        NRF_LOG_ERROR("ftsglue::file_info: comms are invalid");
         return result::Result::ERROR_GENERAL;
     }
     if(file_data == nullptr || max_file_data_size == 0)
     {
+        NRF_LOG_ERROR("ftsglue::file_info: invalid params");
         return result::Result::ERROR_INVALID_PARAMETER;
     }
 
