@@ -150,7 +150,7 @@ result::Result enable_ble_subsystem(Context& context);
 result::Result disable_ble_subsystem(Context& context);
 
 result::Result request_record_creation(const Context& context);
-result::Result request_record_start(const Context& context);
+result::Result request_record_start(Context& context);
 result::Result request_record_stop(const Context& context);
 result::Result request_record_closure(const Context& context);
 

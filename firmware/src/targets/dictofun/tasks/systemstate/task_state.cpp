@@ -485,11 +485,13 @@ result::Result request_record_creation(const Context& context)
     return result::Result::OK;
 }
 
-result::Result request_record_start(const Context& context)
+result::Result request_record_start(Context& context)
 {
     audio::CommandQueueElement cmd{audio::Command::RECORD_START};
     const auto record_start_status =
         xQueueSend(context.audio_commands_handle, reinterpret_cast<void*>(&cmd), 0);
+
+    context.timestamps.last_record_start_timestamp = xTaskGetTickCount();
     return (record_start_status == pdPASS) ? result::Result::OK : result::Result::ERROR_GENERAL;
 }
 
@@ -702,11 +704,7 @@ bool process_timeouts(Context& context)
     {
         const auto event = keepalive.event;
         using event_type = decltype(event);
-        if(event == event_type::CONNECTED)
-        {
-            led::CommandQueueElement led_command{led::Color::DARK_BLUE, led::State::FAST_GLOW};
-            xQueueSend(context.led_commands_handle, reinterpret_cast<void*>(&led_command), 0);
-        }
+
         if(event == event_type::CONNECTED || event == event_type::FILESYSTEM_EVENT)
         {
             context.timestamps.last_ble_activity_timestamp = xTaskGetTickCount();
@@ -717,8 +715,6 @@ bool process_timeouts(Context& context)
             {
                 // workaround: since BLE disconnect can happen waaay later than we expect, this timeout reason should be ignored, if more than one record has been made
                 context.timestamps.ble_disconnect_event_timestamp = xTaskGetTickCount();
-                led::CommandQueueElement led_command{led::Color::PURPLE, led::State::SLOW_GLOW};
-                xQueueSend(context.led_commands_handle, reinterpret_cast<void*>(&led_command), 0);
             }
             else {
                 context.timestamps.last_ble_activity_timestamp = xTaskGetTickCount();
@@ -734,7 +730,7 @@ bool process_timeouts(Context& context)
         // Record has never been launched.
         if(tick > norecord_launch_timeout)
         {
-            NRF_LOG_DEBUG("shutdown: norecord timeout");
+            NRF_LOG_INFO("shutdown: norecord timeout");
             return true;
         }
         return false;
@@ -748,7 +744,7 @@ bool process_timeouts(Context& context)
     if(!context.timestamps.has_ble_timestamp_been_updated() &&
        time_since_record_end > after_record_timeout)
     {
-        NRF_LOG_DEBUG("shutdown: after record timeout");
+        NRF_LOG_INFO("shutdown: after record timeout");
         return true;
     }
 
@@ -760,7 +756,7 @@ bool process_timeouts(Context& context)
                 tick - context.timestamps.ble_disconnect_event_timestamp;
             if(time_since_disconnect > ble_after_disconnect_timeout)
             {
-                NRF_LOG_DEBUG("shutdown: after disconnect timeout");
+                NRF_LOG_INFO("shutdown: after disconnect timeout");
                 return true;
             }
         }
@@ -770,14 +766,14 @@ bool process_timeouts(Context& context)
                 tick - context.timestamps.last_ble_activity_timestamp;
             if(time_since_last_keepalive > ble_keepalive_timeout)
             {
-                NRF_LOG_DEBUG("shutdown: after keepalive timeout");
+                NRF_LOG_INFO("shutdown: after keepalive timeout");
                 return true;
             }
         }
     }
     if(tick > max_operation_duration)
     {
-        NRF_LOG_DEBUG("shutdown: after max duration timeout");
+        NRF_LOG_INFO("shutdown: after max duration timeout");
         return true;
     }
     return false;
@@ -809,9 +805,6 @@ void switch_to_ble_mode(Context& context)
     {
         NRF_LOG_ERROR("state: failed to request owner switch to BLE.");
     }
-
-    led::CommandQueueElement led_command{led::Color::DARK_BLUE, led::State::SLOW_GLOW};
-    xQueueSend(context.led_commands_handle, reinterpret_cast<void*>(&led_command), 0);
 
     // Enable BLE subsystem, if it's not enabled yet
     const auto ble_enable_result = enable_ble_subsystem(context);
