@@ -179,6 +179,11 @@ int myfs_mount(myfs_t& myfs)
                 {
                     return IMPLEMENTATION_ERROR;
                 }
+                if (myfs.next_file_start_address >= (config.block_count * config.block_size - 1024))
+                {
+                    return NO_SPACE_LEFT;
+                }
+
                 myfs.is_mounted = true;
                 return 0;
             }
@@ -208,11 +213,19 @@ int myfs_mount(myfs_t& myfs)
                     const auto next_descriptor_address = (last_written_file_idx + 1) * single_file_descriptor_size_bytes;
                     const auto next_file_start_address = last_written_descriptor.start_address + ((last_written_descriptor.file_size / page_size) + 1) * page_size;
                     
-                    myfs.files_count = last_written_file_idx;
-                    myfs.next_file_start_address = next_file_start_address;
-                    myfs.next_file_descriptor_address = next_descriptor_address;
-                    myfs.is_mounted = true;
-                    return 0;
+                    if (next_file_start_address <= (config.block_count * config.block_size))
+                    {
+                        myfs.files_count = last_written_file_idx;
+                        myfs.next_file_start_address = next_file_start_address;
+                        myfs.next_file_descriptor_address = next_descriptor_address;
+                        
+                        myfs.is_mounted = true;
+                        return 0;
+                    }
+                    else 
+                    {
+                        return NO_SPACE_LEFT;
+                    }
                 }
                 else 
                 {

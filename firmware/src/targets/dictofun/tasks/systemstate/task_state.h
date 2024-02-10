@@ -19,16 +19,16 @@ void task_system_state(void* context);
 // Basically corresponds to the particular indication colors.
 enum class SystemState: uint8_t
 {
-    INIT,
-    BATTERY_LOW,
-    DEVELOPMENT_MODE,
-    RECORD_PREPARE,
-    RECORDING,
-    RECORD_END,
-    BLE_OPERATION,
-    OUT_OF_MEMORY,
-    MEMORY_IS_CORRUPT,
-    SHUTDOWN
+    INIT = 0,
+    BATTERY_LOW = 1,
+    DEVELOPMENT_MODE = 2,
+    RECORD_PREPARE = 3,
+    RECORDING = 4,
+    RECORD_END = 5,
+    BLE_OPERATION = 6,
+    OUT_OF_MEMORY = 16,
+    MEMORY_IS_CORRUPT = 17,
+    SHUTDOWN = 32
 };
 
 struct Context
@@ -79,7 +79,7 @@ struct Context
     // This variable tracks the use-case of a record restart before the session end
     uint32_t records_per_launch_counter{0};
 
-    SystemState system_state;
+    SystemState system_state{SystemState::INIT};
 
     struct Timestamps
     {

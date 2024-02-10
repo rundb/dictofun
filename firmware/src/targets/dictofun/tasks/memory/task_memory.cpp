@@ -202,14 +202,14 @@ void task_memory(void* context_ptr)
                                 {
                                     NRF_LOG_ERROR("mem: file closure upon out of memory has failed");
                                     // TODO: define action in this case
-                                    StatusQueueElement response{Command::NONE, Status::ERROR_FATAL};
-                                    xQueueSend(context.status_queue, reinterpret_cast<void *>(&response), 0);
+                                    EventQueueElement response{Status::ERROR_FATAL};
+                                    xQueueSend(context.event_queue, reinterpret_cast<void *>(&response), 0);
                                 }
                                 else
                                 {
                                     // signal task_state the error state
-                                    StatusQueueElement response{Command::NONE, Status::ERROR_OUT_OF_MEMORY};
-                                    xQueueSend(context.status_queue, reinterpret_cast<void *>(&response), 0);
+                                    EventQueueElement response{Status::ERROR_OUT_OF_MEMORY};
+                                    xQueueSend(context.event_queue, reinterpret_cast<void *>(&response), 0);
                                 }
                                 _file_operation_context.is_file_open = false;
                             }

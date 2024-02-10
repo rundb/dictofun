@@ -141,23 +141,27 @@ void task_system_state(void* context_ptr)
     // }
 
     SystemState next_state{context->system_state};
+    NRF_LOG_INFO("state: starting main with state %d", context->system_state);
 
     while(1)
     {
         switch (context->system_state)
         {
+            case SystemState::INIT:
+            {
+                break;
+            }
             case SystemState::RECORD_PREPARE:
             {
                 // prepare record - prepare filesystem, wait for the signal from FS
                 if (context->memory_status == Context::MemoryStatus::BUSY)
                 {
-                    continue;
+                    break;
                 }
                 
                 if (context->memory_status == Context::MemoryStatus::READY)
                 {
                     // if ready - create the file and switch to recording state
-                    NRF_LOG_DEBUG("state: memory has reported readiness");
                     const auto create_result = request_record_creation(*context);
                     if (result::Result::OK != create_result)
                     {
@@ -167,7 +171,7 @@ void task_system_state(void* context_ptr)
                         next_state = SystemState::MEMORY_IS_CORRUPT;
                     }
                     const auto record_start_result = request_record_start(*context);
-                    if (result::Result::OK != create_result)
+                    if (result::Result::OK != record_start_result)
                     {
                         NRF_LOG_ERROR("state: record start request has failed");
                         // TODO: apply a correct state transition
@@ -196,16 +200,18 @@ void task_system_state(void* context_ptr)
                 if (context->memory_status == Context::MemoryStatus::OUT_OF_MEMORY || 
                     context->memory_status == Context::MemoryStatus::CORRUPT)
                 {
+                    [[maybe_unused]] const auto record_stop_result = request_record_stop(*context);
                     next_state = SystemState::RECORD_END;
-                    continue;
+                    break;
                 }
 
                 // check events from the button.
                 const auto button_state = fetch_button_state(*context);
                 if (button_state == button::ButtonState::RELEASED)
                 {
+                    NRF_LOG_DEBUG("state: polling button released");
                     next_state = SystemState::RECORD_END;
-                    continue;
+                    break;
                 }
 
 
@@ -214,16 +220,42 @@ void task_system_state(void* context_ptr)
             }
             case SystemState::RECORD_END:
             {
-                // close the record file
-
                 // check that memory has not sent "corrupt"/"out of memory" statuses
+                // in this case memory closes the file by itself
+                if (context->memory_status == Context::MemoryStatus::OUT_OF_MEMORY)
+                {
+                    next_state = SystemState::OUT_OF_MEMORY;
+                    break;
+                }
+                else if (context->memory_status == Context::MemoryStatus::CORRUPT)
+                {
+                    next_state = SystemState::MEMORY_IS_CORRUPT;
+                    break;
+                }
 
+                // normal case: close the record file
+                const auto closure_request_result = request_record_closure(*context);
+                if (result::Result::OK != closure_request_result)
+                {
+                    NRF_LOG_ERROR("state: failed to close a record. TODO: define appropriate action");
+                    next_state = SystemState::MEMORY_IS_CORRUPT;
+                    break;
+                }
                 // proceed to BLE operation
+                next_state = SystemState::BLE_OPERATION;
+
                 break;
             }
             case SystemState::BLE_OPERATION:
             {
                 // Process timeouts and events from the buttons
+                
+                static uint32_t BLE_counter_printout = 0;
+                ++BLE_counter_printout;
+                if (BLE_counter_printout % 500 == 0)
+                {
+                    NRF_LOG_ERROR("ble operation");
+                }
 
                 // Also change the BLE indication depending on the status change
                 // - slow glow - before and after connection, fast - during the connection, extra fast - during file transactions
@@ -237,6 +269,9 @@ void task_system_state(void* context_ptr)
             case SystemState::OUT_OF_MEMORY:
             {
                 // Indicate with color, after several seconds (and if the button is not pressed) - switch to BLE operation
+                NRF_LOG_ERROR("out of memory");
+                
+                vTaskDelay(1000);
                 break;
             }
             case SystemState::DEVELOPMENT_MODE:
@@ -247,10 +282,15 @@ void task_system_state(void* context_ptr)
             case SystemState::MEMORY_IS_CORRUPT:
             {
                 // issue repair command, stay in this state until memory reports readyness, then shutdown
+                NRF_LOG_ERROR("memory is corrupt");
+                vTaskDelay(1000);
                 break;
             }
             case SystemState::SHUTDOWN:
             {
+                NRF_LOG_ERROR("shutdown state");
+                vTaskDelay(1000);
+                shutdown_ldo();
                 break;
             }
         }
@@ -260,7 +300,7 @@ void task_system_state(void* context_ptr)
             context->system_state = next_state;
         }
 
-        vTaskDelay(100);
+        vTaskDelay(10);
         
         // This section runs through the relevant event queues and updates respective context fields. State machine then makes decisions based on the 
         // events, if it effects the execution.
@@ -275,18 +315,22 @@ void task_system_state(void* context_ptr)
                 if (response.status == memory::Status::IS_READY)
                 {
                     context->memory_status = Context::MemoryStatus::READY;
+                    NRF_LOG_DEBUG("state: memory has reported readiness");
                 }
                 else if (response.status == memory::Status::ERROR_OUT_OF_MEMORY)
                 {
                     context->memory_status = Context::MemoryStatus::OUT_OF_MEMORY;
+                    NRF_LOG_WARNING("state: memory has reported out-of-memory");
                 }
                 else if (response.status == memory::Status::ERROR_FATAL || response.status == memory::Status::ERROR_GENERAL)
                 {
                     context->memory_status = Context::MemoryStatus::CORRUPT;
+                    NRF_LOG_WARNING("state: memory has reported corrupt");
                 }
                 else
                 {
                     context->memory_status = Context::MemoryStatus::BUSY;
+                    NRF_LOG_ERROR("state: memory reported an unknown state");
                 }
             }
         }
@@ -316,7 +360,7 @@ void task_system_state(void* context_ptr)
         const auto memory_event_receive_status = xQueueReceive(context->memory_event_handle, &memory_event_buffer, 0);
         if (pdPASS == memory_event_receive_status)
         {
-            if (memory_status_buffer.status == memory::Status::ERROR_OUT_OF_MEMORY)
+            if (memory_event_buffer.status == memory::Status::ERROR_OUT_OF_MEMORY)
             {
                 context->memory_status = Context::MemoryStatus::OUT_OF_MEMORY;
                 NRF_LOG_ERROR("state: mem reported out of memory error");
@@ -460,116 +504,116 @@ result::Result request_record_closure(const Context& context)
 
 void process_button_event(button::Event event, Context& context)
 {
-    const auto operation_mode = get_operation_mode();
-    switch(operation_mode)
-    {
-    case decltype(operation_mode)::DEVELOPMENT: {
-        // There is no reaction required in this case
-        break;
-    }
-    case decltype(operation_mode)::ENGINEERING:
-    case decltype(operation_mode)::FIELD: {
-        if(event == decltype(event)::SINGLE_PRESS_ON)
-        {
-            if(context.is_ble_system_active)
-            {
-                const auto ble_disable_status = disable_ble_subsystem(context);
-                if(result::Result::OK != ble_disable_status)
-                {
-                    NRF_LOG_ERROR("state: failed to request BLE disable");
-                }
+    // const auto operation_mode = get_operation_mode();
+    // switch(operation_mode)
+    // {
+    // case decltype(operation_mode)::DEVELOPMENT: {
+    //     // There is no reaction required in this case
+    //     break;
+    // }
+    // case decltype(operation_mode)::ENGINEERING:
+    // case decltype(operation_mode)::FIELD: {
+    //     if(event == decltype(event)::SINGLE_PRESS_ON)
+    //     {
+    //         if(context.is_ble_system_active)
+    //         {
+    //             const auto ble_disable_status = disable_ble_subsystem(context);
+    //             if(result::Result::OK != ble_disable_status)
+    //             {
+    //                 NRF_LOG_ERROR("state: failed to request BLE disable");
+    //             }
 
-                xQueueReset(context.memory_status_handle);
-                memory::CommandQueueElement command_to_memory{memory::Command::SELECT_OWNER_AUDIO,
-                                                              {0, 0}};
-                const auto owner_switch_result = xQueueSend(
-                    context.memory_commands_handle, reinterpret_cast<void*>(&command_to_memory), 0);
-                if(pdPASS != owner_switch_result)
-                {
-                    NRF_LOG_ERROR("state: failed to request owner switch to audio. Record might "
-                                  "not be saved");
-                }
-                memory::StatusQueueElement response;
-                static constexpr uint32_t memory_ownership_switch_timeout{1000};
-                const auto memory_response_result =
-                    xQueueReceive(context.memory_status_handle,
-                                  reinterpret_cast<void*>(&response),
-                                  memory_ownership_switch_timeout);
-                if(pdPASS != memory_response_result ||
-                   response.status != decltype(response.status)::OK)
-                {
-                    NRF_LOG_ERROR(
-                        "state: memory ownership switch has failed. Record won't be launched");
-                    return;
-                }
-            }
+    //             xQueueReset(context.memory_status_handle);
+    //             memory::CommandQueueElement command_to_memory{memory::Command::SELECT_OWNER_AUDIO,
+    //                                                           {0, 0}};
+    //             const auto owner_switch_result = xQueueSend(
+    //                 context.memory_commands_handle, reinterpret_cast<void*>(&command_to_memory), 0);
+    //             if(pdPASS != owner_switch_result)
+    //             {
+    //                 NRF_LOG_ERROR("state: failed to request owner switch to audio. Record might "
+    //                               "not be saved");
+    //             }
+    //             memory::StatusQueueElement response;
+    //             static constexpr uint32_t memory_ownership_switch_timeout{1000};
+    //             const auto memory_response_result =
+    //                 xQueueReceive(context.memory_status_handle,
+    //                               reinterpret_cast<void*>(&response),
+    //                               memory_ownership_switch_timeout);
+    //             if(pdPASS != memory_response_result ||
+    //                response.status != decltype(response.status)::OK)
+    //             {
+    //                 NRF_LOG_ERROR(
+    //                     "state: memory ownership switch has failed. Record won't be launched");
+    //                 return;
+    //             }
+    //         }
 
-            const auto button_event_result = xQueueReceive(context.button_events_handle, &button_event_buffer, 0);
-            if (pdPASS == button_event_result)
-            {
-                // since there is a chance that last operation has taken a while, a new button event may have arrived.
-                // Making sure that we process the last button event (so if sequence was OFF-ON - we continue recording)
-                while (pdPASS == xQueueReceive(context.button_events_handle, &button_event_buffer, 0));
-                if (button_event_buffer.event == button::Event::SINGLE_PRESS_OFF)
-                {
-                    // enable BLE and don't create a new record
-                    context.is_record_active = false;
-                    NRF_LOG_INFO("detected a too-short press of the button. enabling BLE");
-                    switch_to_ble_mode(context);
-                    context.timestamps.reset();
-                    return;
-                }
-            }
+    //         const auto button_event_result = xQueueReceive(context.button_events_handle, &button_event_buffer, 0);
+    //         if (pdPASS == button_event_result)
+    //         {
+    //             // since there is a chance that last operation has taken a while, a new button event may have arrived.
+    //             // Making sure that we process the last button event (so if sequence was OFF-ON - we continue recording)
+    //             while (pdPASS == xQueueReceive(context.button_events_handle, &button_event_buffer, 0));
+    //             if (button_event_buffer.event == button::Event::SINGLE_PRESS_OFF)
+    //             {
+    //                 // enable BLE and don't create a new record
+    //                 context.is_record_active = false;
+    //                 NRF_LOG_INFO("detected a too-short press of the button. enabling BLE");
+    //                 switch_to_ble_mode(context);
+    //                 context.timestamps.reset();
+    //                 return;
+    //             }
+    //         }
 
-            context.records_per_launch_counter++;
-            const auto creation_result = request_record_creation(context);
-            if(decltype(creation_result)::OK != creation_result)
-            {
-                NRF_LOG_ERROR("state: failed to create record upon button press");
-                return;
-            }
-            context.is_record_active = true;
-            const auto record_start_result = request_record_start(context);
-            if(decltype(record_start_result)::OK != record_start_result)
-            {
-                NRF_LOG_ERROR("state: failed to launch record upon button press");
-                return;
-            }
-            NRF_LOG_INFO("state: launched record start");
-            context.timestamps.last_record_start_timestamp = xTaskGetTickCount();
+    //         context.records_per_launch_counter++;
+    //         const auto creation_result = request_record_creation(context);
+    //         if(decltype(creation_result)::OK != creation_result)
+    //         {
+    //             NRF_LOG_ERROR("state: failed to create record upon button press");
+    //             return;
+    //         }
+    //         context.is_record_active = true;
+    //         const auto record_start_result = request_record_start(context);
+    //         if(decltype(record_start_result)::OK != record_start_result)
+    //         {
+    //             NRF_LOG_ERROR("state: failed to launch record upon button press");
+    //             return;
+    //         }
+    //         NRF_LOG_INFO("state: launched record start");
+    //         context.timestamps.last_record_start_timestamp = xTaskGetTickCount();
 
-            // This is the point where LED indication should be changed
-            led::CommandQueueElement led_command{led::Color::RED, led::State::FAST_GLOW};
-            xQueueSend(context.led_commands_handle, reinterpret_cast<void*>(&led_command), 0);
+    //         // This is the point where LED indication should be changed
+    //         led::CommandQueueElement led_command{led::Color::RED, led::State::FAST_GLOW};
+    //         xQueueSend(context.led_commands_handle, reinterpret_cast<void*>(&led_command), 0);
 
-            // Also at this point we should tell BLE to switch to access the real FS (not the simulated one). Operation result in this case doesn't really matter.
-            ble::CommandQueueElement cmd{ble::Command::CONNECT_FS};
-            xQueueSend(context.ble_commands_handle, reinterpret_cast<void*>(&cmd), 0);
-        }
-        else
-        {
-            const auto record_stop_result = request_record_stop(context);
-            if(decltype(record_stop_result)::OK != record_stop_result)
-            {
-                NRF_LOG_ERROR("state: failed to stop record upon button release");
-                context.is_record_active = false;
-                return;
-            }
-            const auto closure_result = request_record_closure(context);
-            if(decltype(closure_result)::OK != closure_result)
-            {
-                NRF_LOG_ERROR("state: failed to close record upon button release");
+    //         // Also at this point we should tell BLE to switch to access the real FS (not the simulated one). Operation result in this case doesn't really matter.
+    //         ble::CommandQueueElement cmd{ble::Command::CONNECT_FS};
+    //         xQueueSend(context.ble_commands_handle, reinterpret_cast<void*>(&cmd), 0);
+    //     }
+    //     else
+    //     {
+    //         const auto record_stop_result = request_record_stop(context);
+    //         if(decltype(record_stop_result)::OK != record_stop_result)
+    //         {
+    //             NRF_LOG_ERROR("state: failed to stop record upon button release");
+    //             context.is_record_active = false;
+    //             return;
+    //         }
+    //         const auto closure_result = request_record_closure(context);
+    //         if(decltype(closure_result)::OK != closure_result)
+    //         {
+    //             NRF_LOG_ERROR("state: failed to close record upon button release");
 
-            }
-            context.is_record_active = false;
-            NRF_LOG_INFO("state: stopped and saved record");
+    //         }
+    //         context.is_record_active = false;
+    //         NRF_LOG_INFO("state: stopped and saved record");
 
-            switch_to_ble_mode(context);
-            context.timestamps.reset();
-        }
-        break;
-    }
-    }
+    //         switch_to_ble_mode(context);
+    //         context.timestamps.reset();
+    //     }
+    //     break;
+    // }
+    // }
 }
 
 /// @brief Unfortunately, nvconfig can't contain all dependencies within the module.
