@@ -159,12 +159,10 @@ result::Result get_file_info(file_id_type file_id,
 {
     if(!is_fs_communication_valid())
     {
-        NRF_LOG_ERROR("ftsglue::file_info: comms are invalid");
         return result::Result::ERROR_GENERAL;
     }
     if(file_data == nullptr || max_file_data_size == 0)
     {
-        NRF_LOG_ERROR("ftsglue::file_info: invalid params");
         return result::Result::ERROR_INVALID_PARAMETER;
     }
 
@@ -174,14 +172,12 @@ result::Result get_file_info(file_id_type file_id,
     const auto cmd_result = xQueueSend(_command_to_fs_queue, &cmd, 0);
     if(pdTRUE != cmd_result)
     {
-        NRF_LOG_ERROR("get file info: failed to send cmd to mem");
         return result::Result::ERROR_GENERAL;
     }
     const auto status_result =
         xQueueReceive(_status_from_fs_queue, &response, max_status_wait_time);
     if(pdTRUE != status_result)
     {
-        NRF_LOG_ERROR("get file info: timed out recv status from mem");
         return result::Result::ERROR_GENERAL;
     }
     if(response.status != ble::StatusFromMemory::OK)

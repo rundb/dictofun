@@ -45,9 +45,6 @@ static nrf_drv_pwm_t m_pwm0 = NRF_DRV_PWM_INSTANCE(0);
 
 static void pwm0_handler(nrf_drv_pwm_evt_type_t event_type) { }
 
-static constexpr float sine_wave_10_values[] = 
-    {0.0000, 0.3090, 0.5878, 0.8090, 0.9511, 1.0000, 0.9511, 0.8090, 0.5878, 0.3090, 0.0000};
-
 static constexpr float sine_wave_20_values[] = 
     {0.0000, 0.1564, 0.3090, 0.4540, 0.5878, 0.7071,
      0.8090, 0.8910, 0.9511, 0.9877, 1.0000, 0.9877,
@@ -106,12 +103,8 @@ void task_led(void* context_ptr)
 
     static constexpr uint32_t slow_update_period{1500};
     static constexpr uint32_t slow_pwm_change_period{slow_update_period / brightness_steps_count};
-    static constexpr uint32_t fast_update_period{500};
+    static constexpr uint32_t fast_update_period{750};
     static constexpr uint32_t fast_pwm_change_period{fast_update_period / brightness_steps_count};
-
-    // since blue LED is known to be less bright, it's duty cycle should be multiplied (generally there should be a
-    // calculated table of optimal intensities of all colors for all brightness levels)
-    static constexpr double blue_dc_multiplier{1.8};
 
     uint32_t last_update_tick{0};
     while(1)
@@ -156,7 +149,6 @@ void task_led(void* context_ptr)
                 // configure blue channel
                 seq_values.channel_1 =
                     (is_green_active(active_color)) ? static_cast<uint16_t>(base_pwm_value * green_color_amplitude)  : 0;
-                seq_values.channel_1 *= blue_dc_multiplier;
                 // configure green channel
                 seq_values.channel_2 =
                     (is_blue_active(active_color)) ? static_cast<uint16_t>(base_pwm_value * blue_color_amplitude) : 0;
@@ -174,7 +166,6 @@ void task_led(void* context_ptr)
             seq_values.channel_0 = (is_red_active(active_color)) ? pwm_top_value * red_color_amplitude : 0;
             // configure green channel
             seq_values.channel_1 = (is_green_active(active_color)) ? pwm_top_value * green_color_amplitude : 0;
-            seq_values.channel_1 *= blue_dc_multiplier;
             // configure blue channel
             seq_values.channel_2 = (is_blue_active(active_color)) ? pwm_top_value * blue_color_amplitude : 0;
             nrfx_pwm_stop(&m_pwm0, true);

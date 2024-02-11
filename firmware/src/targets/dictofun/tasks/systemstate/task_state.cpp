@@ -75,7 +75,7 @@ void task_system_state(void* context_ptr)
 
     analyze_reset_reason(*context);
 
-    // TODO: add battery level evalutation at this point
+    // TODO: add battery level evaluation at this point
     
     // Process NV configuration. If it doesn't exist - memory operation should be scheduled.
     const auto nvconfig_load_result = _nvconfig.load_early(_configuration);

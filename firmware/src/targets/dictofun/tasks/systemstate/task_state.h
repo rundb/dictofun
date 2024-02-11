@@ -67,7 +67,6 @@ struct Context
     bool is_battery_low{false};
     bool has_operation_timeout_expired{false};
 
-    // bool is_memory_busy{false};
     enum class MemoryStatus
     {
         BUSY,
