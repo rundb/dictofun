@@ -2,7 +2,15 @@ name: Build target
 run-name: run dictofun target build
 on: [push]
 jobs:
+  cleanup:
+    runs-on: [ self-hosted, linux ]
+    steps:
+      - name: Cleaning up the $GITHUB_WORKSPACE as root from a Docker image
+        # Volume auto mounted by gh actions pointing to the current working-directory
+        run: echo $(whoami) && sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} 
+
   checkout-the-repo:
+    needs: cleanup
     runs-on: [ self-hosted, linux ]
     steps:
       - uses: actions/checkout@v2
