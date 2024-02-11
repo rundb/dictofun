@@ -16,12 +16,15 @@ void task_button(void* context);
 struct Context
 {
     QueueHandle_t events_handle{nullptr};
+    QueueHandle_t commands_handle{nullptr};
+    QueueHandle_t response_handle{nullptr};
 };
 
 enum class ButtonState
 {
     RELEASED,
     PRESSED,
+    UNKNOWN,
 };
 
 enum class Event
@@ -31,9 +34,26 @@ enum class Event
     NONE,
 };
 
+enum class Command
+{
+    REQUEST_STATE,
+};
+
+// Communication state->button
+struct RequestQueueElement
+{
+    Command command;
+};
+
+struct ResponseQueueElement
+{
+    ButtonState state;
+};
+
 struct EventQueueElement
 {
     Event event;
+    ButtonState state;
 };
 
 } // namespace button

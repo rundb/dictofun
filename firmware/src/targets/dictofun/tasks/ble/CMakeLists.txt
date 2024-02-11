@@ -39,6 +39,7 @@ target_link_libraries(task_ble PRIVATE
     nrf5_ble_srv_dfu
     nrf5_dfu_svci
     task_rtc_interface
+    task_led_interface
     boards
 )
 target_link_libraries(task_ble PUBLIC 

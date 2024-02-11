@@ -22,7 +22,7 @@ void launch_cli_command_record(Context& context,
     NRF_LOG_INFO("task: received command from CLI");
     if(is_record_start_by_cli_allowed(context))
     {
-        context._should_record_be_stored = should_store_the_record;
+        context.should_record_be_stored = should_store_the_record;
         if(should_store_the_record)
         {
             const auto creation_result = request_record_creation(context);
@@ -109,7 +109,7 @@ void launch_cli_command_ble_operation(Context& context, const uint32_t command_i
     }
     if(command == ble::Command::START)
     {
-        context._is_ble_system_active = true;
+        context.is_ble_system_active = true;
     }
     else if(command == ble::Command::STOP)
     {

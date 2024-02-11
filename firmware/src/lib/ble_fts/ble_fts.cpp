@@ -826,7 +826,9 @@ result::Result FtsService::send_file_info()
     }
     else if(result::Result::OK != file_info_call_result)
     {
-        NRF_LOG_ERROR("ble::fts::send_info: error");
+        NRF_LOG_ERROR("ble::fts::send_info: error (id %x%x%x%x)", 
+            _transaction_ctx.file_id.data[4], _transaction_ctx.file_id.data[5], 
+            _transaction_ctx.file_id.data[6], _transaction_ctx.file_id.data[7]);
         (void)update_general_status(GeneralStatus::FS_CORRUPT, file_id_type());
         return file_info_call_result;
     }

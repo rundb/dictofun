@@ -39,6 +39,7 @@ static constexpr int NO_SPACE_LEFT{-6};
 static constexpr int ALIGNMENT_ERROR{-7};
 static constexpr int INTERNAL_ERROR{-8};
 static constexpr int IMPLEMENTATION_ERROR{-9};
+static constexpr int REMOUNT_ATTEMPTED{-10};
 static constexpr int REPAIR_HAS_BEEN_PERFORMED{-16};
 
 struct myfs_config
@@ -80,6 +81,8 @@ struct myfs_t
     uint32_t buffer_position{0};
 
     bool is_file_open{false};
+    bool is_full{false};
+    bool is_corrupt{false};
 
     uint32_t current_id_search_pos{single_file_descriptor_size_bytes};
 

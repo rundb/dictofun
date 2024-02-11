@@ -15,6 +15,22 @@ namespace systemstate
 {
 void task_system_state(void* context);
 
+// Set of states that define high-level behavior of the system. 
+// Basically corresponds to the particular indication colors.
+enum class SystemState: uint8_t
+{
+    INIT = 0,
+    BATTERY_LOW = 1,
+    DEVELOPMENT_MODE = 2,
+    RECORD_PREPARE = 3,
+    RECORDING = 4,
+    RECORD_END = 5,
+    BLE_OPERATION = 6,
+    OUT_OF_MEMORY = 16,
+    MEMORY_IS_CORRUPT = 17,
+    SHUTDOWN = 32
+};
+
 struct Context
 {
     QueueHandle_t cli_commands_handle{nullptr};
@@ -25,6 +41,7 @@ struct Context
 
     QueueHandle_t memory_commands_handle{nullptr};
     QueueHandle_t memory_status_handle{nullptr};
+    QueueHandle_t memory_event_handle{nullptr};
 
     QueueHandle_t audio_tester_commands_handle{nullptr};
 
@@ -35,6 +52,8 @@ struct Context
     QueueHandle_t led_commands_handle{nullptr};
 
     QueueHandle_t button_events_handle{nullptr};
+    QueueHandle_t button_requests_handle{nullptr};
+    QueueHandle_t button_response_handle{nullptr};
 
     QueueHandle_t battery_measurements_handle{nullptr};
     QueueHandle_t battery_level_to_ble_handle{nullptr};
@@ -42,12 +61,25 @@ struct Context
     TimerHandle_t record_timer_handle{nullptr};
 
     bool is_record_active{false};
-    bool _should_record_be_stored{false};
-    bool _is_ble_system_active{false};
-    bool _is_shutdown_demanded{false};
-    bool _is_battery_low{false};
-    bool is_memory_busy{false};
+    bool should_record_be_stored{false};
+    bool is_ble_system_active{false};
+    bool is_shutdown_demanded{false};
+    bool is_battery_low{false};
+    bool has_operation_timeout_expired{false};
+
+    enum class MemoryStatus
+    {
+        BUSY,
+        READY,
+        OUT_OF_MEMORY,
+        CORRUPT,
+    };
+    MemoryStatus memory_status{MemoryStatus::BUSY};
+
+    // This variable tracks the use-case of a record restart before the session end
     uint32_t records_per_launch_counter{0};
+
+    SystemState system_state{SystemState::INIT};
 
     struct Timestamps
     {
@@ -56,6 +88,8 @@ struct Context
         uint32_t last_ble_activity_timestamp{timestamp_uninitialized_value};
         uint32_t ble_disconnect_event_timestamp{timestamp_uninitialized_value};
         uint32_t shutdown_procedure_start_timestamp{timestamp_uninitialized_value};
+        uint32_t low_battery_detected_timestamp{timestamp_uninitialized_value};
+        uint32_t memory_issue_detected_timestamp{timestamp_uninitialized_value};
 
         bool has_start_timestamp_been_updated()
         {
@@ -68,6 +102,14 @@ struct Context
         bool has_ble_timestamp_been_updated()
         {
             return last_ble_activity_timestamp != timestamp_uninitialized_value;
+        }
+        bool has_low_batt_detection_timestamp_been_updated()
+        {
+            return low_battery_detected_timestamp != timestamp_uninitialized_value;
+        }
+        bool has_memory_issue_detection_timestamp_been_updated()
+        {
+            return memory_issue_detected_timestamp != timestamp_uninitialized_value;
         }
         void reset()
         {
@@ -99,6 +141,7 @@ void load_nvconfig(Context& context);
 application::Mode get_operation_mode();
 bool is_record_start_by_cli_allowed(Context& context);
 result::Result launch_record_timer(const TickType_t record_duration, Context& context);
+
 void shutdown_ldo();
 void configure_power_latch();
 bool process_timeouts(Context& context);
@@ -106,7 +149,7 @@ result::Result enable_ble_subsystem(Context& context);
 result::Result disable_ble_subsystem(Context& context);
 
 result::Result request_record_creation(const Context& context);
-result::Result request_record_start(const Context& context);
+result::Result request_record_start(Context& context);
 result::Result request_record_stop(const Context& context);
 result::Result request_record_closure(const Context& context);
 

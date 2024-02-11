@@ -63,6 +63,7 @@ application::QueueDescriptor<audio::CodecOutputType, 4>              audio_data_
 
 application::QueueDescriptor<memory::CommandQueueElement, 1>         memory_commands_queue;
 application::QueueDescriptor<memory::StatusQueueElement, 1>          memory_status_queue; 
+application::QueueDescriptor<memory::EventQueueElement, 1>           memory_event_queue; 
 
 application::QueueDescriptor<ble::CommandQueueElement, 2>            ble_commands_queue;
 application::QueueDescriptor<ble::RequestQueueElement, 1>            ble_requests_queue;
@@ -79,6 +80,9 @@ application::QueueDescriptor<rtc::CommandQueueElement, 1>            rtc_command
 application::QueueDescriptor<rtc::ResponseQueueElement, 1>           rtc_response_queue;
 
 application::QueueDescriptor<button::EventQueueElement, 1>           button_event_queue;
+application::QueueDescriptor<button::RequestQueueElement, 1>         button_requests_queue;
+application::QueueDescriptor<button::ResponseQueueElement, 1>        button_response_queue;
+
 application::QueueDescriptor<battery::MeasurementsQueueElement, 1>   battery_measurements_queue;
 
 // ============================= Timers =====================================
@@ -175,6 +179,12 @@ int main()
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
+    const auto memory_event_queue_init_result = memory_event_queue.init();
+    if(result::Result::OK != memory_event_queue_init_result)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
     const auto ble_commands_queue_init_result = ble_commands_queue.init();
     if(result::Result::OK != ble_commands_queue_init_result)
     {
@@ -241,6 +251,18 @@ int main()
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
+    const auto button_requests_queue_init_result = button_requests_queue.init();
+    if(result::Result::OK != button_requests_queue_init_result)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
+    const auto button_response_queue_init_result = button_response_queue.init();
+    if(result::Result::OK != button_response_queue_init_result)
+    {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    }
+
     const auto battery_measurements_queue_init_result = battery_measurements_queue.init();
     if(result::Result::OK != battery_measurements_queue_init_result)
     {
@@ -293,11 +315,14 @@ int main()
     systemstate_context.audio_tester_commands_handle = audio_tester_commands_queue.handle;
     systemstate_context.memory_commands_handle = memory_commands_queue.handle;
     systemstate_context.memory_status_handle = memory_status_queue.handle;
+    systemstate_context.memory_event_handle = memory_event_queue.handle;
     systemstate_context.ble_commands_handle = ble_commands_queue.handle;
     systemstate_context.ble_requests_handle = ble_requests_queue.handle;
     systemstate_context.ble_keepalive_handle = ble_keepalive_queue.handle;
     systemstate_context.led_commands_handle = led_commands_queue.handle;
     systemstate_context.button_events_handle = button_event_queue.handle;
+    systemstate_context.button_requests_handle = button_requests_queue.handle;
+    systemstate_context.button_response_handle = button_response_queue.handle;
     systemstate_context.battery_measurements_handle = battery_measurements_queue.handle;
     systemstate_context.battery_level_to_ble_handle = ble_batt_info_queue.handle;
 
@@ -310,6 +335,7 @@ int main()
 
     memory_context.command_queue = memory_commands_queue.handle;
     memory_context.status_queue = memory_status_queue.handle;
+    memory_context.event_queue = memory_event_queue.handle;
     memory_context.command_from_ble_queue = ble_to_mem_commands_queue.handle;
     memory_context.status_to_ble_queue = ble_from_mem_status_queue.handle;
     memory_context.data_to_ble_queue = ble_from_mem_data_queue.handle;
@@ -332,6 +358,7 @@ int main()
     ble_context.data_from_mem_queue = ble_from_mem_data_queue.handle;
     ble_context.commands_to_rtc_queue = rtc_commands_queue.handle;
     ble_context.battery_to_ble_queue = ble_batt_info_queue.handle;
+    ble_context.ble_to_led_queue = led_commands_queue.handle;
     const auto ble_task_init_result = ble_task.init(ble::task_ble, "BLE", &ble_context);
 
     if(result::Result::OK != ble_task_init_result)
@@ -357,6 +384,8 @@ int main()
     }
 
     button_context.events_handle = button_event_queue.handle;
+    button_context.response_handle = button_response_queue.handle;
+    button_context.commands_handle = button_requests_queue.handle;
     const auto button_task_init_result =
         button_task.init(button::task_button, "BTN", &button_context);
 

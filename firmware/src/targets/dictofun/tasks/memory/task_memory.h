@@ -43,6 +43,7 @@ enum class Command
     FORMAT_FS,
 
     LAUNCH_TEST_5, // memory range print
+    NONE,
 };
 
 enum class Status
@@ -52,6 +53,8 @@ enum class Status
     ERROR_BUSY,
     ERROR_GENERAL,
     FORMAT_REQUIRED,
+    ERROR_OUT_OF_MEMORY,
+    ERROR_FATAL,
 };
 
 struct CommandQueueElement
@@ -67,16 +70,24 @@ struct StatusQueueElement
     Status status;
 };
 
+struct EventQueueElement
+{
+    Status status;
+};
+
 struct Context
 {
     QueueHandle_t audio_data_queue{nullptr};
     QueueHandle_t command_queue{nullptr};
     QueueHandle_t status_queue{nullptr};
+    QueueHandle_t event_queue{nullptr};
     QueueHandle_t command_from_ble_queue{nullptr};
     QueueHandle_t status_to_ble_queue{nullptr};
     QueueHandle_t data_to_ble_queue{nullptr};
     QueueHandle_t commands_to_rtc_queue{nullptr};
     QueueHandle_t response_from_rtc_queue{nullptr};
+
+    bool is_out_of_memory_detected{false};
 };
 
 } // namespace memory

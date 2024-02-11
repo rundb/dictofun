@@ -41,7 +41,7 @@ static const spi::Spi::Configuration flash_spi_config{NRF_DRV_SPI_FREQ_8M,
 flash::SpiFlash flash{flash_spi, vTaskDelay, xTaskGetTickCount};
 constexpr uint32_t flash_page_size{256};
 constexpr uint32_t flash_sector_size{4096};
-constexpr uint32_t flash_total_size{16 * 1024 * 1024};
+constexpr uint32_t flash_total_size{16 * 1024 * 1024 - flash_sector_size};
 constexpr uint32_t flash_sectors_count{flash_total_size / flash_sector_size};
 
 constexpr size_t CACHE_SIZE{flash_page_size};
@@ -194,6 +194,26 @@ void task_memory(void* context_ptr)
                         if(result::Result::OK != write_result)
                         {
                             NRF_LOG_ERROR("mem: data write failed");
+                            if (result::Result::ERROR_OUT_OF_MEMORY == write_result)
+                            {
+                                // close active file
+                                const auto close_result = memory::filesystem::close_file(myfs);
+                                if (result::Result::OK != close_result)
+                                {
+                                    NRF_LOG_ERROR("mem: file closure upon out of memory has failed");
+                                    // TODO: define action in this case
+                                    EventQueueElement response{Status::ERROR_FATAL};
+                                    xQueueSend(context.event_queue, reinterpret_cast<void *>(&response), 0);
+                                }
+                                else
+                                {
+                                    // signal task_state the error state
+                                    EventQueueElement response{Status::ERROR_OUT_OF_MEMORY};
+                                    xQueueSend(context.event_queue, reinterpret_cast<void *>(&response), 0);
+                                }
+                                _file_operation_context.is_file_open = false;
+                                myfs.is_full = true;
+                            }
                         }
                         else
                         {
@@ -430,8 +450,19 @@ void process_request_from_state(Context& context, const Command command_id, uint
                 if(result::Result::OK != create_result)
                 {
                     NRF_LOG_ERROR("myfs: failed to create a new rec");
-                    StatusQueueElement response{Command::CREATE_RECORD, Status::ERROR_GENERAL};
+                    StatusQueueElement response {
+                        Command::CREATE_RECORD, 
+                        (create_result == result::Result::ERROR_OUT_OF_MEMORY) ? 
+                            Status::ERROR_OUT_OF_MEMORY : 
+                            Status::ERROR_GENERAL
+                    };
                     xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
+
+                    if (create_result == result::Result::ERROR_OUT_OF_MEMORY)
+                    {
+                        context.is_out_of_memory_detected = true;
+                    }
+
                     return;
                 }
                 NRF_LOG_DEBUG("created record [%s]", active_record_name);
@@ -469,7 +500,11 @@ void process_request_from_state(Context& context, const Command command_id, uint
                 break;
             }
             const auto init_result = memory::filesystem::init_fs(myfs);
-            if(result::Result::OK != init_result)
+            if (result::Result::ERROR_OUT_OF_MEMORY == init_result)
+            {
+                NRF_LOG_WARNING("mem: FS is full, but available for read operations and formatting");
+            }
+            else if(result::Result::OK != init_result)
             {
                 NRF_LOG_ERROR("myfs: init failed");
                 StatusQueueElement response{Command::SELECT_OWNER_BLE, Status::ERROR_GENERAL};
@@ -493,7 +528,14 @@ void process_request_from_state(Context& context, const Command command_id, uint
                 break;
             }
             const auto init_result = memory::filesystem::init_fs(myfs);
-            if(result::Result::OK != init_result)
+            if (result::Result::ERROR_OUT_OF_MEMORY == init_result)
+            {
+                NRF_LOG_WARNING("mem: FS is full, Audio cannot become an owner of FS");
+                StatusQueueElement response{Command::SELECT_OWNER_AUDIO, Status::ERROR_OUT_OF_MEMORY};
+                xQueueSend(context.status_queue, reinterpret_cast<void*>(&response), 0);
+                break;
+            }
+            else if(result::Result::OK != init_result)
             {
                 NRF_LOG_ERROR("myfs: init failed");
                 StatusQueueElement response{Command::SELECT_OWNER_AUDIO, Status::ERROR_GENERAL};
@@ -531,8 +573,8 @@ void process_request_from_state(Context& context, const Command command_id, uint
             break;
         }
         case Command::PERFORM_MEMORY_CHECK: {
-            static constexpr uint32_t max_files_count{126};
-            static constexpr float formatting_trigger_level{0.8};
+            static constexpr uint32_t max_files_count{254};
+            static constexpr float formatting_trigger_level{0.9};
             const auto fs_stat_result =
                 memory::filesystem::get_fs_stat(myfs, data_queue_elem.data);
             if(result::Result::OK != fs_stat_result)
@@ -545,6 +587,11 @@ void process_request_from_state(Context& context, const Command command_id, uint
             {
                 ble::fts::FileSystemInterface::FSStatus fsStatus;
                 memcpy(&fsStatus, &data_queue_elem.data, sizeof(fsStatus));
+                if (myfs.is_full)
+                {
+                    fsStatus.free_space = 0;
+                    fsStatus.occupied_space = flash_total_size;
+                }
                 NRF_LOG_INFO("FS stats: %d/%d(%d)", fsStatus.occupied_space, fsStatus.free_space, fsStatus.files_count);
                 StatusQueueElement response{Command::PERFORM_MEMORY_CHECK, Status::OK};
                 if ((fsStatus.occupied_space > (flash_total_size * formatting_trigger_level)) || (fsStatus.files_count > max_files_count))

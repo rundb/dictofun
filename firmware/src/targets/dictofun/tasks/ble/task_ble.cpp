@@ -10,6 +10,7 @@
 #include "queue.h"
 #include "task.h"
 #include "task_rtc.h"
+#include "task_led.h"
 
 #include "ble_system.h"
 
@@ -139,6 +140,9 @@ void task_ble(void* context_ptr)
             {
                 NRF_LOG_WARNING("keepalive on-connect send has failed");
             }
+
+            led::CommandQueueElement led_command{led::Color::DARK_BLUE, led::State::FAST_GLOW};
+            xQueueSend(context.ble_to_led_queue, reinterpret_cast<void*>(&led_command), 0);
         }
         if(ble_system.has_disconnect_happened())
         {
@@ -149,6 +153,8 @@ void task_ble(void* context_ptr)
             {
                 NRF_LOG_WARNING("keepalive on-disconnect send has failed");
             }
+            led::CommandQueueElement led_command{led::Color::DARK_BLUE, led::State::SLOW_GLOW};
+            xQueueSend(context.ble_to_led_queue, reinterpret_cast<void*>(&led_command), 0);
         }
 
         if(ble_system.is_time_update_pending())
