@@ -1,3 +1,16 @@
+v1.4
+- install Schottky between button and LDO input
+- consider lower operating voltage
+- optimize power circuit by price and components' availability
+- (consider) replacing power circuits with NPM1300
+- leave more space around the button
+- take interrupt output of the RTC as wake up input to power regulator
+- use a bigger flash memory
+- utilize NRF5340
+- consider the option of installing NFC antenna
+- install USB Type C connector
+- figure out, where VDDH should be connected
+
 Rework for v1.1.
 * cut lines that are coming to pins p0.25 and p0.26 and put a ~1k resistor into the cut. If this is not done, NRF52 burns down.
 

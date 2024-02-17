@@ -1,8 +1,10 @@
 (sym_lib_table
+  (version 7)
   (lib (name "nRF52832_qfaa-eagle-import")(type "KiCad")(uri "${KIPRJMOD}/components/nRF52832_qfaa-eagle-import.kicad_sym")(options "")(descr "")(disabled))
   (lib (name "custom")(type "KiCad")(uri "${KIPRJMOD}/components/custom.kicad_sym")(options "")(descr ""))
   (lib (name "_bq")(type "KiCad")(uri "${KIPRJMOD}/components/BQ24078RGTR.kicad_sym")(options "")(descr "")(disabled))
   (lib (name "_button")(type "KiCad")(uri "${KIPRJMOD}/components/KMR221GLFS.kicad_sym")(options "")(descr "")(disabled))
   (lib (name "_rtc")(type "KiCad")(uri "${KIPRJMOD}/lib/_rtc.kicad_sym")(options "")(descr "")(disabled))
   (lib (name "RV-4162-C7")(type "KiCad")(uri "${KIPRJMOD}/lib/RV-4162-C7.kicad_sym")(options "")(descr "")(disabled))
+  (lib (name "NRF5340")(type "KiCad")(uri "${KIPRJMOD}/components/NRF5340-QKAA-R7.kicad_sym")(options "")(descr ""))
 )
