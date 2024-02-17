@@ -1049,7 +1049,7 @@
 
   (footprint "Capacitor_SMD:C_0402_1005Metric" (layer "F.Cu")
     (tstamp 071ee3e8-066f-4761-bd55-ded58f36dad2)
-    (at 139.6 100.533)
+    (at 136.7 100.3)
     (descr "Capacitor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: IPC-SM-782 page 76, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf), generated with kicad-footprint-generator")
     (tags "capacitor")
     (property "LCSC" "C77007")
@@ -1136,7 +1136,7 @@
 
   (footprint "Capacitor_SMD:C_0402_1005Metric" (layer "F.Cu")
     (tstamp 082645e7-69d1-4374-95ee-7ad598134ec2)
-    (at 141.8 102.133 -90)
+    (at 138.9 101.9 -90)
     (descr "Capacitor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: IPC-SM-782 page 76, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf), generated with kicad-footprint-generator")
     (tags "capacitor")
     (property "LCSC" "C32949")
@@ -1189,7 +1189,7 @@
 
   (footprint "Capacitor_SMD:C_0201_0603Metric" (layer "F.Cu")
     (tstamp 10af7943-2b4d-4db0-9a31-254bebb1b635)
-    (at 134.3 91.333)
+    (at 131.4 91.1)
     (descr "Capacitor SMD 0201 (0603 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: https://www.vishay.com/docs/20052/crcw0201e3.pdf), generated with kicad-footprint-generator")
     (tags "capacitor")
     (property "LCSC" "")
@@ -1241,7 +1241,7 @@
 
   (footprint "Resistor_SMD:R_0402_1005Metric" (layer "F.Cu")
     (tstamp 1339b49b-1736-406a-a8ad-3a9c7813cb72)
-    (at 126.35 91.7 -90)
+    (at 122.55 91.7 -90)
     (descr "Resistor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: IPC-SM-782 page 72, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf), generated with kicad-footprint-generator")
     (tags "resistor")
     (property "LCSC" "C25900")
@@ -1326,7 +1326,7 @@
 
   (footprint "Inductor_SMD:L_0603_1608Metric" (layer "F.Cu")
     (tstamp 1877d4cf-a61d-42fe-867b-ea3479af0079)
-    (at 139.2 94.4455 -90)
+    (at 136.3 94.2125 -90)
     (descr "Inductor SMD 0603 (1608 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: http://www.tortai-tech.com/upload/download/2011102023233369053.pdf), generated with kicad-footprint-generator")
     (tags "inductor")
     (property "LCSC" "C5339208")
@@ -1382,7 +1382,7 @@
 
   (footprint "_other:IC_RV-4162-C7" (layer "F.Cu")
     (tstamp 2381bf52-d918-441c-9435-d5e3097d436b)
-    (at 128.8 91.7 90)
+    (at 125 91.7 90)
     (property "MANUFACTURER" "Micro Crystal")
     (property "MAXIMUM_PACKAGE_HEIGHT" "0.8 mm")
     (property "PARTREV" "5.1/09.2020")
@@ -1475,7 +1475,7 @@
 
   (footprint "Capacitor_SMD:C_0201_0603Metric" (layer "F.Cu")
     (tstamp 27bb40ae-9c1f-4feb-8491-b44323aa0713)
-    (at 130.6 99.267 180)
+    (at 127.7 99.034 180)
     (descr "Capacitor SMD 0201 (0603 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: https://www.vishay.com/docs/20052/crcw0201e3.pdf), generated with kicad-footprint-generator")
     (tags "capacitor")
     (property "LCSC" "C5142565")
@@ -1529,7 +1529,7 @@
 
   (footprint "Capacitor_SMD:C_0201_0603Metric" (layer "F.Cu")
     (tstamp 2866f276-3433-427f-b137-e5ed1acc93ed)
-    (at 137.5 101.853 -90)
+    (at 134.6 101.62 -90)
     (descr "Capacitor SMD 0201 (0603 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: https://www.vishay.com/docs/20052/crcw0201e3.pdf), generated with kicad-footprint-generator")
     (tags "capacitor")
     (property "LCSC" "")
@@ -1614,7 +1614,7 @@
 
   (footprint "Capacitor_SMD:C_0201_0603Metric" (layer "F.Cu")
     (tstamp 378355cc-5f91-4fee-9f8c-277c214dcf8b)
-    (at 139.4 99.733)
+    (at 136.5 99.5)
     (descr "Capacitor SMD 0201 (0603 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: https://www.vishay.com/docs/20052/crcw0201e3.pdf), generated with kicad-footprint-generator")
     (tags "capacitor")
     (property "LCSC" "")
@@ -1721,7 +1721,7 @@
 
   (footprint "Crystal:Crystal_SMD_MicroCrystal_CM9V-T1A-2Pin_1.6x1.0mm" (layer "F.Cu")
     (tstamp 3bbb9239-0d5e-43b9-b972-da4dc943f2a9)
-    (at 135.4 92.833 180)
+    (at 132.5 92.6 180)
     (descr "SMD Crystal MicroCrystal CM9V-T1A series https://www.microcrystal.com/fileadmin/Media/Products/32kHz/Datasheet/CM9V-T1A.pdf, 1.6x1.0mm^2 package")
     (tags "SMD SMT crystal")
     (property "Digikey" "https://www.digikey.de/de/products/detail/citizen-finedevice-co-ltd/CM1610H32768DZBT/7229893")
@@ -1832,7 +1832,7 @@
 
   (footprint "Inductor_SMD:L_0201_0603Metric" (layer "F.Cu")
     (tstamp 3f536c73-e718-4ecc-be1a-bec053b52dde)
-    (at 136.7 101.833 -90)
+    (at 133.8 101.6 -90)
     (descr "Inductor SMD 0201 (0603 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: https://www.vishay.com/docs/20052/crcw0201e3.pdf), generated with kicad-footprint-generator")
     (tags "inductor")
     (property "LCSC" "C1332892")
@@ -1886,7 +1886,7 @@
 
   (footprint "Capacitor_SMD:C_0402_1005Metric" (layer "F.Cu")
     (tstamp 4f5893f2-e724-4d25-aff6-35a78de5ddb8)
-    (at 129.55 89.9 180)
+    (at 125.75 89.9 180)
     (descr "Capacitor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: IPC-SM-782 page 76, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf), generated with kicad-footprint-generator")
     (tags "capacitor")
     (property "LCSC" "C52923")
@@ -1970,7 +1970,7 @@
 
   (footprint "Resistor_SMD:R_0402_1005Metric" (layer "F.Cu")
     (tstamp 52ad4b1a-df47-4753-91ae-1687852d9352)
-    (at 126.85 90)
+    (at 123.05 90)
     (descr "Resistor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: IPC-SM-782 page 72, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf), generated with kicad-footprint-generator")
     (tags "resistor")
     (property "LCSC" "C25900")
@@ -2164,7 +2164,7 @@
 
   (footprint "Capacitor_SMD:C_0201_0603Metric" (layer "F.Cu")
     (tstamp 5aab4b44-49fa-47f0-9ece-d60c72c3fac8)
-    (at 136.255 91.333 180)
+    (at 133.355 91.1 180)
     (descr "Capacitor SMD 0201 (0603 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: https://www.vishay.com/docs/20052/crcw0201e3.pdf), generated with kicad-footprint-generator")
     (tags "capacitor")
     (property "LCSC" "")
@@ -2391,7 +2391,7 @@
 
   (footprint "Capacitor_SMD:C_0201_0603Metric" (layer "F.Cu")
     (tstamp 617b50ad-c7e9-4034-987f-23bb5223a4c6)
-    (at 132.4 101.767 -90)
+    (at 129.5 101.534 -90)
     (descr "Capacitor SMD 0201 (0603 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: https://www.vishay.com/docs/20052/crcw0201e3.pdf), generated with kicad-footprint-generator")
     (tags "capacitor")
     (property "LCSC" "C5142565")
@@ -2445,7 +2445,7 @@
 
   (footprint "Capacitor_SMD:C_0201_0603Metric" (layer "F.Cu")
     (tstamp 6891504f-1ac5-4c33-b0d2-713fcc17f5b7)
-    (at 132.355 93.633 180)
+    (at 129.455 93.4 180)
     (descr "Capacitor SMD 0201 (0603 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: https://www.vishay.com/docs/20052/crcw0201e3.pdf), generated with kicad-footprint-generator")
     (tags "capacitor")
     (property "LCSC" "C5142565")
@@ -2640,7 +2640,7 @@
 
   (footprint "Capacitor_SMD:C_0201_0603Metric" (layer "F.Cu")
     (tstamp 6fb1f2f3-93de-479b-bed1-204919644a55)
-    (at 135.2 101.933 -90)
+    (at 132.3 101.7 -90)
     (descr "Capacitor SMD 0201 (0603 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: https://www.vishay.com/docs/20052/crcw0201e3.pdf), generated with kicad-footprint-generator")
     (tags "capacitor")
     (property "LCSC" "C5142565")
@@ -2694,7 +2694,7 @@
 
   (footprint "Capacitor_SMD:C_0402_1005Metric" (layer "F.Cu")
     (tstamp 72cf58d1-c080-4afa-be08-de178f2a0df9)
-    (at 131.15 91.6 -90)
+    (at 127.35 91.6 -90)
     (descr "Capacitor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: IPC-SM-782 page 76, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf), generated with kicad-footprint-generator")
     (tags "capacitor")
     (property "LCSC" "C1525")
@@ -2747,7 +2747,7 @@
 
   (footprint "Capacitor_SMD:C_0201_0603Metric" (layer "F.Cu")
     (tstamp 72fd839b-8aa6-45f5-a483-3dc3f804baa1)
-    (at 135.5 103.033 180)
+    (at 132.6 102.8 180)
     (descr "Capacitor SMD 0201 (0603 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: https://www.vishay.com/docs/20052/crcw0201e3.pdf), generated with kicad-footprint-generator")
     (tags "capacitor")
     (property "LCSC" "")
@@ -2961,7 +2961,7 @@
 
   (footprint "Capacitor_SMD:C_0402_1005Metric" (layer "F.Cu")
     (tstamp 7dad0691-3362-4574-8dec-ee22734934a8)
-    (at 133.7 93.033 90)
+    (at 130.8 92.8 90)
     (descr "Capacitor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: IPC-SM-782 page 76, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf), generated with kicad-footprint-generator")
     (tags "capacitor")
     (property "LCSC" "C77007")
@@ -3017,7 +3017,7 @@
 
   (footprint "Capacitor_SMD:C_0603_1608Metric" (layer "F.Cu")
     (tstamp 7dcb6c17-400d-4992-8e47-24ef07901f95)
-    (at 141.5 95.933 -90)
+    (at 138.8 95.9 -90)
     (descr "Capacitor SMD 0603 (1608 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: IPC-SM-782 page 76, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf), generated with kicad-footprint-generator")
     (tags "capacitor")
     (property "Comment" "X7S")
@@ -3211,7 +3211,7 @@
 
   (footprint "Capacitor_SMD:C_0201_0603Metric" (layer "F.Cu")
     (tstamp 85eb3513-be66-47aa-96ea-e4692e6b032a)
-    (at 136.7 104.333 180)
+    (at 133.8 104.1 180)
     (descr "Capacitor SMD 0201 (0603 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: https://www.vishay.com/docs/20052/crcw0201e3.pdf), generated with kicad-footprint-generator")
     (tags "capacitor")
     (property "Populate" "")
@@ -3403,7 +3403,7 @@
 
   (footprint "Inductor_SMD:L_0201_0603Metric" (layer "F.Cu")
     (tstamp 8d2b42dd-b84d-4d95-ac78-5750efbb29bd)
-    (at 140.3 94.953 90)
+    (at 137.4 94.72 90)
     (descr "Inductor SMD 0201 (0603 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: https://www.vishay.com/docs/20052/crcw0201e3.pdf), generated with kicad-footprint-generator")
     (tags "inductor")
     (property "LCSC" "C1332892")
@@ -3457,7 +3457,7 @@
 
   (footprint "Capacitor_SMD:C_0402_1005Metric" (layer "F.Cu")
     (tstamp 8ff3ab7f-fb6b-4086-b56a-4cc05cd90f01)
-    (at 137.5 93.533 180)
+    (at 134.6 93.3 180)
     (descr "Capacitor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: IPC-SM-782 page 76, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf), generated with kicad-footprint-generator")
     (tags "capacitor")
     (property "LCSC" "C77007")
@@ -3513,7 +3513,7 @@
 
   (footprint "Inductor_SMD:L_0201_0603Metric" (layer "F.Cu")
     (tstamp 909e05bb-1dfc-4683-aefb-711f26c603b4)
-    (at 135.8 104.033 -90)
+    (at 132.9 103.8 -90)
     (descr "Inductor SMD 0201 (0603 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: https://www.vishay.com/docs/20052/crcw0201e3.pdf), generated with kicad-footprint-generator")
     (tags "inductor")
     (property "LCSC" "")
@@ -3598,7 +3598,7 @@
 
   (footprint "_other:SW_KMR221GLFS" (layer "F.Cu")
     (tstamp 9733d0eb-1722-4b6e-a035-4dd200796d11)
-    (at 145.9 99 90)
+    (at 147.8 99 90)
     (property "LCSC" "C72443")
     (property "Sheetfile" "nRF52832_qfaa.kicad_sch")
     (property "Sheetname" "")
@@ -3649,7 +3649,7 @@
 
   (footprint "Capacitor_SMD:C_0402_1005Metric" (layer "F.Cu")
     (tstamp 97550cbe-d1a0-49e8-96a9-d267188a9c43)
-    (at 139.5 97.333)
+    (at 136.6 97.1)
     (descr "Capacitor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: IPC-SM-782 page 76, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf), generated with kicad-footprint-generator")
     (tags "capacitor")
     (property "LCSC" "C77007")
@@ -3767,7 +3767,7 @@
 
   (footprint "Capacitor_SMD:C_0402_1005Metric" (layer "F.Cu")
     (tstamp 9fc22ac8-d055-4fa0-b6e2-11564beecf6a)
-    (at 138.7 103.833)
+    (at 135.8 103.6)
     (descr "Capacitor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: IPC-SM-782 page 76, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf), generated with kicad-footprint-generator")
     (tags "capacitor")
     (property "LCSC" "C32949")
@@ -3851,7 +3851,7 @@
 
   (footprint "Capacitor_SMD:C_0201_0603Metric" (layer "F.Cu")
     (tstamp a1cb4d73-35a4-4333-91a2-c33e2badafa5)
-    (at 130.6 97.667 180)
+    (at 127.7 97.434 180)
     (descr "Capacitor SMD 0201 (0603 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: https://www.vishay.com/docs/20052/crcw0201e3.pdf), generated with kicad-footprint-generator")
     (tags "capacitor")
     (property "LCSC" "C5142565")
@@ -3905,7 +3905,7 @@
 
   (footprint "Capacitor_SMD:C_0201_0603Metric" (layer "F.Cu")
     (tstamp a34e7e34-83b5-4b7e-841b-5b09df2b2722)
-    (at 139.4 98.233)
+    (at 136.5 98)
     (descr "Capacitor SMD 0201 (0603 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: https://www.vishay.com/docs/20052/crcw0201e3.pdf), generated with kicad-footprint-generator")
     (tags "capacitor")
     (property "LCSC" "C5142565")
@@ -3990,7 +3990,7 @@
 
   (footprint "Capacitor_SMD:C_0201_0603Metric" (layer "F.Cu")
     (tstamp a84fad4a-7e37-4dd5-a9ef-6eb4ad708797)
-    (at 139.4 99.033)
+    (at 136.5 98.8)
     (descr "Capacitor SMD 0201 (0603 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: https://www.vishay.com/docs/20052/crcw0201e3.pdf), generated with kicad-footprint-generator")
     (tags "capacitor")
     (property "LCSC" "C5142565")
@@ -5808,7 +5808,7 @@
 
   (footprint "nRF52832_qfaa:BT-XTAL_2016_N" (layer "F.Cu")
     (tstamp b50cf389-ffb5-47bd-87be-36ee0c0ae9b6)
-    (at 139.9 102.233)
+    (at 137 102)
     (descr "<b>BT-XTAL_2016</b><p>\n\nSMD XTAL 2.0 x 1.6 mm")
     (property "Sheetfile" "nRF52832_qfaa.kicad_sch")
     (property "Sheetname" "")
@@ -5921,7 +5921,7 @@
 
   (footprint "Capacitor_SMD:C_0402_1005Metric" (layer "F.Cu")
     (tstamp c3290e0e-3aec-472b-899d-0ac054dee577)
-    (at 139.5 96.333)
+    (at 136.6 96.1)
     (descr "Capacitor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: IPC-SM-782 page 76, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf), generated with kicad-footprint-generator")
     (tags "capacitor")
     (property "LCSC" "C77007")
@@ -6008,7 +6008,7 @@
 
   (footprint "Capacitor_SMD:C_0201_0603Metric" (layer "F.Cu")
     (tstamp c9d79591-bf7a-4951-8f7f-edb5c02fc80d)
-    (at 130.655 96.233 180)
+    (at 127.755 96 180)
     (descr "Capacitor SMD 0201 (0603 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: https://www.vishay.com/docs/20052/crcw0201e3.pdf), generated with kicad-footprint-generator")
     (tags "capacitor")
     (property "LCSC" "C5142565")
@@ -6260,7 +6260,7 @@
 
   (footprint "Capacitor_SMD:C_0201_0603Metric" (layer "F.Cu")
     (tstamp d0b6ae9b-c846-46d8-a27c-c8d39e9a4c9e)
-    (at 130.8 94.867 180)
+    (at 127.9 94.634 180)
     (descr "Capacitor SMD 0201 (0603 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: https://www.vishay.com/docs/20052/crcw0201e3.pdf), generated with kicad-footprint-generator")
     (tags "capacitor")
     (property "LCSC" "C5142565")
@@ -6345,7 +6345,7 @@
 
   (footprint "Inductor_SMD:L_0603_1608Metric" (layer "F.Cu")
     (tstamp d537d5a4-1ed4-44d0-afe6-a02f2b0c8824)
-    (at 141 98.733 90)
+    (at 138.1 98.5 90)
     (descr "Inductor SMD 0603 (1608 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: http://www.tortai-tech.com/upload/download/2011102023233369053.pdf), generated with kicad-footprint-generator")
     (tags "inductor")
     (property "LCSC" "C5339208")
@@ -6458,7 +6458,7 @@
 
   (footprint "Connector_PinHeader_1.00mm:PinHeader_1x01_P1.00mm_Vertical" (layer "F.Cu")
     (tstamp e0171fa7-4ecd-4767-aba6-d66200e7f427)
-    (at 135.7 106)
+    (at 132.8 105.767)
     (descr "Through hole straight pin header, 1x01, 1.00mm pitch, single row")
     (tags "Through hole pin header THT 1x01 1.00mm single row")
     (property "Sheetfile" "nRF52832_qfaa.kicad_sch")
@@ -6608,7 +6608,7 @@
 
   (footprint "_other:XCVR_NRF5340-QKAA-R7" (layer "F.Cu")
     (tstamp e74ab385-a27f-447f-ab92-f5ed12328013)
-    (at 135 97.533 -90)
+    (at 132.1 97.3 -90)
     (property "Availability" "In Stock")
     (property "Check_prices" "https://www.snapeda.com/parts/NRF5340-QKAA-R7/Nordic+Semiconductor+ASA/view-part/?ref=eda")
     (property "Description" "\nRF System on a Chip - SoC Dual-core Bluetooth 5.2 SoC supporting Bluetooth Low Energy, Bluetooth mesh, NFC, Thread, and Zigbee\n")
@@ -9244,7 +9244,7 @@
 
   (footprint "Resistor_SMD:R_0402_1005Metric" (layer "F.Cu")
     (tstamp ef4a8af6-fe36-44de-806d-59e679e9508c)
-    (at 127.59 93.4125)
+    (at 123.79 93.4125)
     (descr "Resistor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: IPC-SM-782 page 72, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf), generated with kicad-footprint-generator")
     (tags "resistor")
     (property "LCSC" "C25105")
@@ -9383,7 +9383,7 @@
 
   (footprint "Capacitor_SMD:C_0603_1608Metric" (layer "F.Cu")
     (tstamp f6ea4a72-27ef-4e71-84a2-f684f4a6d65f)
-    (at 138.1 92.233 180)
+    (at 135.2 92 180)
     (descr "Capacitor SMD 0603 (1608 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: IPC-SM-782 page 76, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf), generated with kicad-footprint-generator")
     (tags "capacitor")
     (property "LCSC" "C77183")
@@ -9950,16 +9950,16 @@
     (fill (thermal_gap 0.5) (thermal_bridge_width 0.5))
     (polygon
       (pts
-        (xy 149.85 96)
-        (xy 149.85 95)
-        (xy 142.25 95)
-        (xy 142.25 102.9)
-        (xy 149.85 102.9)
-        (xy 149.85 96.1)
-        (xy 147.55 96.1)
-        (xy 147.55 101.8)
-        (xy 143.95 101.8)
-        (xy 143.95 96)
+        (xy 151.75 96)
+        (xy 151.75 95)
+        (xy 144.15 95)
+        (xy 144.15 102.9)
+        (xy 151.75 102.9)
+        (xy 151.75 96.1)
+        (xy 149.45 96.1)
+        (xy 149.45 101.8)
+        (xy 145.85 101.8)
+        (xy 145.85 96)
       )
     )
   )
