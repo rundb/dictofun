@@ -3068,9 +3068,40 @@
     (uuid ff182e2c-2f9d-4eb7-87d8-8f8845824c09)
   )
 
+  (no_connect (at 226.695 186.69) (uuid 0727d853-85d0-4588-92e9-6e52a45c7e5c))
+  (no_connect (at 167.005 170.815) (uuid 0e9b89a4-ee64-4e2e-bba3-f0fb0613e971))
+  (no_connect (at 226.695 166.37) (uuid 101ec527-1c68-406a-bae6-076723ec19ea))
+  (no_connect (at 167.005 155.575) (uuid 195c0ecf-50c9-4b81-8346-3e250a2558fa))
+  (no_connect (at 167.005 168.275) (uuid 1b18456b-0a7f-4d2a-af47-1dca5004ec37))
+  (no_connect (at 167.005 147.955) (uuid 2d77426a-91ed-4335-ac95-a478e1c4418c))
+  (no_connect (at 226.695 168.91) (uuid 3519f3a8-ca17-40b1-a853-32a575865f21))
+  (no_connect (at 226.695 189.23) (uuid 373aab7f-f20b-4352-9abe-44b0a64f9030))
+  (no_connect (at 167.005 130.175) (uuid 4f4711a9-6d4b-46a1-878d-bc0c79d89a88))
+  (no_connect (at 167.005 163.195) (uuid 55db4748-6290-469c-8eee-ef512debb8a9))
   (no_connect (at 229.87 284.48) (uuid 717ebe20-095c-410e-bb4d-5206190c8c72))
+  (no_connect (at 167.005 132.715) (uuid 832dcfe8-4b67-4e2f-a0b2-22afc1a74c1a))
   (no_connect (at 5.08 -36.83) (uuid 84d4e166-b429-409a-ab37-c6a10fd82ff5))
+  (no_connect (at 167.005 117.475) (uuid 8a6f7276-825a-42f9-b539-0cfaed5881e6))
+  (no_connect (at 167.005 135.255) (uuid 8bd117a5-1c5b-432f-8ad9-8e66614153ab))
+  (no_connect (at 226.695 181.61) (uuid 8e207b89-7755-4638-ad5b-5e6c9fd74cbb))
   (no_connect (at 240.03 284.48) (uuid 942e17f3-b456-46f4-beaa-49c074b8a605))
+  (no_connect (at 48.895 116.84) (uuid a3d18af1-229c-443f-a023-b5c0c47053f9))
+  (no_connect (at 226.695 176.53) (uuid a9372f57-af24-4d60-8655-ff3f8e72d850))
+  (no_connect (at 167.005 137.795) (uuid ae2bb9d9-d243-4e9e-8048-d26d90171f9c))
+  (no_connect (at 167.005 150.495) (uuid b42eb1fe-975a-431b-be2a-c71c29a2c568))
+  (no_connect (at 167.005 175.895) (uuid c7b306ba-7740-4571-83a3-a86286ce6543))
+  (no_connect (at 167.005 140.335) (uuid c91d2443-5859-4fe6-9466-3139d9625ef1))
+  (no_connect (at 226.695 171.45) (uuid cb3439ac-38f6-4424-8880-127b027faf88))
+  (no_connect (at 167.005 125.095) (uuid d01d5813-1260-4231-af8f-0b61c134d16c))
+  (no_connect (at 147.32 53.975) (uuid d8113644-6d50-4795-9536-2240989da107))
+  (no_connect (at 226.695 156.21) (uuid dd3e2b18-0852-4072-b8a5-e5e77fd4d020))
+  (no_connect (at 167.005 191.135) (uuid df7fb18a-f01f-4999-91c0-f41b4db9e055))
+  (no_connect (at 226.695 153.67) (uuid e3d5b52b-7611-4055-89b8-11772c9d8f3a))
+  (no_connect (at 335.28 43.815) (uuid ec14a423-7a49-4e85-b3f8-c8ac88a31fe7))
+  (no_connect (at 198.12 54.61) (uuid ed0c683a-7196-4b4b-ba2e-f8031dd477dc))
+  (no_connect (at 167.005 120.015) (uuid ed93cacf-15d4-4689-9834-b83f3d734938))
+  (no_connect (at 167.005 142.875) (uuid ef53ae76-b2ea-4faf-9855-12af9fc17e61))
+  (no_connect (at 335.28 33.655) (uuid fa0e2197-7757-4bc7-8b17-d3a09a56ef38))
 
   (wire (pts (xy 231.775 52.07) (xy 239.395 52.07))
     (stroke (width 0) (type default))
@@ -3340,6 +3371,10 @@
     (stroke (width 0) (type default))
     (uuid 37ce4b73-2248-48dc-86a8-b0c9f05cc57a)
   )
+  (wire (pts (xy 108.585 212.725) (xy 108.585 215.265))
+    (stroke (width 0) (type default))
+    (uuid 37fbf0c9-9044-4774-b07f-dbadbfb07da0)
+  )
   (wire (pts (xy 283.21 23.495) (xy 292.1 23.495))
     (stroke (width 0) (type default))
     (uuid 3804fca1-9d15-4608-8eea-41b9290c1d69)
@@ -3519,10 +3554,6 @@
   (wire (pts (xy 153.67 183.515) (xy 167.005 183.515))
     (stroke (width 0) (type default))
     (uuid 668da9a4-ba45-48fb-bf3f-e190cac47832)
-  )
-  (wire (pts (xy 335.28 33.655) (xy 349.25 33.655))
-    (stroke (width 0) (type default))
-    (uuid 67e64a1f-d37b-46cd-bfa9-0da8c2a7379b)
   )
   (wire (pts (xy 292.1 32.385) (xy 292.1 33.655))
     (stroke (width 0) (type default))
@@ -4193,10 +4224,6 @@
     (effects (font (size 1.27 1.27)) (justify left bottom))
     (uuid 331e8772-04e6-4514-8c8d-7eece7b60cde)
   )
-  (label "UART_TX" (at 265.43 208.915 180) (fields_autoplaced)
-    (effects (font (size 1.27 1.27)) (justify right bottom))
-    (uuid 3a41dd27-ec14-44d5-b505-aad1d829f79a)
-  )
   (label "LED_GREEN" (at 162.56 165.735 180) (fields_autoplaced)
     (effects (font (size 1.27 1.27)) (justify right bottom))
     (uuid 3bca658b-a598-4669-a7cb-3f9b5f47bb5a)
@@ -4256,10 +4283,6 @@
   (label "N_RESET" (at 229.87 72.39 0) (fields_autoplaced)
     (effects (font (size 1.27 1.27)) (justify left bottom))
     (uuid 6b5fb51d-798b-4559-8d57-591bd9731b9f)
-  )
-  (label "RTC_CLKOUT" (at 337.82 33.655 0) (fields_autoplaced)
-    (effects (font (size 1.27 1.27)) (justify left bottom))
-    (uuid 6eba297b-a289-43d3-a531-f8e61a033b66)
   )
   (label "BUTTON_INPUT_MCU" (at 71.12 45.72 0) (fields_autoplaced)
     (effects (font (size 1.27 1.27)) (justify left bottom))
@@ -4340,10 +4363,6 @@
   (label "RTC_INT_N" (at 386.715 57.15 0) (fields_autoplaced)
     (effects (font (size 1.27 1.27)) (justify left bottom))
     (uuid cec822cc-6570-4a50-9795-28df30210ab2)
-  )
-  (label "UART_RX" (at 265.43 206.375 180) (fields_autoplaced)
-    (effects (font (size 1.27 1.27)) (justify right bottom))
-    (uuid d38aa458-d7c4-47af-ba08-2b6be506a3fd)
   )
   (label "N_RESET" (at 307.975 242.57 0) (fields_autoplaced)
     (effects (font (size 1.27 1.27)) (justify left bottom))
@@ -4450,7 +4469,7 @@
     (pin "1" (uuid f114e8d1-fb50-46a2-8734-2a109654964b))
     (pin "2" (uuid 42c2bda6-dae3-48c4-8ea3-a3902e5b347f))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "C3") (unit 1)
         )
@@ -4475,7 +4494,7 @@
     )
     (pin "1" (uuid 7f898608-2897-44a5-a5e8-4a402858bae0))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#GND02") (unit 1)
         )
@@ -4504,7 +4523,7 @@
     (pin "1" (uuid ce30f6a3-9213-4a0d-bfee-84d9778d8c13))
     (pin "2" (uuid 8dcc8bbd-a0e5-4aa0-ba31-00ff61e1de40))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "R1") (unit 1)
         )
@@ -4543,7 +4562,7 @@
     (pin "8" (uuid 4f1f1fa5-ac2c-40ca-baf2-24cee817236a))
     (pin "9" (uuid 005a0637-ab5e-4f73-8058-144d2196d443))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "U2") (unit 1)
         )
@@ -4568,7 +4587,7 @@
     )
     (pin "1" (uuid 89b6996e-0789-4d93-84ed-e1de109c4cd6))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#GND018") (unit 1)
         )
@@ -4593,7 +4612,7 @@
     )
     (pin "1" (uuid ea67da83-4054-4c9f-a3bf-6899299f40a1))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#GND020") (unit 1)
         )
@@ -4618,7 +4637,7 @@
     )
     (pin "1" (uuid d2b9df14-2c9d-4ecb-a0e7-d782eb7efe83))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#GND015") (unit 1)
         )
@@ -4647,7 +4666,7 @@
     (pin "1" (uuid 2e19170e-6195-4bcc-a2c8-6b2d101cc492))
     (pin "2" (uuid f9316bab-8f65-416f-b65e-8b4b0d330be3))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "C18") (unit 1)
         )
@@ -4676,7 +4695,7 @@
     (pin "1" (uuid ea52a2f9-9cc8-412d-8698-2498153ef1cc))
     (pin "2" (uuid c4fe4fa6-119a-4c19-b848-cb8c113fda12))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "C17") (unit 1)
         )
@@ -4701,7 +4720,7 @@
     )
     (pin "1" (uuid 8cf8567b-b7c1-4a92-bf08-e38f81e80399))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#GND019") (unit 1)
         )
@@ -4730,7 +4749,7 @@
     (pin "1" (uuid a5c14325-a24b-4779-bfc4-4361b9f068dc))
     (pin "2" (uuid 995c44ee-6133-4e88-af52-eddd63b33f74))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "C15") (unit 1)
         )
@@ -4755,7 +4774,7 @@
     )
     (pin "1" (uuid 5e967bc1-6d0c-45d5-b584-3e979b1d5fcf))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#GND017") (unit 1)
         )
@@ -4784,7 +4803,7 @@
     (pin "1" (uuid 9b8215f1-e9de-4089-9a87-34f2906fa5b4))
     (pin "2" (uuid 9a7aace5-2eeb-4460-bbcb-98f9d18add96))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "R3") (unit 1)
         )
@@ -4811,7 +4830,7 @@
       (effects (font (size 1.27 1.27)) hide)
     )
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "H1") (unit 1)
         )
@@ -4838,7 +4857,7 @@
       (effects (font (size 1.27 1.27)) hide)
     )
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "H2") (unit 1)
         )
@@ -4863,7 +4882,7 @@
     )
     (pin "1" (uuid da0d8a1b-a98c-4f10-bee1-6dee6985ef79))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#PWR01") (unit 1)
         )
@@ -4880,7 +4899,7 @@
     (property "Value" "KMR221GLFS" (at 29.21 19.5326 0)
       (effects (font (size 1.27 1.27)))
     )
-    (property "Footprint" "SW_KMR221GLFS" (at 29.21 22.86 0)
+    (property "Footprint" "df_components:SW_KMR221GLFS" (at 29.21 22.86 0)
       (effects (font (size 1.27 1.27)) (justify left bottom) hide)
     )
     (property "Datasheet" "" (at 29.21 22.86 0)
@@ -4889,13 +4908,16 @@
     (property "LCSC" "C72443" (at 29.21 22.86 0)
       (effects (font (size 1.27 1.27)) hide)
     )
+    (property "Populate" "" (at 29.21 22.86 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
     (pin "1" (uuid 41022068-7a48-4af9-ab76-152afa691e41))
     (pin "2" (uuid 960a2a59-07db-4c30-b646-58c3af9e474b))
     (pin "3" (uuid 289e8d8a-b643-4f8d-be62-6a55221272b7))
     (pin "4" (uuid 57ece2ff-2ff7-4ebf-8cf7-6c60c0680c8a))
     (pin "5" (uuid a59b2020-aea5-456b-91bf-16109ef215a4))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "S1") (unit 1)
         )
@@ -4920,7 +4942,7 @@
     )
     (pin "1" (uuid 8da45f36-100c-45b1-bcbb-45adb9c103fe))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#GND0103") (unit 1)
         )
@@ -4945,7 +4967,7 @@
     )
     (pin "1" (uuid 28eb53e5-5e25-4d8d-9574-c209b9d55ab8))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "TP6") (unit 1)
         )
@@ -4970,7 +4992,7 @@
     )
     (pin "1" (uuid 16ba9573-06d2-43b7-a0a7-eb8ec6493eb4))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "TP7") (unit 1)
         )
@@ -4995,7 +5017,7 @@
     )
     (pin "1" (uuid 1cc554f9-6c5f-4417-b12f-35fce7213dde))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "TP8") (unit 1)
         )
@@ -5028,7 +5050,7 @@
     (pin "5" (uuid 94c7ce6d-0dc8-4b53-a470-c6ddd8deb8db))
     (pin "6" (uuid 88406d70-7bea-4243-b287-e3d548dcc3ae))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "MK1") (unit 1)
         )
@@ -5053,7 +5075,7 @@
     )
     (pin "1" (uuid 489b2bcf-1c26-46a9-b277-bbc3defdcd37))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#GND014") (unit 1)
         )
@@ -5077,7 +5099,7 @@
       (effects (font (size 1.27 1.27)) hide)
     )
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#FRAME1") (unit 1)
         )
@@ -5109,7 +5131,7 @@
     (pin "1" (uuid f74e406d-6b71-463a-8966-ab41e30140fc))
     (pin "2" (uuid bae90b4e-ba88-4944-8fce-a7580f5a97ce))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "C11") (unit 1)
         )
@@ -5134,7 +5156,7 @@
     )
     (pin "1" (uuid 0dadd474-6ffd-4039-8ce4-500d12c5e62c))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#PWR02") (unit 1)
         )
@@ -5159,7 +5181,7 @@
     )
     (pin "1" (uuid 3e777275-b243-407e-b69f-3f3aad20fd0f))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#PWR017") (unit 1)
         )
@@ -5188,7 +5210,7 @@
     (pin "1" (uuid ea0847d9-33c7-49e8-9674-9466b342f0f1))
     (pin "2" (uuid d7e33560-7260-481b-a0b1-8308d43b96a5))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "R4") (unit 1)
         )
@@ -5213,7 +5235,7 @@
     )
     (pin "1" (uuid 40876336-6eaa-4273-9bee-3e58fc4193a6))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "TP20") (unit 1)
         )
@@ -5245,7 +5267,7 @@
     (pin "1" (uuid 30d06a43-4810-4c42-afd2-4fb6d40fd6ca))
     (pin "2" (uuid e6a55ed7-4153-4731-a260-b715b5f70c47))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "L4") (unit 1)
         )
@@ -5280,7 +5302,7 @@
     (pin "7" (uuid 3b282b5c-541d-4f7d-94d8-72f6f3e1b951))
     (pin "8" (uuid 5b9b935e-44ad-4731-826f-94f81360762f))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "RN3") (unit 1)
         )
@@ -5305,7 +5327,7 @@
     )
     (pin "1" (uuid 0ce3651d-4078-4cab-8a8a-40240e04ff18))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#PWR022") (unit 1)
         )
@@ -5483,7 +5505,7 @@
     (pin "W1" (uuid 560e96a0-f8f1-47a1-bf07-d0b48aa61826))
     (pin "38" (uuid cacb0d8b-dfaa-4433-af28-ee74b2f64973))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "U7") (unit 4)
         )
@@ -5515,7 +5537,7 @@
     (pin "1" (uuid a864cb06-6633-4402-ad68-cfafcf6d4fec))
     (pin "2" (uuid 0dcaf638-4c70-4831-914a-360e6d696efd))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "X1") (unit 1)
         )
@@ -5540,7 +5562,7 @@
     )
     (pin "1" (uuid 28e2bd84-26aa-49ba-a88c-0dca4833bae8))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "TP11") (unit 1)
         )
@@ -5572,7 +5594,7 @@
     (pin "1" (uuid 97b50ea0-c121-49cb-908d-20d559504699))
     (pin "2" (uuid c7d84f36-0238-4024-88f4-cd066ff42dab))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "L6") (unit 1)
         )
@@ -5597,7 +5619,7 @@
     )
     (pin "1" (uuid 55f3d9ec-1d36-49e6-ae67-91938acff240))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#PWR012") (unit 1)
         )
@@ -5629,7 +5651,7 @@
     (pin "1" (uuid e94c26d8-5b60-4f00-8907-41f6afb030c4))
     (pin "2" (uuid 6d607301-b96c-4cef-983e-8c63368515ce))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "C35") (unit 1)
         )
@@ -5671,7 +5693,7 @@
     (pin "1" (uuid 27e3ad00-3aa2-4c69-9ca0-5a9bcab7496a))
     (pin "2" (uuid 58180ac1-4b65-4071-b582-178d3305a472))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "Q1") (unit 1)
         )
@@ -5696,7 +5718,7 @@
     )
     (pin "1" (uuid fcdeec5e-55c9-4e57-bb72-750b3ac6a797))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#PWR013") (unit 1)
         )
@@ -5726,7 +5748,7 @@
     (pin "1" (uuid 80987d2e-8cb2-42f1-afb5-ae80dd37971e))
     (pin "3" (uuid 75634fea-1f04-49ae-a8cb-c433b98a9fe5))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "J5") (unit 1)
         )
@@ -5758,7 +5780,7 @@
     (pin "1" (uuid 9e4d4735-5848-42f4-993e-0800e9857767))
     (pin "2" (uuid 15cd50e2-99e4-491e-9118-09c651a4956e))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "R23") (unit 1)
         )
@@ -5790,7 +5812,7 @@
     (pin "1" (uuid d1986feb-4c9f-406a-94fd-565b7ca5bd7a))
     (pin "2" (uuid 1cc803db-343b-41e0-8489-54dfa9e65ca1))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "C39") (unit 1)
         )
@@ -5815,7 +5837,7 @@
     )
     (pin "1" (uuid 92439af7-a661-460b-bcc5-403ad9e30ad5))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#PWR031") (unit 1)
         )
@@ -5840,7 +5862,7 @@
     )
     (pin "1" (uuid 3e99a400-94a1-456d-ac33-4d33f51285c9))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#PWR033") (unit 1)
         )
@@ -5865,7 +5887,7 @@
     )
     (pin "1" (uuid fb77182d-9c00-41c4-b681-7db03db5277b))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#PWR034") (unit 1)
         )
@@ -5890,7 +5912,7 @@
     )
     (pin "1" (uuid d50eb9c6-455c-4be8-ab9e-e88355bf55d1))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "TP30") (unit 1)
         )
@@ -5922,7 +5944,7 @@
     (pin "1" (uuid 91e8271d-0068-454a-8169-c963788e1b3e))
     (pin "2" (uuid 1e14b064-cfd4-4c79-be46-227dd31d4c77))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "C47") (unit 1)
         )
@@ -5947,7 +5969,7 @@
     )
     (pin "1" (uuid c073a01f-72a1-4d6d-940a-aeae4657a627))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#PWR026") (unit 1)
         )
@@ -5972,7 +5994,7 @@
     )
     (pin "1" (uuid 34e7a92d-ac24-4184-9352-fea255e94ce5))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "TP18") (unit 1)
         )
@@ -6001,7 +6023,7 @@
     (pin "1" (uuid fbc53844-a670-4a19-99c9-4d03bb97d702))
     (pin "2" (uuid 297392ad-d2d0-4823-9234-1dafff31e0de))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "R21") (unit 1)
         )
@@ -6045,7 +6067,7 @@
     (pin "7" (uuid 7c10bf17-ef7a-4573-958d-56fd687f1a9a))
     (pin "8" (uuid ebb85a8e-f868-44f3-a609-0f50d88766d4))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "U5") (unit 1)
         )
@@ -6077,7 +6099,7 @@
     (pin "1" (uuid ee71bff7-0277-4b93-a648-03c0eb3ddbfa))
     (pin "2" (uuid 9aaff8f3-6607-40d7-ad39-3a5c13b409e4))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "C37") (unit 1)
         )
@@ -6102,7 +6124,7 @@
     )
     (pin "1" (uuid d6c4c1eb-0f24-4e64-a7ff-b1318ec410b3))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#PWR011") (unit 1)
         )
@@ -6134,7 +6156,7 @@
     (pin "1" (uuid e2daa9e8-7d17-471f-bc43-47c2e90eb72b))
     (pin "2" (uuid c6f2d218-ba39-4cb2-afcf-be6e164868f6))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "C44") (unit 1)
         )
@@ -6159,7 +6181,7 @@
     )
     (pin "1" (uuid d11e7c4a-8005-4c9d-8378-a4038482c25a))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#PWR030") (unit 1)
         )
@@ -6188,7 +6210,7 @@
     (pin "1" (uuid 7a1bb30c-ee7b-406a-8101-564a4da0bd01))
     (pin "2" (uuid ecf39e63-6a13-4377-9b6b-2cb3cf0b9c2c))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "R22") (unit 1)
         )
@@ -6196,24 +6218,24 @@
     )
   )
 
-  (symbol (lib_id "power:VCC") (at 108.585 215.265 0) (unit 1)
+  (symbol (lib_id "power:VCC") (at 108.585 212.725 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 507e78e5-53a0-4673-92ff-88179ccba6cb)
-    (property "Reference" "#PWR032" (at 108.585 219.075 0)
+    (property "Reference" "#PWR032" (at 108.585 216.535 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (property "Value" "VCC" (at 108.585 210.185 0)
+    (property "Value" "VCC" (at 108.585 207.645 0)
       (effects (font (size 1.27 1.27)))
     )
-    (property "Footprint" "" (at 108.585 215.265 0)
+    (property "Footprint" "" (at 108.585 212.725 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (property "Datasheet" "" (at 108.585 215.265 0)
+    (property "Datasheet" "" (at 108.585 212.725 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (pin "1" (uuid e54d547d-5ebf-4d97-86d4-9ae959fa2e71))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#PWR032") (unit 1)
         )
@@ -6242,7 +6264,7 @@
     (pin "1" (uuid b9a8db06-6048-4673-a9c3-e253077e79ee))
     (pin "2" (uuid 97f4dacc-945b-41bd-966b-2c214f3cb269))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "R24") (unit 1)
         )
@@ -6274,7 +6296,7 @@
     (pin "1" (uuid deca6ac7-53df-496f-a9a0-fe7e7cf110a7))
     (pin "2" (uuid 30995fdf-d227-46d0-93f5-6adc37ac36ce))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "C34") (unit 1)
         )
@@ -6306,7 +6328,7 @@
     (pin "1" (uuid 01f72eea-ef7d-4295-8ec3-3e87c430e3a1))
     (pin "2" (uuid 73136618-55f8-4a1a-9cc5-23ebf4e7efd1))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "C36") (unit 1)
         )
@@ -6331,7 +6353,7 @@
     )
     (pin "1" (uuid 28f7c93b-ffe3-4e8d-9ee3-fcbabf855261))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#PWR03") (unit 1)
         )
@@ -6363,7 +6385,7 @@
     (pin "1" (uuid 3e6b8d8f-f5a8-404c-8660-bcebb5750f28))
     (pin "2" (uuid 8069d7cf-b44d-4a1a-afaf-4bfef47db7e9))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "C39(NP0)1") (unit 1)
         )
@@ -6395,7 +6417,7 @@
     (pin "1" (uuid 1f31cbe7-5650-44e1-86ed-d5f1aa56cadb))
     (pin "2" (uuid d316ef68-f534-4d7d-b43c-147fb0f9b64d))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "C12") (unit 1)
         )
@@ -6424,7 +6446,7 @@
     (pin "1" (uuid 0552efb7-b309-462b-bdaa-168460c4a216))
     (pin "2" (uuid ef92b163-6e69-4b53-a237-cce1a39c191b))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "C13") (unit 1)
         )
@@ -6449,7 +6471,7 @@
     )
     (pin "1" (uuid 4e30228c-5d1e-4764-a304-c57d37ff1fa6))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#PWR027") (unit 1)
         )
@@ -6474,7 +6496,7 @@
     )
     (pin "1" (uuid 0fba0572-3f4f-4cbe-8106-c34040200b42))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#PWR029") (unit 1)
         )
@@ -6506,7 +6528,7 @@
     (pin "1" (uuid 5c9d67bb-36d4-44f4-a07d-2394f107207d))
     (pin "2" (uuid 3894aa73-b990-451e-87f7-8e7687e95be6))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "C38") (unit 1)
         )
@@ -6531,7 +6553,7 @@
     )
     (pin "1" (uuid 4d380a92-e7e7-4eb2-a2e8-318031e9145b))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#PWR024") (unit 1)
         )
@@ -6560,7 +6582,7 @@
     (pin "1" (uuid eb3bff5b-f94c-468c-968e-ef1e1e60c665))
     (pin "2" (uuid 8a4d003a-f69d-48a1-b2a1-a15bdbf11315))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "C46") (unit 1)
         )
@@ -6585,7 +6607,7 @@
     )
     (pin "1" (uuid 68978da2-1b02-4abf-9e8b-03248971fa31))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#PWR020") (unit 1)
         )
@@ -6620,7 +6642,7 @@
     (pin "1" (uuid 6cd9466f-9e1b-4a42-9f45-5987e471eead))
     (pin "2" (uuid 4542ad98-0f64-4519-bb49-a6b26db4b2d4))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "C43") (unit 1)
         )
@@ -6652,7 +6674,7 @@
     (pin "1" (uuid 657d94ff-d7dc-4f73-98ad-f3c8672e9833))
     (pin "2" (uuid 74deb71e-6f06-404e-9414-f0e6b6895a29))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "C4") (unit 1)
         )
@@ -6677,7 +6699,7 @@
     )
     (pin "1" (uuid 2c8641f3-19c0-4fd7-a183-40fdb565e427))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#PWR025") (unit 1)
         )
@@ -6702,7 +6724,7 @@
     )
     (pin "1" (uuid a6463655-e2ac-49cf-9ba8-c4bdc4f7613b))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#PWR016") (unit 1)
         )
@@ -6727,7 +6749,7 @@
     )
     (pin "1" (uuid 5024ff00-f85d-4ae3-81da-c9d1410e9ada))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#GND06") (unit 1)
         )
@@ -6759,7 +6781,7 @@
     (pin "1" (uuid 552b612d-d408-42b2-ab1c-f6e5371914f9))
     (pin "2" (uuid 4d1216a8-97f0-4065-aaac-4319d8b7d145))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "C30") (unit 1)
         )
@@ -6784,7 +6806,7 @@
     )
     (pin "1" (uuid 8badbf18-d279-4eb9-91a8-27cbed320cca))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "TP21") (unit 1)
         )
@@ -6813,7 +6835,7 @@
     (pin "1" (uuid 39fee015-96ef-442a-92e9-7104ea50ce58))
     (pin "2" (uuid 31ede386-74c1-4ace-b3dc-2ff83d021980))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "C25") (unit 1)
         )
@@ -6838,7 +6860,7 @@
     )
     (pin "1" (uuid e9240b8b-b1c1-4a68-8e4c-c81692bf5057))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "TP9") (unit 1)
         )
@@ -6863,7 +6885,7 @@
     )
     (pin "1" (uuid bf51dc9d-e007-4d55-8b98-a211d51d96d2))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#PWR023") (unit 1)
         )
@@ -6895,7 +6917,7 @@
     (pin "1" (uuid 15997666-d38d-4267-9b9c-1a4a36003d1b))
     (pin "2" (uuid a8ffa116-d9ef-47d3-a37b-62a61674b957))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "C31") (unit 1)
         )
@@ -6927,7 +6949,7 @@
     (pin "1" (uuid f14c9e45-eca1-4080-b1e0-7315f1222422))
     (pin "2" (uuid 0982cb6d-aee1-401a-a276-bcc8db464876))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "C32") (unit 1)
         )
@@ -6959,7 +6981,7 @@
     (pin "1" (uuid 9d2f6790-7c95-4b7e-a093-846f9f68081a))
     (pin "2" (uuid 70b673a1-6bb7-4052-9fd7-407530287203))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "C28") (unit 1)
         )
@@ -6991,7 +7013,7 @@
     (pin "1" (uuid 97be35c4-e167-4d2d-b5ad-10a4082c2bdf))
     (pin "2" (uuid 31ad7e01-0ef3-410a-8ed6-e2af6d688d6f))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "C41") (unit 1)
         )
@@ -7016,7 +7038,7 @@
     )
     (pin "1" (uuid add3c605-3e32-466a-8508-3733d5069c00))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#PWR028") (unit 1)
         )
@@ -7041,7 +7063,7 @@
     )
     (pin "1" (uuid 7392be50-8bfa-43d7-a306-cb9b14ef8813))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "TP15") (unit 1)
         )
@@ -7070,7 +7092,7 @@
     (pin "1" (uuid f1e6568a-938f-47c9-b269-adc065036d72))
     (pin "2" (uuid 794153a3-7776-4b99-92f0-8cae2cac0f39))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "R2") (unit 1)
         )
@@ -7095,7 +7117,7 @@
     )
     (pin "1" (uuid 484bae51-abc3-46b8-bc10-aba80ce8c900))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#PWR014") (unit 1)
         )
@@ -7124,7 +7146,7 @@
     (pin "1" (uuid 58fd9e38-ff29-4580-a4ee-061bca54eaf7))
     (pin "2" (uuid 99226400-54fc-4f7a-bae9-abf3ec70dc9c))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "C10") (unit 1)
         )
@@ -7149,7 +7171,7 @@
     )
     (pin "1" (uuid baec4207-256f-433e-830d-b8ec869248d3))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#GND0106") (unit 1)
         )
@@ -7181,7 +7203,7 @@
     (pin "2" (uuid 0d683991-d7db-44df-9f3e-29374facaa12))
     (pin "1" (uuid f7ef811c-58ab-4091-8d60-2eb9d83561c5))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "FB3") (unit 1)
         )
@@ -7214,7 +7236,7 @@
     (pin "5" (uuid cf83f36d-4100-4803-8f39-97fe4b6a1086))
     (pin "2" (uuid 417eea95-a6b5-4ee0-b95a-f2cb2e2b759e))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "J3") (unit 1)
         )
@@ -7239,7 +7261,7 @@
     )
     (pin "1" (uuid 1401a6f9-0533-4291-a123-0b52b1bf0c95))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "J1") (unit 1)
         )
@@ -7417,7 +7439,7 @@
     (pin "W1" (uuid 560e96a0-f8f1-47a1-bf07-d0b48aa61827))
     (pin "38" (uuid cacb0d8b-dfaa-4433-af28-ee74b2f64974))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "U7") (unit 2)
         )
@@ -7449,7 +7471,7 @@
     (pin "1" (uuid 21e54fe1-9e1b-42d8-be33-162384596070))
     (pin "2" (uuid 54ee4905-86ce-4d3f-9045-68132b786cde))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "L5") (unit 1)
         )
@@ -7474,7 +7496,7 @@
     )
     (pin "1" (uuid 577ae91e-cb35-46de-86b5-34d1ef80360a))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "TP10") (unit 1)
         )
@@ -7499,7 +7521,7 @@
     )
     (pin "1" (uuid 2f087601-e01c-4077-b745-5cd47bf432fa))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#PWR0104") (unit 1)
         )
@@ -7534,7 +7556,7 @@
     (pin "1" (uuid a250704f-305d-4064-9eb2-82d70e0f87e8))
     (pin "2" (uuid e4cfb141-5dc9-4b18-9a07-6d0cb7b067ab))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "C42") (unit 1)
         )
@@ -7712,7 +7734,7 @@
     (pin "W1" (uuid 560e96a0-f8f1-47a1-bf07-d0b48aa61828))
     (pin "38" (uuid cacb0d8b-dfaa-4433-af28-ee74b2f64975))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "U7") (unit 1)
         )
@@ -7740,7 +7762,7 @@
     (pin "3" (uuid 4b42ab7d-cfb9-4d41-9a96-ec5dfdd7339c))
     (pin "4" (uuid 94468a25-33e0-42de-b1eb-e90e029aeed1))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "X2") (unit 1)
         )
@@ -7765,7 +7787,7 @@
     )
     (pin "1" (uuid f4fd42e6-b369-4f3a-845d-43d530ca4f05))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "TP31") (unit 1)
         )
@@ -7790,7 +7812,7 @@
     )
     (pin "1" (uuid ed12a62d-959c-4fcc-b106-6eaaac1f75c5))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "TP5") (unit 1)
         )
@@ -7815,7 +7837,7 @@
     )
     (pin "1" (uuid 3dab523c-7d88-4cf2-9609-585091b3ba5f))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#PWR015") (unit 1)
         )
@@ -7840,7 +7862,7 @@
     )
     (pin "1" (uuid be223e8f-b65a-4c0d-b408-200291152fd3))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#PWR0103") (unit 1)
         )
@@ -7872,7 +7894,7 @@
     (pin "1" (uuid 3f55756d-eb91-404a-917e-aeebe034b050))
     (pin "2" (uuid 0922af45-c702-4da5-a792-85ef08037266))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "C6") (unit 1)
         )
@@ -7897,7 +7919,7 @@
     )
     (pin "1" (uuid 26fa9974-d03a-4f85-b80c-8b160021d7e1))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "TP29") (unit 1)
         )
@@ -7932,7 +7954,7 @@
     (pin "1" (uuid b5ec8986-42df-426f-8f6d-fa706663f2cb))
     (pin "2" (uuid 41487588-e3b1-4498-91e2-62f5cdf25278))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "D5") (unit 1)
         )
@@ -7957,7 +7979,7 @@
     )
     (pin "1" (uuid d7247e35-a826-4b79-a0ef-9300d372011f))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "TP23") (unit 1)
         )
@@ -7982,7 +8004,7 @@
     )
     (pin "1" (uuid ef0d3192-ec49-47df-9618-d05fa1d5c450))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#GND0105") (unit 1)
         )
@@ -8011,7 +8033,7 @@
     (pin "1" (uuid 4d7bac50-47e4-40f9-92c9-b93b52b23d0f))
     (pin "2" (uuid c4a9998f-83e0-4522-a01d-f36917a4d967))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "R13") (unit 1)
         )
@@ -8036,7 +8058,7 @@
     )
     (pin "1" (uuid bf2a5ab6-1307-408b-b870-cd61ed118847))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "TP32") (unit 1)
         )
@@ -8068,7 +8090,7 @@
     (pin "1" (uuid e64a60b7-485d-4b12-a06a-c31777edc6df))
     (pin "2" (uuid 7884d101-e576-4c9d-b6da-50b3ce29d053))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "L3") (unit 1)
         )
@@ -8093,7 +8115,7 @@
     )
     (pin "1" (uuid e67985ca-0e61-4105-b111-894da8a42aec))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "TP17") (unit 1)
         )
@@ -8118,7 +8140,7 @@
     )
     (pin "1" (uuid 7fe3f15b-486e-4bfd-a365-f193c08016f0))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#PWR021") (unit 1)
         )
@@ -8143,7 +8165,7 @@
     )
     (pin "1" (uuid f9365681-3d1e-402e-be46-799059c5c8e4))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "TP1") (unit 1)
         )
@@ -8168,7 +8190,7 @@
     )
     (pin "1" (uuid c7005824-7418-438e-a2a5-ab365c1812d6))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#PWR018") (unit 1)
         )
@@ -8193,7 +8215,7 @@
     )
     (pin "1" (uuid 73bcad54-5b5c-4458-bbb0-287f1c4b4553))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#PWR05") (unit 1)
         )
@@ -8218,7 +8240,7 @@
     )
     (pin "1" (uuid e4d573da-776b-4cef-854e-20152cd4375e))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "TP3") (unit 1)
         )
@@ -8396,7 +8418,7 @@
     (pin "W1" (uuid 560e96a0-f8f1-47a1-bf07-d0b48aa61829))
     (pin "38" (uuid cacb0d8b-dfaa-4433-af28-ee74b2f64976))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "U7") (unit 3)
         )
@@ -8428,7 +8450,7 @@
     (pin "1" (uuid c4bdfb99-2440-40c1-9f6f-290b99d798ec))
     (pin "2" (uuid ff300a50-2d91-473c-81a1-2fbd902d163c))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "C33") (unit 1)
         )
@@ -8460,7 +8482,7 @@
     (pin "2" (uuid 1e24b1b6-7240-4934-804d-1576bb671e05))
     (pin "1" (uuid 319a1ef0-7a23-4773-9a00-cf1533cf6fdd))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "FB2") (unit 1)
         )
@@ -8494,7 +8516,7 @@
     (pin "1" (uuid ae352097-7137-4b74-98fb-101e1c951fe8))
     (pin "4" (uuid 044966eb-3be1-4ee3-bc3b-9671dfb62b7f))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "D1") (unit 1)
         )
@@ -8526,7 +8548,7 @@
     (pin "1" (uuid d82b3772-7469-42e4-9aea-2dd8bc5ce62d))
     (pin "2" (uuid c7e75f6a-7716-48d2-8b4e-d0aae81b3be3))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "C5") (unit 1)
         )
@@ -8558,7 +8580,7 @@
     (pin "1" (uuid 2c330bc9-aac0-4ad6-8f45-06d444c10c5f))
     (pin "2" (uuid be949373-24c8-4e73-8346-84c57e3c16ab))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "C40") (unit 1)
         )
@@ -8587,7 +8609,7 @@
     (pin "1" (uuid 47b04ce2-2213-401b-b440-3a13dede626b))
     (pin "2" (uuid 9ff5a1e8-9387-4fad-a83d-e7273700f720))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "C24") (unit 1)
         )
@@ -8612,7 +8634,7 @@
     )
     (pin "1" (uuid 39d9d10a-f1c5-4b6d-9419-b116ba70ac01))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#GND05") (unit 1)
         )
@@ -8637,7 +8659,7 @@
     )
     (pin "1" (uuid ab2dbc64-6870-4178-845e-bb8f77dc94a7))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "TP22") (unit 1)
         )
@@ -8669,7 +8691,7 @@
     (pin "1" (uuid 6a952437-1a2c-4dd7-bec7-e2a694cad3c0))
     (pin "2" (uuid b88d9587-f3b6-43af-8dd7-4c167ce9725e))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "C45") (unit 1)
         )
@@ -8701,7 +8723,7 @@
     (pin "1" (uuid 409dd8ab-55af-46d6-b10e-694b71620988))
     (pin "2" (uuid a919e381-f803-4318-9b9a-0058e9b19288))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "R20") (unit 1)
         )
@@ -8733,7 +8755,7 @@
     (pin "1" (uuid 8c8145e4-7a92-4ccb-ace5-9403c6c84684))
     (pin "2" (uuid c35f2eea-551d-47ba-afc3-3be176de8d86))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "C29") (unit 1)
         )
@@ -8758,7 +8780,7 @@
     )
     (pin "1" (uuid 95c8c076-ca0a-4325-b22c-870d9c97829f))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#PWR035") (unit 1)
         )
@@ -8790,7 +8812,7 @@
     (pin "1" (uuid 4d748eee-6d9a-4c51-be69-4e7261bcf4b7))
     (pin "2" (uuid c3a2ec9b-3904-4000-af9d-f12fe3ec6861))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "C8") (unit 1)
         )
@@ -8822,7 +8844,7 @@
     (pin "1" (uuid 0333f556-d9fc-40f2-9ae9-76fee5554ebe))
     (pin "2" (uuid 4ce4d5f9-ea29-4f15-9070-9bf57dab8dd0))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "L7") (unit 1)
         )
@@ -8851,7 +8873,7 @@
     (pin "1" (uuid 46753498-11b4-4293-bfd3-a18563396544))
     (pin "2" (uuid dbdf23d2-bb03-44f1-b092-3ac01af6f9e7))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "R12") (unit 1)
         )
@@ -8876,7 +8898,7 @@
     )
     (pin "1" (uuid cadd7285-a857-4823-9aa2-3b87c8af4e3c))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "#GND01") (unit 1)
         )
@@ -8908,7 +8930,7 @@
     (pin "2" (uuid 717e2e2a-75e2-4f82-aef1-a01e61ccde5d))
     (pin "1" (uuid 050dd22b-7dd0-4602-b8f0-c7d68d62f686))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "FB1") (unit 1)
         )
@@ -8936,7 +8958,7 @@
     (pin "3" (uuid 71f3b16e-802c-455c-95de-271ef823def8))
     (pin "4" (uuid ac082e0a-5633-49da-9a0b-8ef6dbd68335))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "D4") (unit 1)
         )
@@ -8968,7 +8990,7 @@
     (pin "1" (uuid bafc7f25-d611-4a79-bea3-9ff01ff7c54b))
     (pin "2" (uuid d02a44ec-738d-489a-842b-c01efca183fe))
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b"
           (reference "C7") (unit 1)
         )
@@ -8976,18 +8998,18 @@
     )
   )
 
-  (sheet (at 6.985 57.785) (size 25.4 8.255) (fields_autoplaced)
+  (sheet (at 17.145 66.04) (size 25.4 8.255) (fields_autoplaced)
     (stroke (width 0) (type solid))
     (fill (color 0 0 0 0.0000))
     (uuid 00000000-0000-0000-0000-000061764c1f)
-    (property "Sheetname" "Power" (at 6.985 57.0734 0)
+    (property "Sheetname" "Power" (at 17.145 65.3284 0)
       (effects (font (size 1.27 1.27)) (justify left bottom))
     )
-    (property "Sheetfile" "power.kicad_sch" (at 6.985 66.6246 0)
+    (property "Sheetfile" "power.kicad_sch" (at 17.145 74.8796 0)
       (effects (font (size 1.27 1.27)) (justify left top))
     )
     (instances
-      (project "nRF52832_qfaa"
+      (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b" (page "2"))
       )
     )
