@@ -1,0 +1,4 @@
+Ref,Val,Package,PosX,PosY,Rot,Side
+"J3","USB_B_Micro","USB_Micro-B_Molex-105017-0001",152.262500,-99.000000,-90.000000,bottom
+"J4","Conn_01x02_Socket","SM02B-SRSS-TB_LF__SN_",148.100000,-104.100000,90.000000,bottom
+"J5","Conn_01x03_Socket","JST_SM03B-SRSS-TB_LF__SN_",148.000000,-95.375000,0.000000,bottom
