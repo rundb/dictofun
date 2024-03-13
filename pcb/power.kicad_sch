@@ -2243,7 +2243,7 @@
     (property "Datasheet" "" (at 135.89 151.13 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (property "LCSC" "C52923" (at 135.89 151.13 0)
+    (property "LCSC" "C77007" (at 135.89 151.13 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (pin "1" (uuid 9cfdcefa-c498-49c9-a3a1-3a7a59511c70))
@@ -2618,8 +2618,8 @@
     (property "JST ID" "SM02B-SRSS-TB" (at 15.875 66.04 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "2" (uuid 4f4665b1-c2db-47ad-a656-e20855184317))
     (pin "1" (uuid 276bce1a-4a93-4809-b7ed-2f1201fa3c3c))
+    (pin "2" (uuid 4f4665b1-c2db-47ad-a656-e20855184317))
     (instances
       (project "dictofun"
         (path "/109caac1-5036-4f23-9a66-f569d871501b/00000000-0000-0000-0000-000061764c1f"
@@ -2909,7 +2909,7 @@
     (property "Datasheet" "" (at 264.16 149.86 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (property "LCSC" "C52923" (at 264.16 149.86 0)
+    (property "LCSC" "C77007" (at 264.16 149.86 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (pin "1" (uuid 74fbb84d-6620-4548-b040-a79325366230))
@@ -3776,7 +3776,7 @@
     (property "Reference" "R14" (at 177.038 72.4916 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
-    (property "Value" "100k" (at 177.038 74.803 0)
+    (property "Value" "100K" (at 177.038 74.803 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Footprint" "Resistor_SMD:R_0402_1005Metric" (at 173.482 73.66 90)
