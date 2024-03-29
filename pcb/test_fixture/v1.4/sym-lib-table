@@ -1,0 +1,7 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "fixture")(type "KiCad")(uri "${KIPRJMOD}/fixture.kicad_sym")(options "")(descr ""))
+  (lib (name "SN74AVC4T774RSVR")(type "KiCad")(uri "/home/roman/programming/dictofun/pcb/lib/df_symbols/SN74AVC4T774RSVR.kicad_sym")(options "")(descr ""))
+  (lib (name "SM03B-SRSS-TB_LF__SN_")(type "KiCad")(uri "/home/roman/programming/dictofun/pcb/lib/df_symbols/SM03B-SRSS-TB_LF__SN_.kicad_sym")(options "")(descr ""))
+  (lib (name "SM02B-SRSS-TB_LF__SN_")(type "KiCad")(uri "/home/roman/programming/dictofun/pcb/lib/df_symbols/SM02B-SRSS-TB_LF__SN_.kicad_sym")(options "")(descr ""))
+)
