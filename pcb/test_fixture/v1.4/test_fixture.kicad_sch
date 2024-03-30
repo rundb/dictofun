@@ -3471,7 +3471,7 @@
   (symbol (lib_id "Connector:TestPoint") (at 232.41 74.93 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid edd2718b-95ea-494a-9505-8214b8ac7796)
-    (property "Reference" "GND" (at 223.52 74.93 90)
+    (property "Reference" "GND3" (at 223.52 74.93 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" " " (at 223.52 74.93 90)
@@ -3487,7 +3487,7 @@
     (instances
       (project "test_fixture"
         (path "/e63e39d7-6ac0-4ffd-8aa3-1841a4541b55"
-          (reference "GND") (unit 1)
+          (reference "GND3") (unit 1)
         )
       )
     )
