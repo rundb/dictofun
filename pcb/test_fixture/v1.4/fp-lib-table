@@ -1,0 +1,5 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "fixture")(type "KiCad")(uri "${KIPRJMOD}/fixture.pretty")(options "")(descr ""))
+  (lib (name "df_footprints")(type "KiCad")(uri "/home/roman/programming/dictofun/pcb/lib/df_footprints.pretty")(options "")(descr ""))
+)
