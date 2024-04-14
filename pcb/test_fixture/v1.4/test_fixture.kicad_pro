@@ -453,7 +453,7 @@
       "idf": "",
       "netlist": "./",
       "specctra_dsn": "",
-      "step": "",
+      "step": "../../../../../Public/3d_models/df1.4/test_fixture.step",
       "vrml": ""
     },
     "page_layout_descr_file": ""
