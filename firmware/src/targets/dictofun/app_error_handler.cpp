@@ -60,5 +60,11 @@ void app_error_fault_handler(uint32_t id, uint32_t pc, uint32_t info)
     NRF_BREAKPOINT_COND;
     // On assert, the system can only recover with a reset.
 
-    nrf_gpio_pin_clear(LDO_EN_PIN);
+    //nrf_gpio_pin_clear(LDO_EN_PIN);
+    nrf_gpio_pin_clear(LDO_LATCH_D_PIN);
+    nrf_gpio_pin_set(LDO_LATCH_CLK_PIN);
+    for (volatile int i = 0; i < 100000; ++i);
+    nrf_gpio_pin_clear(LDO_LATCH_CLK_PIN);
+    for (volatile int i = 0; i < 100000; ++i);
+    nrf_gpio_pin_set(LDO_LATCH_CLK_PIN);
 }

@@ -77,6 +77,7 @@ function(nrf5_get_board_target sdk_version board out_target out_define)
   set(board_arduinoprimo  nrf52832_xxaa BOARD_ARDUINO_PRIMO 15.3.0 16.0.0)
   set(board_dictofun_v_1_1      nrf52832_xxaa BOARD_DICTOFUN_1_1 17.1.0 17.1.0)
   set(board_dictofun_v_1_3      nrf52832_xxaa BOARD_DICTOFUN_1_3 17.1.0 17.1.0)
+  set(board_dictofun_v_1_4      nrf52840_xxaa BOARD_DICTOFUN_1_4 17.1.0 17.1.0)
 
   if(NOT board_${board})
     message(FATAL_ERROR "Unsupported nRF board: ${board}")
@@ -135,7 +136,7 @@ function(nrf5_get_target_flags sdk_version target out_target out_target_short ou
   set(target_nrf52832_xxaa nrf52832 NRF52832_XXAA 15.3.0 17.1.0)
   set(target_nrf52832_xxab nrf52832 NRF52832_XXAB 15.3.0 16.0.0)
   set(target_nrf52833_xxaa nrf52833 NRF52833_XXAA 16.0.0 16.0.0)
-  set(target_nrf52840_xxaa nrf52840 NRF52840_XXAA 15.3.0 16.0.0)
+  set(target_nrf52840_xxaa nrf52840 NRF52840_XXAA 15.3.0 17.1.0)
 
   if(NOT target_${target})
     message(FATAL_ERROR "Unsupported nRF target: ${target}")
@@ -264,6 +265,7 @@ function(nrf5_get_softdevice_data sdk_path sdk_version target sd_variant out_sd_
   set(supports_16.0.0_s340 nrf52840)
 
   set(supports_17.1.0_s132 nrf52832)
+  set(supports_17.1.0_s140 nrf52811 nrf52820 nrf52833 nrf52840)
 
   list(FIND supports_${sdk_version}_${sd_variant} ${target_group} sd_target_supported)
   if (sd_target_supported EQUAL -1)
@@ -301,6 +303,7 @@ function(nrf5_get_softdevice_data sdk_path sdk_version target sd_variant out_sd_
   set(softdevice_16.0.0_s340 6.1.1 YES YES)
 
   set(softdevice_17.1.0_s132 7.2.0 YES NO)
+  set(softdevice_17.1.0_s140 7.2.0 YES NO)
 
   list(GET softdevice_${sdk_version}_${sd_variant} ${sd_key_version} sd_version)
   list(GET softdevice_${sdk_version}_${sd_variant} ${sd_key_use_ble} sd_use_ble)

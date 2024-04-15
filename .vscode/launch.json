@@ -13,11 +13,11 @@
             "type": "cortex-debug",
             "servertype": "jlink",
             "serverpath": "/usr/bin/JLinkGDBServerCLExe",
-            "device": "nRF52832_xxAA",
+            "device": "nRF52840_xxAA",
             "interface": "swd",
             "serialNumber": "", // add J-Link serial number if having multiple attached the same time.
             "runToMain": false,
-            "svdFile": "${workspaceRoot}/firmware/sdk/nRF5_SDK_17.1.0_ddde560/modules/nrfx/mdk/nrf52.svd",
+            "svdFile": "${workspaceRoot}/firmware/sdk/nRF5_SDK_17.1.0_ddde560/modules/nrfx/mdk/nrf52840.svd",
             "showDevDebugOutput": "parsed",
         }
     ]
