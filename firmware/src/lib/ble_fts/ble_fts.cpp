@@ -37,7 +37,10 @@ blcm_link_ctx_storage_t FtsService::_link_ctx_storage = {.p_ctx_data_pool = _ctx
                                                              sizeof(_ctx_data_pool) / _max_clients};
 
 // clang-format off
-FtsService::Context FtsService::_context{0,
+FtsService::Context FtsService::_context{0xDEADBEEF,
+                                         0xFEEBDAED,
+                                         0xEFCCAA55,
+                                         0,
                                          0,
                                          {0, 0, 0, 0,},
                                          {0, 0, 0, 0,},
@@ -49,7 +52,8 @@ FtsService::Context FtsService::_context{0,
                                          {0, 0, 0, 0,},
                                          0,
                                          false,
-                                         &_link_ctx_storage};
+                                         &_link_ctx_storage,
+                                         0xBEEFDEAD};
 
 __attribute__((section("." STRINGIFY(sdh_ble_observers2)))) __attribute__((used))
 nrf_sdh_ble_evt_observer_t observer = {
@@ -174,6 +178,11 @@ result::Result FtsService::init()
     {
         return cp_char_add_result;
     }
+    NRF_LOG_INFO("CP handles %x %x %x %x", 
+        _context.control_point_handles.value_handle, 
+        _context.control_point_handles.user_desc_handle, 
+        _context.control_point_handles.cccd_handle, 
+        _context.control_point_handles.sccd_handle);
 
     const auto file_list_char_add_result = add_characteristic(BLE_UUID_TYPE_BLE,
                                                               file_list_char_uuid,
@@ -186,6 +195,11 @@ result::Result FtsService::init()
     {
         return file_list_char_add_result;
     }
+    NRF_LOG_INFO("files list handles %x %x %x %x", 
+        _context.files_list.value_handle, 
+        _context.files_list.user_desc_handle, 
+        _context.files_list.cccd_handle, 
+        _context.files_list.sccd_handle);
 
     const auto file_list_next_char_add_result =
         add_characteristic(BLE_UUID_TYPE_BLE,
@@ -199,6 +213,11 @@ result::Result FtsService::init()
     {
         return file_list_next_char_add_result;
     }
+    NRF_LOG_INFO("files list next handles %x %x %x %x", 
+        _context.files_list_next.value_handle, 
+        _context.files_list_next.user_desc_handle, 
+        _context.files_list_next.cccd_handle, 
+        _context.files_list_next.sccd_handle);
 
     const auto file_info_char_add_result = add_characteristic(BLE_UUID_TYPE_BLE,
                                                               file_info_char_uuid,
@@ -211,6 +230,11 @@ result::Result FtsService::init()
     {
         return file_info_char_add_result;
     }
+    NRF_LOG_INFO("files info handles %x %x %x %x", 
+        _context.file_info.value_handle, 
+        _context.file_info.user_desc_handle, 
+        _context.file_info.cccd_handle, 
+        _context.file_info.sccd_handle);
 
     const auto file_data_char_add_result = add_characteristic(BLE_UUID_TYPE_BLE,
                                                               file_data_char_uuid,
@@ -223,6 +247,11 @@ result::Result FtsService::init()
     {
         return file_data_char_add_result;
     }
+    NRF_LOG_INFO("files data handles %x %x %x %x", 
+        _context.file_data.value_handle, 
+        _context.file_data.user_desc_handle, 
+        _context.file_data.cccd_handle, 
+        _context.file_data.sccd_handle);
 
     const auto fs_status_char_add_result = add_characteristic(BLE_UUID_TYPE_BLE,
                                                               fs_status_char_uuid,
@@ -235,6 +264,12 @@ result::Result FtsService::init()
     {
         return fs_status_char_add_result;
     }
+    NRF_LOG_INFO("fsstat handles %x %x %x %x", 
+        _context.fs_status.value_handle, 
+        _context.fs_status.user_desc_handle, 
+        _context.fs_status.cccd_handle, 
+        _context.fs_status.sccd_handle);
+
 
     const auto status_char_add_result = add_characteristic(BLE_UUID_TYPE_BLE,
                                                            status_char_uuid,
@@ -247,6 +282,12 @@ result::Result FtsService::init()
     {
         return status_char_add_result;
     }
+    NRF_LOG_INFO("status handles %x %x %x %x", 
+        _context.status.value_handle, 
+        _context.status.user_desc_handle, 
+        _context.status.cccd_handle, 
+        _context.status.sccd_handle);
+
 
     const auto pairing_char_add_result = add_characteristic(BLE_UUID_TYPE_BLE,
                                                             pairing_char_uuid,
@@ -271,8 +312,14 @@ void FtsService::reset_context()
     _context.active_command = ControlPointOpcode::IDLE;
 }
 
+void FtsService::print_handles(FtsService::Context& ctx)
+{
+    NRF_LOG_INFO("%x %x %x %x", ctx.rotu_canary_1, ctx.rotu_canary_2, ctx.rotu_canary_3, ctx.rotu_canary_4);
+}
+
 void FtsService::on_write(ble_evt_t const* p_ble_evt, ClientContext& client_context)
 {
+    print_handles(_context);
     ble_gatts_evt_write_t const* p_evt_write = &p_ble_evt->evt.gatts_evt.params.write;
     _context.client_context = &client_context;
     if(p_evt_write->handle == _context.control_point_handles.value_handle)
@@ -287,7 +334,6 @@ void FtsService::on_write(ble_evt_t const* p_ble_evt, ClientContext& client_cont
     else if((p_evt_write->handle == _context.files_list_next.cccd_handle) &&
             (p_evt_write->len == 2))
     {
-        NRF_LOG_DEBUG("file list next notif enabled");
         client_context.is_file_list_next_notifications_enabled =
             ble_srv_is_notification_enabled(p_evt_write->data);
     }
@@ -306,14 +352,19 @@ void FtsService::on_write(ble_evt_t const* p_ble_evt, ClientContext& client_cont
         client_context.is_fs_status_notifications_enabled =
             ble_srv_is_notification_enabled(p_evt_write->data);
     }
+    else if((p_evt_write->handle == _context.status.cccd_handle) && (p_evt_write->len == 2))
+    {
+        client_context.is_status_notifications_enabled =
+            ble_srv_is_notification_enabled(p_evt_write->data);
+    }
     else if (p_evt_write->handle == _context.pairer.value_handle)
     {
         on_pairer_write(p_evt_write->len, p_evt_write->data);
     }
     else
     {
-        //// Ignore, but it's kept here for the cases of debugging (in particular for porting to other client platforms)
-        // NRF_LOG_WARNING("write to unknown char with len %d", p_evt_write->len);
+        // Ignore, but it's kept here for the cases of debugging (in particular for porting to other client platforms)
+        NRF_LOG_WARNING("write to unknown char 0x%x with len %d", p_evt_write->handle, p_evt_write->len);
     }
 }
 
@@ -704,13 +755,12 @@ void FtsService::process_client_request(ControlPointOpcode client_request)
             _context.pending_command = FtsService::ControlPointOpcode::IDLE;
             return;
         }
-        _context.active_command = _context.pending_command;
+        _context.active_command = FtsService::ControlPointOpcode::IDLE;
         _context.pending_command = FtsService::ControlPointOpcode::IDLE;
         break;
     }
     case FtsService::ControlPointOpcode::REQ_RECEIVE_COMPLETE: 
     {
-        NRF_LOG_INFO("Host confirmed reception completion");
         _fs_if.receive_completed_function();
         _context.active_command = _context.pending_command;
         _context.pending_command = FtsService::ControlPointOpcode::IDLE;

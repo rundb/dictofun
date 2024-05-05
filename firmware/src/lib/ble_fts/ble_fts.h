@@ -199,6 +199,9 @@ private:
 
     struct Context
     {
+        uint32_t rotu_canary_1;
+        uint32_t rotu_canary_2;
+        uint32_t rotu_canary_3;
         uint8_t uuid_type;
         uint16_t service_handle;
         ble_gatts_char_handles_t control_point_handles;
@@ -214,6 +217,7 @@ private:
         bool is_notification_enabled;
 
         blcm_link_ctx_storage_t* const p_link_ctx_storage;
+        uint32_t rotu_canary_4;
 
         ControlPointOpcode pending_command{ControlPointOpcode::IDLE};
         ControlPointOpcode active_command{ControlPointOpcode::IDLE};
@@ -228,6 +232,7 @@ private:
         bool is_unpair_requested{false};
         bool is_disconnect_requested{false};
     };
+    void print_handles(FtsService::Context& ctx);
 
     static constexpr uint8_t _max_clients{1};
     static constexpr uint32_t _link_ctx_size{sizeof(ClientContext)};
