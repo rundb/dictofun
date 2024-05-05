@@ -178,11 +178,6 @@ result::Result FtsService::init()
     {
         return cp_char_add_result;
     }
-    NRF_LOG_INFO("CP handles %x %x %x %x", 
-        _context.control_point_handles.value_handle, 
-        _context.control_point_handles.user_desc_handle, 
-        _context.control_point_handles.cccd_handle, 
-        _context.control_point_handles.sccd_handle);
 
     const auto file_list_char_add_result = add_characteristic(BLE_UUID_TYPE_BLE,
                                                               file_list_char_uuid,
@@ -195,11 +190,6 @@ result::Result FtsService::init()
     {
         return file_list_char_add_result;
     }
-    NRF_LOG_INFO("files list handles %x %x %x %x", 
-        _context.files_list.value_handle, 
-        _context.files_list.user_desc_handle, 
-        _context.files_list.cccd_handle, 
-        _context.files_list.sccd_handle);
 
     const auto file_list_next_char_add_result =
         add_characteristic(BLE_UUID_TYPE_BLE,
@@ -213,11 +203,6 @@ result::Result FtsService::init()
     {
         return file_list_next_char_add_result;
     }
-    NRF_LOG_INFO("files list next handles %x %x %x %x", 
-        _context.files_list_next.value_handle, 
-        _context.files_list_next.user_desc_handle, 
-        _context.files_list_next.cccd_handle, 
-        _context.files_list_next.sccd_handle);
 
     const auto file_info_char_add_result = add_characteristic(BLE_UUID_TYPE_BLE,
                                                               file_info_char_uuid,
@@ -230,11 +215,6 @@ result::Result FtsService::init()
     {
         return file_info_char_add_result;
     }
-    NRF_LOG_INFO("files info handles %x %x %x %x", 
-        _context.file_info.value_handle, 
-        _context.file_info.user_desc_handle, 
-        _context.file_info.cccd_handle, 
-        _context.file_info.sccd_handle);
 
     const auto file_data_char_add_result = add_characteristic(BLE_UUID_TYPE_BLE,
                                                               file_data_char_uuid,
@@ -247,11 +227,6 @@ result::Result FtsService::init()
     {
         return file_data_char_add_result;
     }
-    NRF_LOG_INFO("files data handles %x %x %x %x", 
-        _context.file_data.value_handle, 
-        _context.file_data.user_desc_handle, 
-        _context.file_data.cccd_handle, 
-        _context.file_data.sccd_handle);
 
     const auto fs_status_char_add_result = add_characteristic(BLE_UUID_TYPE_BLE,
                                                               fs_status_char_uuid,
@@ -264,12 +239,6 @@ result::Result FtsService::init()
     {
         return fs_status_char_add_result;
     }
-    NRF_LOG_INFO("fsstat handles %x %x %x %x", 
-        _context.fs_status.value_handle, 
-        _context.fs_status.user_desc_handle, 
-        _context.fs_status.cccd_handle, 
-        _context.fs_status.sccd_handle);
-
 
     const auto status_char_add_result = add_characteristic(BLE_UUID_TYPE_BLE,
                                                            status_char_uuid,
@@ -282,12 +251,6 @@ result::Result FtsService::init()
     {
         return status_char_add_result;
     }
-    NRF_LOG_INFO("status handles %x %x %x %x", 
-        _context.status.value_handle, 
-        _context.status.user_desc_handle, 
-        _context.status.cccd_handle, 
-        _context.status.sccd_handle);
-
 
     const auto pairing_char_add_result = add_characteristic(BLE_UUID_TYPE_BLE,
                                                             pairing_char_uuid,
