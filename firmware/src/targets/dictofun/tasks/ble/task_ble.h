@@ -42,7 +42,8 @@ struct CommandQueueElement
 
 enum class Request
 {
-    LED
+    LED,
+    DISCONNECT_UPON_COMPLETION,
 };
 
 struct RequestQueueElement

@@ -40,6 +40,7 @@ time::DateTime _current_time;
 uint8_t _batt_level{100};
 
 constexpr size_t uuids_count{sizeof(adv_uuids) / sizeof(adv_uuids[0])};
+std::function<void()> _disconnect_delegate{nullptr};
 
 static void db_discovery_init();
 static void battery_level_update();
@@ -246,6 +247,11 @@ void services::register_keepalive_queue(QueueHandle_t keepalive_queue)
     integration::target::register_keepalive_queue(keepalive_queue);
 }
 
+void services::register_fts_to_state_status_queue(QueueHandle_t status_queue)
+{
+    integration::target::register_fts_to_state_status_queue(status_queue);
+}
+
 bool services::is_fts_active()
 {
     return fts_service.is_file_transmission_running();
@@ -270,6 +276,11 @@ void services::request_current_time()
     {
         NRF_LOG_DEBUG("CTS handle is invalid");
     }
+}
+
+void services::register_disconnect_delegate(std::function<void()> disconnect_delegate)
+{
+    _disconnect_delegate = disconnect_delegate;
 }
 
 size_t get_services_uuids(ble_uuid_t* service_uuids, const size_t max_uuids)
@@ -307,6 +318,14 @@ void services_process()
         if (NRF_SUCCESS != err_code)
         {
             NRF_LOG_ERROR("pm peers deleted has failed");
+        }
+    }
+    if (fts_service.is_disconnect_requested())
+    {
+        if (_disconnect_delegate != nullptr)
+        {
+            NRF_LOG_INFO("Performing a disconnect upon transaction completion");
+            _disconnect_delegate();
         }
     }
 }

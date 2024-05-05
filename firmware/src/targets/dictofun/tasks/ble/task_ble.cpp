@@ -26,11 +26,11 @@ ble::BatteryDataElement batt_level_buffer;
 constexpr TickType_t command_wait_slow_ticks{5U};
 constexpr TickType_t command_wait_fast_ticks{1U};
 
-struct
-{
-    bool is_active;
-    uint8_t led_state;
-} led_state_request;
+// struct
+// {
+//     bool is_active;
+//     uint8_t led_state;
+// } led_state_request;
 
 /// @brief This task is responsible for all functionalities related to BLE operation.
 void task_ble(void* context_ptr)
@@ -70,64 +70,65 @@ void task_ble(void* context_ptr)
         {
             switch(command_buffer.command_id)
             {
-            case Command::START: {
-                const auto start_result = ble_system.start();
-                if(result::Result::OK != start_result)
-                {
-                    NRF_LOG_ERROR("task ble: start has failed");
+                case Command::START: {
+                    const auto start_result = ble_system.start();
+                    if(result::Result::OK != start_result)
+                    {
+                        NRF_LOG_ERROR("task ble: start has failed");
+                    }
+                    else
+                    {
+                        NRF_LOG_INFO("task ble: start");
+                    }
+                    break;
                 }
-                else
-                {
-                    NRF_LOG_INFO("task ble: start");
+                case Command::STOP: {
+                    const auto stop_result = ble_system.stop();
+                    if(result::Result::OK != stop_result)
+                    {
+                        NRF_LOG_ERROR("task ble: stop has failed");
+                    }
+                    else
+                    {
+                        NRF_LOG_INFO("task ble: stop");
+                    }
+                    break;
                 }
-                break;
-            }
-            case Command::STOP: {
-                const auto stop_result = ble_system.stop();
-                if(result::Result::OK != stop_result)
-                {
-                    NRF_LOG_ERROR("task ble: stop has failed");
+                case Command::RESET_PAIRING: {
+                    const auto pairing_reset_result = ble_system.reset_pairing();
+                    if(result::Result::OK != pairing_reset_result)
+                    {
+                        NRF_LOG_ERROR("ble: failed to reset pairing");
+                    }
+                    else
+                    {
+                        NRF_LOG_INFO("task ble: pairing reset command succeeded");
+                    }
+                    break;
                 }
-                else
-                {
-                    NRF_LOG_INFO("task ble: stop");
+                case Command::CONNECT_FS: {
+                    ble_system.register_fs_communication_queues(context.command_to_mem_queue,
+                                                                context.status_from_mem_queue,
+                                                                context.data_from_mem_queue);
+                    ble_system.register_keepalive_queue(context.keepalive_queue);
+                    ble_system.register_fts_to_state_status_queue(context.requests_queue);
+                    ble_system.connect_fts_to_target_fs();
+                    break;
                 }
-                break;
-            }
-            case Command::RESET_PAIRING: {
-                const auto pairing_reset_result = ble_system.reset_pairing();
-                if(result::Result::OK != pairing_reset_result)
-                {
-                    NRF_LOG_ERROR("ble: failed to reset pairing");
-                }
-                else
-                {
-                    NRF_LOG_INFO("task ble: pairing reset command succeeded");
-                }
-                break;
-            }
-            case Command::CONNECT_FS: {
-                ble_system.register_fs_communication_queues(context.command_to_mem_queue,
-                                                            context.status_from_mem_queue,
-                                                            context.data_from_mem_queue);
-                ble_system.register_keepalive_queue(context.keepalive_queue);
-                ble_system.connect_fts_to_target_fs();
-                break;
-            }
-            }
-        }
-        if(led_state_request.is_active)
-        {
-            led_state_request.is_active = false;
-            RequestQueueElement cmd{Request::LED,
-                                    {static_cast<uint32_t>(led_state_request.led_state)}};
-            const auto command_send_status =
-                xQueueSend(context.requests_queue, reinterpret_cast<void*>(&cmd), 0);
-            if(pdPASS != command_send_status)
-            {
-                NRF_LOG_ERROR("BLE: failed to send led write request");
             }
         }
+        // if(led_state_request.is_active)
+        // {
+        //     led_state_request.is_active = false;
+        //     RequestQueueElement cmd{Request::LED,
+        //                             {static_cast<uint32_t>(led_state_request.led_state)}};
+        //     const auto command_send_status =
+        //         xQueueSend(context.requests_queue, reinterpret_cast<void*>(&cmd), 0);
+        //     if(pdPASS != command_send_status)
+        //     {
+        //         NRF_LOG_ERROR("BLE: failed to send led write request");
+        //     }
+        // }
 
         ble_system.process();
         // process keepalive packets

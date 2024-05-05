@@ -33,6 +33,7 @@ void register_fs_communication_queues(QueueHandle_t commands_queue,
                                       QueueHandle_t status_queue,
                                       QueueHandle_t data_queue);
 void register_keepalive_queue(QueueHandle_t keepalive_queue);
+void register_fts_to_state_status_queue(QueueHandle_t status_queue);
 bool is_fts_active();
 void start_db_discovery(uint16_t conn_handle);
 void request_current_time();
@@ -43,6 +44,7 @@ result::Result get_current_time_update(time::DateTime& datetime);
 void set_bas_battery_level(uint8_t batt_level);
 
 void restart();
+void register_disconnect_delegate(std::function<void()> disconnect_delegate);
 
 } // namespace services
 } // namespace ble

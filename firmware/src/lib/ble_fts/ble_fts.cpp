@@ -710,10 +710,11 @@ void FtsService::process_client_request(ControlPointOpcode client_request)
     }
     case FtsService::ControlPointOpcode::REQ_RECEIVE_COMPLETE: 
     {
-        NRF_LOG_DEBUG("Host confirmed reception completion");
+        NRF_LOG_INFO("Host confirmed reception completion");
         _fs_if.receive_completed_function();
         _context.active_command = _context.pending_command;
         _context.pending_command = FtsService::ControlPointOpcode::IDLE;
+        _context.is_disconnect_requested = true;
         break;
     }
     default:

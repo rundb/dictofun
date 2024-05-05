@@ -226,6 +226,7 @@ private:
         static constexpr uint32_t min_connection_params_change_request_time{1000};
         // FIXME: horrible way to implement request, should be moved to the system information provider module
         bool is_unpair_requested{false};
+        bool is_disconnect_requested{false};
     };
 
     static constexpr uint8_t _max_clients{1};
@@ -316,6 +317,13 @@ public:
         const auto value = _context.is_unpair_requested;
         _context.is_unpair_requested = false;
         return value; 
+    }
+
+    bool is_disconnect_requested()
+    {
+        const auto value = _context.is_disconnect_requested;
+        _context.is_disconnect_requested = false;
+        return value;
     }
 
     static Context _context;
