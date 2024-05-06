@@ -79,6 +79,8 @@ ble_dfu_buttonless_init_t dfus_init = {0};
 extern ble_advertising_t m_advertising;
 static void ble_dfu_evt_handler(ble_dfu_buttonless_evt_type_t event);
 
+void disconnect();
+
 BleSystem* BleSystem::_instance{nullptr};
 
 result::Result BleSystem::configure()
@@ -158,6 +160,8 @@ result::Result BleSystem::start()
     }
     _is_active = true;
 
+    services::register_disconnect_delegate(disconnect);
+
     return result::Result::OK;
 }
 
@@ -216,7 +220,7 @@ void BleSystem::ble_evt_handler(ble_evt_t const* p_ble_evt, void* p_context)
 
     case BLE_GAP_EVT_DISCONNECTED:
     {
-        NRF_LOG_INFO("Disconnected");
+        NRF_LOG_INFO("Disconnected, reason %x", p_ble_evt->evt.gap_evt.params.disconnected.reason);
         //bsp_board_led_off(CONNECTED_LED);
         m_conn_handle = BLE_CONN_HANDLE_INVALID;
         BleSystem::instance()._has_disconnect_happened = true;
@@ -595,6 +599,11 @@ void BleSystem::register_keepalive_queue(QueueHandle_t keepalive_queue)
     services::register_keepalive_queue(keepalive_queue);
 }
 
+void BleSystem::register_fts_to_state_status_queue(QueueHandle_t status_queue)
+{
+    services::register_fts_to_state_status_queue(status_queue);
+}
+
 bool BleSystem::is_fts_active()
 {
     return services::is_fts_active();
@@ -680,6 +689,11 @@ static void disconnect(uint16_t conn_handle, void * p_context)
     {
         NRF_LOG_DEBUG("Disconnected connection handle %d", conn_handle);
     }
+}
+
+void disconnect()
+{
+    disconnect(m_conn_handle, nullptr);
 }
 
 static void ble_dfu_evt_handler(ble_dfu_buttonless_evt_type_t event)

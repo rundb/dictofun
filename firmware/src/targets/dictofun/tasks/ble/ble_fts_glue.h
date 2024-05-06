@@ -24,6 +24,7 @@ void register_filesystem_queues(QueueHandle_t command_queue,
                                 QueueHandle_t status_queue,
                                 QueueHandle_t data_queue);
 void register_keepalive_queue(QueueHandle_t keepalive_queue);
+void register_fts_to_state_status_queue(QueueHandle_t status_queue);
 
 } // namespace target
 } // namespace integration

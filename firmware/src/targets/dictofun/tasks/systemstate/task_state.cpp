@@ -178,6 +178,9 @@ void task_system_state(void* context_ptr)
                     else 
                     {
                         next_state = SystemState::RECORDING;
+                        context->is_record_active = true;
+                        context->timestamps.reset();
+
                     }
                 }
                 else if (context->memory_status == Context::MemoryStatus::OUT_OF_MEMORY) 
@@ -208,6 +211,7 @@ void task_system_state(void* context_ptr)
                 {
                     NRF_LOG_DEBUG("state: polling button released");
                     next_state = SystemState::RECORD_END;
+                    context->is_record_active = false;
                     break;
                 }
 
@@ -688,15 +692,11 @@ bool process_timeouts(Context& context)
     static constexpr uint32_t norecord_launch_timeout{20000};
     static constexpr uint32_t after_record_timeout{25000};
     static constexpr uint32_t ble_keepalive_timeout{15000};
-    static constexpr uint32_t ble_after_disconnect_timeout{10000};
+    // TODO: distinguish disconnect upon all files transmitted and sporadic one
+    static constexpr uint32_t ble_after_disconnect_timeout{5000};
     // We should unconditionally shutdown after 8 minutes of operation
     static constexpr uint32_t max_operation_duration{8 * 60 * 1000};
 
-    // First update all relevant timeouts
-    if(context.is_record_active)
-    {
-        context.timestamps.last_record_end_timestamp = xTaskGetTickCount();
-    }
     ble::KeepaliveQueueElement keepalive;
     const auto ble_keepalive_receive_result =
         xQueueReceive(context.ble_keepalive_handle, &keepalive, 0);
@@ -722,6 +722,12 @@ bool process_timeouts(Context& context)
         }
     }
 
+    if(context.is_record_active)
+    {
+        context.timestamps.last_record_end_timestamp = xTaskGetTickCount();
+        return false;
+    }
+
     // At this stage depending on record state and presence of timestamps make decision
     // whether we should shutdown
     const auto tick = xTaskGetTickCount();
@@ -735,10 +741,7 @@ bool process_timeouts(Context& context)
         }
         return false;
     }
-    if(context.is_record_active)
-    {
-        return false;
-    }
+
     // At this point recording is over.
     const auto time_since_record_end = tick - context.timestamps.last_record_end_timestamp;
     if(!context.timestamps.has_ble_timestamp_been_updated() &&

@@ -101,9 +101,9 @@ void task_led(void* context_ptr)
 
     nrfx_pwm_simple_playback(&m_pwm0, &seq, 1, NRFX_PWM_FLAG_LOOP);
 
-    static constexpr uint32_t slow_update_period{1500};
+    static constexpr uint32_t slow_update_period{2000};
     static constexpr uint32_t slow_pwm_change_period{slow_update_period / brightness_steps_count};
-    static constexpr uint32_t fast_update_period{750};
+    static constexpr uint32_t fast_update_period{500};
     static constexpr uint32_t fast_pwm_change_period{fast_update_period / brightness_steps_count};
 
     uint32_t last_update_tick{0};

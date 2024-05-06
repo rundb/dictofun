@@ -114,7 +114,6 @@ struct Context
         void reset()
         {
             last_ble_activity_timestamp = timestamp_uninitialized_value;
-            last_ble_activity_timestamp = timestamp_uninitialized_value;
             ble_disconnect_event_timestamp = timestamp_uninitialized_value;
         }
 

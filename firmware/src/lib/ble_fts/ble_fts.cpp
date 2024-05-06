@@ -37,7 +37,10 @@ blcm_link_ctx_storage_t FtsService::_link_ctx_storage = {.p_ctx_data_pool = _ctx
                                                              sizeof(_ctx_data_pool) / _max_clients};
 
 // clang-format off
-FtsService::Context FtsService::_context{0,
+FtsService::Context FtsService::_context{0xDEADBEEF,
+                                         0xFEEBDAED,
+                                         0xEFCCAA55,
+                                         0,
                                          0,
                                          {0, 0, 0, 0,},
                                          {0, 0, 0, 0,},
@@ -49,7 +52,8 @@ FtsService::Context FtsService::_context{0,
                                          {0, 0, 0, 0,},
                                          0,
                                          false,
-                                         &_link_ctx_storage};
+                                         &_link_ctx_storage,
+                                         0xBEEFDEAD};
 
 __attribute__((section("." STRINGIFY(sdh_ble_observers2)))) __attribute__((used))
 nrf_sdh_ble_evt_observer_t observer = {
@@ -271,8 +275,14 @@ void FtsService::reset_context()
     _context.active_command = ControlPointOpcode::IDLE;
 }
 
+void FtsService::print_handles(FtsService::Context& ctx)
+{
+    NRF_LOG_INFO("%x %x %x %x", ctx.buffer_canary_1, ctx.buffer_canary_2, ctx.buffer_canary_3, ctx.buffer_canary_4);
+}
+
 void FtsService::on_write(ble_evt_t const* p_ble_evt, ClientContext& client_context)
 {
+    print_handles(_context);
     ble_gatts_evt_write_t const* p_evt_write = &p_ble_evt->evt.gatts_evt.params.write;
     _context.client_context = &client_context;
     if(p_evt_write->handle == _context.control_point_handles.value_handle)
@@ -287,7 +297,6 @@ void FtsService::on_write(ble_evt_t const* p_ble_evt, ClientContext& client_cont
     else if((p_evt_write->handle == _context.files_list_next.cccd_handle) &&
             (p_evt_write->len == 2))
     {
-        NRF_LOG_DEBUG("file list next notif enabled");
         client_context.is_file_list_next_notifications_enabled =
             ble_srv_is_notification_enabled(p_evt_write->data);
     }
@@ -306,14 +315,19 @@ void FtsService::on_write(ble_evt_t const* p_ble_evt, ClientContext& client_cont
         client_context.is_fs_status_notifications_enabled =
             ble_srv_is_notification_enabled(p_evt_write->data);
     }
+    else if((p_evt_write->handle == _context.status.cccd_handle) && (p_evt_write->len == 2))
+    {
+        client_context.is_status_notifications_enabled =
+            ble_srv_is_notification_enabled(p_evt_write->data);
+    }
     else if (p_evt_write->handle == _context.pairer.value_handle)
     {
         on_pairer_write(p_evt_write->len, p_evt_write->data);
     }
     else
     {
-        //// Ignore, but it's kept here for the cases of debugging (in particular for porting to other client platforms)
-        // NRF_LOG_WARNING("write to unknown char with len %d", p_evt_write->len);
+        // Ignore, but it's kept here for the cases of debugging (in particular for porting to other client platforms)
+        NRF_LOG_WARNING("write to unknown char 0x%x with len %d", p_evt_write->handle, p_evt_write->len);
     }
 }
 
@@ -704,16 +718,16 @@ void FtsService::process_client_request(ControlPointOpcode client_request)
             _context.pending_command = FtsService::ControlPointOpcode::IDLE;
             return;
         }
-        _context.active_command = _context.pending_command;
+        _context.active_command = FtsService::ControlPointOpcode::IDLE;
         _context.pending_command = FtsService::ControlPointOpcode::IDLE;
         break;
     }
     case FtsService::ControlPointOpcode::REQ_RECEIVE_COMPLETE: 
     {
-        NRF_LOG_DEBUG("Host confirmed reception completion");
         _fs_if.receive_completed_function();
         _context.active_command = _context.pending_command;
         _context.pending_command = FtsService::ControlPointOpcode::IDLE;
+        _context.is_disconnect_requested = true;
         break;
     }
     default:

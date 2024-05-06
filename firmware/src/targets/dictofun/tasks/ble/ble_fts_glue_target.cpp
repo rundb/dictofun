@@ -23,6 +23,7 @@ static QueueHandle_t _command_to_fs_queue{nullptr};
 static QueueHandle_t _status_from_fs_queue{nullptr};
 static QueueHandle_t _data_from_fs_queue{nullptr};
 static QueueHandle_t _keepalive_queue{nullptr};
+static QueueHandle_t _status_to_state_queue{nullptr};
 
 static constexpr uint32_t max_status_wait_time{1000};
 static constexpr uint32_t max_short_data_wait_time{1000};
@@ -50,6 +51,11 @@ void register_filesystem_queues(QueueHandle_t command_queue,
 void register_keepalive_queue(QueueHandle_t keepalive_queue)
 {
     _keepalive_queue = keepalive_queue;
+}
+
+void register_fts_to_state_status_queue(QueueHandle_t status_queue)
+{
+    _status_to_state_queue = status_queue;
 }
 
 result::Result get_file_list(uint32_t& files_count, file_id_type* files_list_ptr)
@@ -403,6 +409,11 @@ void receive_completed()
     {
         NRF_LOG_ERROR("receive completed: failed to send cmd to mem");
     }
+
+    ble::RequestQueueElement ble_req{ble::Request::DISCONNECT_UPON_COMPLETION, {0}};
+    xQueueReset(_status_to_state_queue);
+    xQueueSend(_status_to_state_queue, &ble_req, 0);
+
 }
 
 FileSystemInterface dictofun_fs_if{
