@@ -197,11 +197,13 @@ private:
         bool is_status_notifications_enabled{false};
     };
 
+    // Canaries are added in the beginning of the structure, as I've noticed, that first 5-8 bytes 
+    // of this structure are being corrupted. It should be investigated. See Issue #177.
     struct Context
     {
-        uint32_t rotu_canary_1;
-        uint32_t rotu_canary_2;
-        uint32_t rotu_canary_3;
+        uint32_t buffer_canary_1;
+        uint32_t buffer_canary_2;
+        uint32_t buffer_canary_3;
         uint8_t uuid_type;
         uint16_t service_handle;
         ble_gatts_char_handles_t control_point_handles;
@@ -217,7 +219,7 @@ private:
         bool is_notification_enabled;
 
         blcm_link_ctx_storage_t* const p_link_ctx_storage;
-        uint32_t rotu_canary_4;
+        uint32_t buffer_canary_4;
 
         ControlPointOpcode pending_command{ControlPointOpcode::IDLE};
         ControlPointOpcode active_command{ControlPointOpcode::IDLE};

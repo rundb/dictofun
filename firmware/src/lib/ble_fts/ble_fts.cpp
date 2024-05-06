@@ -277,7 +277,7 @@ void FtsService::reset_context()
 
 void FtsService::print_handles(FtsService::Context& ctx)
 {
-    NRF_LOG_INFO("%x %x %x %x", ctx.rotu_canary_1, ctx.rotu_canary_2, ctx.rotu_canary_3, ctx.rotu_canary_4);
+    NRF_LOG_INFO("%x %x %x %x", ctx.buffer_canary_1, ctx.buffer_canary_2, ctx.buffer_canary_3, ctx.buffer_canary_4);
 }
 
 void FtsService::on_write(ble_evt_t const* p_ble_evt, ClientContext& client_context)

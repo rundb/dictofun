@@ -26,11 +26,6 @@ ble::BatteryDataElement batt_level_buffer;
 constexpr TickType_t command_wait_slow_ticks{5U};
 constexpr TickType_t command_wait_fast_ticks{1U};
 
-// struct
-// {
-//     bool is_active;
-//     uint8_t led_state;
-// } led_state_request;
 
 /// @brief This task is responsible for all functionalities related to BLE operation.
 void task_ble(void* context_ptr)
@@ -117,18 +112,6 @@ void task_ble(void* context_ptr)
                 }
             }
         }
-        // if(led_state_request.is_active)
-        // {
-        //     led_state_request.is_active = false;
-        //     RequestQueueElement cmd{Request::LED,
-        //                             {static_cast<uint32_t>(led_state_request.led_state)}};
-        //     const auto command_send_status =
-        //         xQueueSend(context.requests_queue, reinterpret_cast<void*>(&cmd), 0);
-        //     if(pdPASS != command_send_status)
-        //     {
-        //         NRF_LOG_ERROR("BLE: failed to send led write request");
-        //     }
-        // }
 
         ble_system.process();
         // process keepalive packets
