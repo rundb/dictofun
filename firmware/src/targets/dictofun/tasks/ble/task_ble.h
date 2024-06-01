@@ -110,6 +110,7 @@ struct BatteryDataElement
 {
     uint8_t batt_level;
     float batt_voltage;
+    bool is_ble_active;
 };
 
 } // namespace ble

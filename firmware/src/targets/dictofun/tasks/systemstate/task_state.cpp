@@ -899,17 +899,21 @@ button::ButtonState fetch_button_state(Context& context)
 void process_battery_event(battery::MeasurementsQueueElement measurement, Context& context)
 {
     // TODO: make decisions based on battery level
-    ble::BatteryDataElement battery_level_msg{ measurement.battery_percentage, measurement.battery_voltage_level};
-    if (context.is_ble_system_active)
+    ble::BatteryDataElement battery_level_msg
+    { 
+        measurement.battery_percentage, 
+        measurement.battery_voltage_level, 
+        context.is_ble_system_active
+    };
+
+    xQueueReset(context.battery_level_to_ble_handle);
+    const auto batt_info_send_result =
+        xQueueSend(context.battery_level_to_ble_handle, reinterpret_cast<void*>(&battery_level_msg), 0);
+    if(pdPASS != batt_info_send_result)
     {
-        xQueueReset(context.battery_level_to_ble_handle);
-        const auto batt_info_send_result =
-            xQueueSend(context.battery_level_to_ble_handle, reinterpret_cast<void*>(&battery_level_msg), 0);
-        if(pdPASS != batt_info_send_result)
-        {
-            NRF_LOG_WARNING("state: failed to send batt level to ble");
-        }
+        NRF_LOG_WARNING("state: failed to send batt level to ble");
     }
+
     // print battery voltage every 10 seconds.
     print_battery_voltage(battery_measurement_buffer.battery_voltage_level);
     if (measurement.battery_voltage_level< 3.1)

@@ -64,7 +64,7 @@ public:
     bool is_time_update_pending();
     result::Result get_current_cts_time(time::DateTime& datetime);
 
-    void set_battery_level(const uint8_t batt_level);
+    void set_battery_level(const uint8_t batt_level, const bool update_bas = true);
 
 private:
     static BleSystem* _instance;

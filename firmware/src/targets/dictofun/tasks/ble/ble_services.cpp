@@ -37,7 +37,7 @@ ble_uuid_t adv_uuids[] = {
 
 volatile bool _is_current_time_update_pending{false};
 time::DateTime _current_time;
-uint8_t _batt_level{100};
+uint8_t _batt_level{254};
 
 constexpr size_t uuids_count{sizeof(adv_uuids) / sizeof(adv_uuids[0])};
 std::function<void()> _disconnect_delegate{nullptr};
@@ -50,10 +50,13 @@ static void nrf_qwr_error_handler(uint32_t nrf_error)
     NRF_LOG_ERROR("ble: QWR error %d", nrf_error);
 }
 
-void services::set_bas_battery_level(const uint8_t batt_level)
+void services::set_bas_battery_level(uint8_t batt_level, const bool update_bas)
 {
     _batt_level = batt_level;
-    battery_level_update();
+    if (update_bas)
+    {
+        battery_level_update();
+    }
 }
 
 static void current_time_set(ble_cts_c_evt_t* p_evt)

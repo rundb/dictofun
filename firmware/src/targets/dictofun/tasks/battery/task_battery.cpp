@@ -66,6 +66,7 @@ void task_battery(void* context_ptr)
         {
             // NRF_LOG_ERROR("failed to send battery measurement");
         }
+        NRF_LOG_DEBUG("battery level %d seent", battery_level);
         vTaskDelay(5000);
     }
 }

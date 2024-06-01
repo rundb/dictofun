@@ -36,14 +36,27 @@ void task_ble(void* context_ptr)
     // 2. NVM config has to be accessed immediately after startup. It can be done using SD-aware and SD-ignorant implementations.
     //    There are 2 options: either use SD-aware and wait until SD is loaded, or use SD-ignorant immediately and switch to SD-aware
     //    after the config is loaded. I have chosen the first option, as it introduces less dependencies between tasks.
-    static constexpr uint32_t ble_subsystem_startup_delay{100};
-    vTaskDelay(ble_subsystem_startup_delay);
 
     const auto dfu_enable_result = ble_dfu_buttonless_async_svci_init();
     if (0 != dfu_enable_result)
     {
         NRF_LOG_ERROR("DFU init has failed");
     }
+
+    {
+        // setting initial battery level, before BLE stack is even enabled
+        const auto batt_level_receive_status = xQueueReceive(
+        context.battery_to_ble_queue, reinterpret_cast<void*>(&batt_level_buffer), 50);
+        if(pdPASS == batt_level_receive_status)
+        {
+            NRF_LOG_DEBUG("battery level %d received", batt_level_buffer.batt_level);
+            ble_system.set_battery_level(batt_level_buffer.batt_level, batt_level_buffer.is_ble_active);
+        }   
+    }
+
+    static constexpr uint32_t ble_subsystem_startup_delay{200};
+    vTaskDelay(ble_subsystem_startup_delay);
+
 
     const auto configure_result = ble_system.configure();
     if(result::Result::OK != configure_result)
@@ -52,7 +65,6 @@ void task_ble(void* context_ptr)
         // Suspend the task
         vTaskSuspend(NULL);
     }
-
     NRF_LOG_DEBUG("task ble: initialized");
 
     while(1)
@@ -172,8 +184,9 @@ void task_ble(void* context_ptr)
             context.battery_to_ble_queue, reinterpret_cast<void*>(&batt_level_buffer), 0);
         if(pdPASS == batt_level_receive_status)
         {
-            ble_system.set_battery_level(batt_level_buffer.batt_level);
+            ble_system.set_battery_level(batt_level_buffer.batt_level, batt_level_buffer.is_ble_active);
             // TODO: utilize battery voltage too (to gather statistics on battery live across all the devices)
+            NRF_LOG_DEBUG("battery level %d received", batt_level_buffer.batt_level);
         }
     }
 }
