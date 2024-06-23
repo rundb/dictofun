@@ -7,7 +7,7 @@
 
         {
             "cwd": "${workspaceRoot}/firmware",
-            "executable": "${workspaceRoot}/firmware/build/src/targets/dictofun/dictofun_main",
+            "executable": "${workspaceRoot}/firmware/src/targets/bootloader/pca10056_s140_ble_debug/armgcc/_build/nrf52840_xxaa_s140.out",
             "name": "Debug Microcontroller",
             "request": "launch",
             "type": "cortex-debug",

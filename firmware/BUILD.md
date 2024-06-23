@@ -18,7 +18,7 @@ cmake -S .. -B . -DCMAKE_BUILD_TYPE:STRING=Debug -DBUILD_TARGET:STRING=dictofun 
 
 #### Package Application
 ```
-nrfutil pkg generate  --hw-version 52 --sd-req 0x0101 --application-version 2 --application src/targets/dictofun/Dictofun.hex  --key-file ${DICTOFUN_PK_PATH} app_dfu_package.zip
+nrfutil pkg generate  --hw-version 52 --sd-req 0x0100 --application-version 2 --application src/targets/dictofun/Dictofun.hex  --key-file ${DICTOFUN_PK_PATH} app_dfu_package.zip
 ```
 
 ## Flash commands

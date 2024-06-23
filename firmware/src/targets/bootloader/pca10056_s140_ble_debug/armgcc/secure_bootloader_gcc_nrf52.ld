@@ -5,12 +5,12 @@ GROUP(-lgcc -lc -lnosys)
 
 MEMORY
 {
-  FLASH (rx) : ORIGIN = 0x71000, LENGTH = 0xd000
-  RAM (rwx) :  ORIGIN = 0x20005968, LENGTH = 0xa698
+  FLASH (rx) : ORIGIN = 0xF0000, LENGTH = 0xd000
+  RAM (rwx) :  ORIGIN = 0x20005978, LENGTH = 0x3a688
   uicr_bootloader_start_address (r) : ORIGIN = 0x10001014, LENGTH = 0x4
-  bootloader_settings_page (r) : ORIGIN = 0x0007F000, LENGTH = 0x1000
+  bootloader_settings_page (r) : ORIGIN = 0x000FF000, LENGTH = 0x1000
   uicr_mbr_params_page (r) : ORIGIN = 0x10001018, LENGTH = 0x4
-  mbr_params_page (r) : ORIGIN = 0x0007E000, LENGTH = 0x1000
+  mbr_params_page (r) : ORIGIN = 0x000FE000, LENGTH = 0x1000
 }
 
 SECTIONS
