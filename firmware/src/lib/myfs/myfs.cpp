@@ -196,6 +196,8 @@ int myfs_mount(myfs_t& myfs)
             else if (current_file_id == max_files_in_fs - 1) 
             {
                 // file system is full, special case, tbd the next action
+                myfs.is_mounted = true;
+                myfs.is_full = true;
                 return NO_SPACE_LEFT;
             }
             else 

@@ -128,8 +128,16 @@ void task_memory(void* context_ptr)
     if(result::Result::OK != init_result)
     {
         NRF_LOG_ERROR("mem: failed to mount myfs");
-        StatusQueueElement response{Command::MOUNT_FS, Status::ERROR_BUSY};
-        xQueueSend(context.status_queue, reinterpret_cast<void *>(&response), 0);
+        if (result::Result::ERROR_OUT_OF_MEMORY != init_result)
+        {
+            StatusQueueElement response{Command::MOUNT_FS, Status::ERROR_BUSY};
+            xQueueSend(context.status_queue, reinterpret_cast<void *>(&response), 0);
+        }
+        else 
+        {
+            StatusQueueElement response{Command::MOUNT_FS, Status::ERROR_OUT_OF_MEMORY};
+            xQueueSend(context.status_queue, reinterpret_cast<void *>(&response), 0);
+        }
     }
     else 
     {
