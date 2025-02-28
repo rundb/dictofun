@@ -9,7 +9,7 @@ All build commands are launched from `<PROJECT_PATH>/firmware/build`
 #### Bootloader
 
 ```
-make -C ../src/targets/bootloader/pca10040_s132_ble_debug/armgcc -j
+make -C ../src/targets/bootloader/pca10056_s140_ble_debug/armgcc -j
 ```
 #### Application
 ```
@@ -35,10 +35,10 @@ openocd -f interface/cmsis-dap.cfg -f target/nrf52.cfg -c "init ; reset run; exi
 
 #### Flash SoftDevice
 ```
-openocd -f interface/cmsis-dap.cfg -f target/nrf52.cfg -c "program ../sdk/nRF5_SDK_17.1.0_ddde560/components/softdevice/s132/hex/s132_nrf52_7.2.0_softdevice.hex verify reset exit"
+openocd -f interface/cmsis-dap.cfg -f target/nrf52.cfg -c "program ../sdk/nRF5_SDK_17.1.0_ddde560/components/softdevice/s140/hex/s140_nrf52_7.2.0_softdevice.hex verify reset exit"
 ```
 
 #### Flash Bootloader
 ```
-openocd -f interface/cmsis-dap.cfg -f target/nrf52.cfg -c "program ../src/targets/bootloader/pca10040_s132_ble_debug/armgcc/_build/nrf52832_xxaa_s132.hex verify reset exit"
+openocd -f interface/cmsis-dap.cfg -f target/nrf52.cfg -c "program ../src/targets/bootloader/pca10056_s140_ble_debug/armgcc/_build/nrf52840_xxaa_s140.hex verify reset exit"
 ```

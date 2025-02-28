@@ -55,7 +55,7 @@ nrfjprog --reset --program ./build/src/targets/dictofun/Dictofun.hex --sectorera
 If SoftDevice is not flashed, it should be flashed using the following command:
 
 ```
-nrfjprog --reset --program ./sdk/nRF5_SDK_17.1.0_ddde560/components/softdevice/s132/hex/s132_nrf52_7.2.0_softdevice.hex  --family NRF52 --sectorerase --verify
+nrfjprog --reset --program ./sdk/nRF5_SDK_17.1.0_ddde560/components/softdevice/s140/hex/s140_nrf52_7.2.0_softdevice.hex  --family NRF52 --sectorerase --verify
 ```
 
 Both commands should be executed from folder `firmware` in the project structure.
