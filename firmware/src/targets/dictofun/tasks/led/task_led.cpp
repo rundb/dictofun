@@ -18,9 +18,9 @@
 
 namespace led
 {
-constexpr uint16_t RED_LED_PIN = LED_3;
-constexpr uint16_t BLUE_LED_PIN = LED_1;
-constexpr uint16_t GREEN_LED_PIN = LED_2;
+constexpr uint16_t RED_LED_PIN = LED_2;
+constexpr uint16_t BLUE_LED_PIN = LED_3;
+constexpr uint16_t GREEN_LED_PIN = LED_1;
 constexpr uint16_t UNCONNECTED_PIN = 30;
 
 constexpr uint32_t task_led_queue_wait_time{10};

@@ -106,16 +106,23 @@ battery::Context        battery_context;
 
 void latch_ldo_enable()
 {
-    nrf_gpio_cfg_output(LDO_EN_PIN);
+    nrf_gpio_cfg_output(LDO_LATCH_D_PIN);
+    nrf_gpio_cfg_output(LDO_LATCH_CLK_PIN);
     nrf_gpio_cfg_input(BUTTON_PIN, NRF_GPIO_PIN_PULLDOWN);
-    nrf_gpio_pin_set(LDO_EN_PIN);
+    nrf_gpio_pin_set(LDO_LATCH_D_PIN);
 
-    nrf_gpio_cfg(LDO_EN_PIN,
+    nrf_gpio_cfg(LDO_LATCH_D_PIN,
                  NRF_GPIO_PIN_DIR_OUTPUT,
                  NRF_GPIO_PIN_INPUT_DISCONNECT,
                  NRF_GPIO_PIN_PULLDOWN,
                  NRF_GPIO_PIN_H0S1,
                  NRF_GPIO_PIN_NOSENSE);
+
+    nrf_gpio_pin_set(LDO_LATCH_CLK_PIN);
+    for (volatile int i = 0; i < 100000; ++i);
+    nrf_gpio_pin_clear(LDO_LATCH_CLK_PIN);
+    for (volatile int i = 0; i < 100000; ++i);
+    nrf_gpio_pin_set(LDO_LATCH_CLK_PIN);
 }
 
 int main()
@@ -269,7 +276,7 @@ int main()
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
-    // Timers' initialization
+    // // Timers' initialization
     record_timer_handle = xTimerCreateStatic(
         "AUDIO", 1, pdFALSE, nullptr, systemstate::record_end_callback, &record_timer_buffer);
     if(nullptr == record_timer_handle)

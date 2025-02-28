@@ -11,11 +11,13 @@
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 
+#include "boards.h"
+
 namespace systemstate
 {
 
-static constexpr uint8_t power_flipflop_clk{26};
-static constexpr uint8_t power_flipflop_d{27};
+static constexpr uint8_t power_flipflop_clk{LDO_LATCH_CLK_PIN};
+static constexpr uint8_t power_flipflop_d{LDO_LATCH_D_PIN};
 
 void configure_power_latch()
 {

@@ -5,9 +5,9 @@ GROUP(-lgcc -lc -lnosys)
 
 MEMORY
 {
-  FLASH (rx) : ORIGIN = 0x26000, LENGTH = 0x4B000 /* leaving space for bootloader */
-  RAM (rwx) :  ORIGIN = 0x20002C70, LENGTH = 0xD380
-  NOINIT(rwx) : ORIGIN = 0x2000FFE0, LENGTH = 0x20
+  FLASH (rx) : ORIGIN = 0x27000, LENGTH = 0xb9000  /*52840: 27000-100000, x20000 for btld and storage*/
+  RAM (rwx) :  ORIGIN = 0x20005978, LENGTH = 0x3a668 /* 0x40000 total */
+  NOINIT(rwx) : ORIGIN = 0x2003FFE0, LENGTH = 0x20
 }
 
 SECTIONS

@@ -15,8 +15,8 @@ namespace application
 
 static void fstorage_evt_handler(nrf_fstorage_evt_t* p_evt);
 
-static constexpr uint32_t fstorage_start_address{0x70000};
-static constexpr uint32_t fstorage_end_address{0x71000};
+static constexpr uint32_t fstorage_start_address{0xEF000};
+static constexpr uint32_t fstorage_end_address{0xF0000};
 /// @brief This value's unit is pages count (each page is 4096 bytes)
 static constexpr uint32_t fstorage_size{1};
 

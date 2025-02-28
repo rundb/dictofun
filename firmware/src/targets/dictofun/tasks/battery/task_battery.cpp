@@ -6,6 +6,7 @@
 #include "adc.h"
 #include "battery.h"
 #include "nrf_log.h"
+#include <nrfx_saadc.h>
 
 #include "FreeRTOS.h"
 #include "task.h"
@@ -13,7 +14,7 @@
 namespace battery
 {
 
-static constexpr adc::AdcIf::AnalogInputId battery_pin_id{2};
+static constexpr adc::AdcIf::AnalogInputId battery_pin_id{NRF_SAADC_INPUT_AIN5};
 static constexpr float battery_conversion_factor{2.0};
 static const adc::NrfAdc::Config nrf_adc_config{1, {battery_pin_id, 0, 0, 0}};
 

@@ -162,11 +162,30 @@ static void dfu_observer(nrf_dfu_evt_type_t evt_type)
     }
 }
 
+// static constexpr uint8_t power_flipflop_clk{LDO_LATCH_CLK_PIN};
+// static constexpr uint8_t power_flipflop_d{LDO_LATCH_D_PIN};
+
+void configure_power_latch()
+{
+    nrf_gpio_cfg_output(LDO_LATCH_CLK_PIN);
+    nrf_gpio_cfg_output(LDO_LATCH_D_PIN);
+
+    nrf_gpio_pin_clear(LDO_LATCH_CLK_PIN);
+    nrf_gpio_pin_set(LDO_LATCH_D_PIN);
+
+    for (volatile int i = 0; i < 100000; ++i);
+    nrf_gpio_pin_set(LDO_LATCH_CLK_PIN);
+    for (volatile int i = 0; i < 100000; ++i);
+    nrf_gpio_pin_clear(LDO_LATCH_CLK_PIN);
+}
 
 /**@brief Function for application main entry. */
 int main(void)
 {
+    
     uint32_t ret_val;
+
+    configure_power_latch();
 
     // Must happen before flash protection is applied, since it edits a protected page.
     nrf_bootloader_mbr_addrs_populate();
